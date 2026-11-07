@@ -286,6 +286,10 @@ export default function MapPage() {
     ? getRelativeBearing(targetBearing, heading, mapNorthHeading ?? 0)
     : null;
 
+  const segmentDistance = routeResult ? getSegmentDistance(routeResult, activeStepIndex) : 0;
+  const remainingDistance = Math.max(0, segmentDistance - walkedMeters);
+  const isVerticalTransition = activeRouteSegment && activeRouteSegment.from.floor !== activeRouteSegment.to.floor;
+
   // A sustained heading mismatch is a deviation warning, not a false location fix.
   // The user confirms their actual position with a QR checkpoint before rerouting.
   useEffect(() => {
@@ -301,9 +305,6 @@ export default function MapPage() {
       setRouteDeviation(false);
     }
   }, [stepCount, routeResult, sensorStatus, relativeTurn, isVerticalTransition]);
-  const segmentDistance = routeResult ? getSegmentDistance(routeResult, activeStepIndex) : 0;
-  const remainingDistance = Math.max(0, segmentDistance - walkedMeters);
-  const isVerticalTransition = activeRouteSegment && activeRouteSegment.from.floor !== activeRouteSegment.to.floor;
   const isRouteComplete = Boolean(routeResult?.path?.length && activeStepIndex >= routeResult.path.length - 1);
 
   const handleAdminMapClick = (coords) => {
