@@ -250,6 +250,72 @@ export const api = {
     return res.json();
   },
 
+  // ================= ADMIN CAMPUS SURVEYS & USER WALKTHROUGHS =================
+  async getCampusSurveys() {
+    const res = await fetch(`${API_BASE}/surveys`, { headers: getAuthHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to load campus walkthroughs');
+    return data;
+  },
+
+  async createCampusSurvey(payload) {
+    const res = await fetch(`${API_BASE}/surveys`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to create walkthrough');
+    return data;
+  },
+
+  async updateCampusSurvey(id, payload) {
+    const res = await fetch(`${API_BASE}/surveys/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to save walkthrough details');
+    return data;
+  },
+
+  async uploadCampusSurveyVideo(id, blob) {
+    const token = localStorage.getItem('bji_nav_token');
+    const contentType = blob.type.includes('mp4') ? 'video/mp4' : 'video/webm';
+    const res = await fetch(`${API_BASE}/surveys/${encodeURIComponent(id)}/video`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': contentType,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: blob,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Video upload failed');
+    return data;
+  },
+
+  async publishCampusSurvey(id) {
+    const res = await fetch(`${API_BASE}/surveys/${encodeURIComponent(id)}/publish`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to publish walkthrough');
+    return data;
+  },
+
+  async deleteCampusSurvey(id) {
+    const res = await fetch(`${API_BASE}/surveys/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to delete walkthrough');
+    return data;
+  },
+
   // ================= CAMPUS OCCUPANCY =================
   async getCrowdSummary(windowMinutes = 10) { const r=await fetch(`${API_BASE}/navigation/crowd?windowMinutes=${windowMinutes}`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load occupancy');return d; },
 
