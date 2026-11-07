@@ -74,6 +74,14 @@ test('requires the exact origin and destination landing for a floor transition',
     { valid: true, floor: 1, stage: 'transition-destination' }
   );
   assert.equal(validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-B', floor: 1 }, 0).valid, false);
+  assert.equal(
+    validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-A', floor: 2 }, 0, {
+      originNodeId: 'GF-STAIR-A',
+      destinationNodeId: '1F-STAIR-A',
+    }).valid,
+    false,
+    'a mismatched floor number must be rejected'
+  );
 });
 
 test('rejects unrelated or wrong-floor checkpoints during normal route navigation', () => {
@@ -82,29 +90,3 @@ test('rejects unrelated or wrong-floor checkpoints during normal route navigatio
   assert.equal(validateRouteCheckpoint(route, 0, { nodeId: '1F-X', floor: 1 }, 0).valid, false);
 });
 
-test('requires origin QR before destination QR and verifies both landing floors', () => {
-  const route = {
-    path: [
-      { nodeId: 'GF-STAIR-A', floor: 0 },
-      { nodeId: '1F-STAIR-A', floor: 1 },
-    ],
-  };
-  const destination = { nodeId: '1F-STAIR-A', floor: 1 };
-  assert.equal(validateRouteCheckpoint(route, 0, destination, 0).valid, false);
-  const origin = validateRouteCheckpoint(route, 0, { nodeId: 'GF-STAIR-A', floor: 0 }, 0);
-  assert.equal(origin.stage, 'transition-origin');
-  assert.deepEqual(
-    validateRouteCheckpoint(route, 0, destination, 0, {
-      originNodeId: 'GF-STAIR-A',
-      destinationNodeId: '1F-STAIR-A',
-    }),
-    { valid: true, floor: 1, stage: 'transition-destination' }
-  );
-  assert.equal(
-    validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-A', floor: 2 }, 0, {
-      originNodeId: 'GF-STAIR-A',
-      destinationNodeId: '1F-STAIR-A',
-    }).valid,
-    false
-  );
-});
