@@ -21,6 +21,8 @@ import ARView from '../components/ARView';
 import DirectionsBottomSheet from '../components/DirectionsBottomSheet';
 import ShareLocationSheet from '../components/ShareLocationSheet';
 import AdminNodeModal from '../components/AdminNodeModal';
+import IndoorCheckpointScanner from '../components/IndoorCheckpointScanner';
+import { api } from '../services/api';
 import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -79,6 +81,7 @@ export default function MapPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showRoutePlanner, setShowRoutePlanner] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [autoScannerOpen, setAutoScannerOpen] = useState(false);
 
   // Admin Map Editor state
   const [adminEditMode, setAdminEditMode] = useState(false);
@@ -133,6 +136,17 @@ export default function MapPage() {
       computeRoute(startNodeId, node.nodeId, accessibleOnly, nodes);
       setSheetSnap('half');
     }
+  };
+
+  const handleConfirmIndoorCheckpoint = (checkpoint) => {
+    setStartNodeId(checkpoint.nodeId);
+    setCurrentFloor(Number(checkpoint.floor));
+    api.updateMyLocation(checkpoint.nodeId, checkpoint.qrValue).catch(() => {});
+    broadcastCheckpoint(checkpoint.nodeId);
+    if (destinationNodeId) {
+      computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
+    }
+    showToast(`Location confirmed: ${checkpoint.name}`, 'success');
   };
 
   const handleAdminMapClick = (coords) => {
@@ -303,7 +317,7 @@ export default function MapPage() {
                     ))}
                   </select>
                   <button
-                    onClick={() => navigate('/scan')}
+                    onClick={() => setAutoScannerOpen(true)}
                     title="Scan QR Checkpoint"
                     className="p-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 shrink-0"
                   >
@@ -372,6 +386,17 @@ export default function MapPage() {
           >
             <Camera size={13} />
             <span>AR Live View</span>
+          </button>
+
+          <button
+            onClick={() => setAutoScannerOpen((open) => !open)}
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${
+              autoScannerOpen ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50'
+            }`}
+            title="Enable automatic QR checkpoint detection"
+          >
+            <QrCode size={13} />
+            <span>{autoScannerOpen ? 'QR Scanning On' : 'Auto QR Checkpoints'}</span>
           </button>
 
           {/* Live Share Location Button */}
@@ -545,6 +570,14 @@ export default function MapPage() {
           onLaunchAR={() => (isARMode ? fallbackTo2DMap() : launchARLiveView())}
           activeStepIndex={activeStepIndex}
           onSelectStep={(idx) => setActiveStepIndex(idx)}
+        />
+      )}
+
+      {!showAROverlay && (
+        <IndoorCheckpointScanner
+          enabled={autoScannerOpen}
+          onClose={() => setAutoScannerOpen(false)}
+          onConfirm={handleConfirmIndoorCheckpoint}
         />
       )}
 
