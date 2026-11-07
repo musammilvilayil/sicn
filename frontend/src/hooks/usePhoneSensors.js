@@ -17,12 +17,17 @@ function getAccelerationMagnitude(event) {
  * Phone-only compass and step sensor access. Permission prompts are requested
  * only when startSensors is called directly from a user click/tap.
  */
-export default function usePhoneSensors() {
+export default function usePhoneSensors(onStep) {
   const [heading, setHeading] = useState(null);
   const [stepCount, setStepCount] = useState(0);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const cleanupRef = useRef(null);
+  const onStepRef = useRef(onStep);
+
+  useEffect(() => {
+    onStepRef.current = onStep;
+  }, [onStep]);
   const stepDetectorRef = useRef(new StepDetector());
 
   const stopSensors = useCallback(() => {
@@ -81,6 +86,7 @@ export default function usePhoneSensors() {
       if (motionPermission !== 'granted') return;
       if (stepDetectorRef.current.push(getAccelerationMagnitude(event), event.timeStamp || Date.now())) {
         setStepCount((count) => count + 1);
+        onStepRef.current?.();
       }
     };
 
