@@ -264,6 +264,6 @@ The repository alone cannot prove real-world floor-plan geometry or QR placement
 
 ## 8. Audit conclusion
 
-SICN already has a meaningful foundation: React/Vite, Express/MongoDB, multi-floor graph data, A* routing, QR lookup, AR camera guidance, Socket.IO sharing, attendance and role-protected admin operations. The main blockers are not a lack of features; they are correctness boundaries and missing verification: QR floor-transition state, sensor positioning confidence, map-coordinate calibration, route geometry, complete responsive QA and CI coverage.
+SICN already has a meaningful foundation: React/Vite, Express/MongoDB, multi-floor graph data, A* routing, QR lookup, AR camera guidance, Socket.IO sharing, attendance and role-protected admin operations. The main blockers are not a lack of floor-plan files; those are already present for GF–7F. The blockers are using and calibrating those assets in the renderer, QR floor-transition correctness, sensor positioning confidence, route geometry, complete responsive QA and CI coverage.
 
 Implement in the PR order above. Keep every PR small enough to test and review independently. Do not merge a PR solely because it compiles; require the relevant acceptance tests and clearly record any physical-device or surveyed-map checks that cannot be automated.
