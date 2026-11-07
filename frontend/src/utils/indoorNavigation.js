@@ -302,3 +302,24 @@ export function transformMapToPlan(point, calibration) {
     y: y[0] * point.x + y[1] * point.y + y[2],
   };
 }
+
+
+/** Describe the next junction turn from route geometry, independent of phone facing. */
+export function getRouteTurnInstruction(routeResult, segmentIndex, straightThreshold = 25) {
+  const path = routeResult?.path || [];
+  const from = path[segmentIndex];
+  const junction = path[segmentIndex + 1];
+  const to = path[segmentIndex + 2];
+  if (!from || !junction || !to || from.floor !== junction.floor || junction.floor !== to.floor) return null;
+  const incoming = getMapBearing(from, junction);
+  const outgoing = getMapBearing(junction, to);
+  if (incoming === null || outgoing === null) return null;
+  const angle = ((outgoing - incoming + 540) % 360) - 180;
+  const magnitude = Math.abs(angle);
+  const type = magnitude >= 150
+    ? 'u-turn'
+    : magnitude < straightThreshold
+      ? 'straight'
+      : angle > 0 ? 'right' : 'left';
+  return { type, angle, atNodeId: junction.nodeId, atNodeName: junction.name };
+}
