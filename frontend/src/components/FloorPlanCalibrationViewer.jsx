@@ -89,6 +89,7 @@ export default function FloorPlanCalibrationViewer({
         }
         const document = pdfRef.current.document;
         const safePage = Math.max(1, Math.min(pageNumber, document.numPages));
+        if (safePage !== pageNumber) setPageNumber(safePage);
         const page = await document.getPage(safePage);
         const baseViewport = page.getViewport({ scale: 1 });
         const availableWidth = Math.max(320, pageContainerRef.current.clientWidth - 24);
