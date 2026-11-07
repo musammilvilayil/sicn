@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feat/sicn-complete-mobile-ar-admin-redesign
+      - feat/admin-campus-survey-walkthrough
   pull_request:
     branches:
       - main
