@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const getJwtSecret = () => {
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET.startsWith('replace-')) {
     throw new Error('JWT_SECRET is not configured correctly.');
   }
   return process.env.JWT_SECRET;
