@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   registerUser,
+  provisionUser,
   loginUser,
   getUserProfile,
   updateUserLocation,
@@ -10,6 +11,7 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 
 router.post('/register', registerUser);
+router.post('/provision', protect, require('../middleware/authMiddleware').authorizeRoles('Admin'), provisionUser);
 router.post('/login', loginUser);
 router.get('/me', protect, getUserProfile);
 router.put('/location', protect, updateUserLocation);
