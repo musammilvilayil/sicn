@@ -45,6 +45,7 @@ export default function ScanPage() {
 
   const qrRegionId = 'scanpage-html5qr-region';
   const scannerRef = useRef(null);
+  const verificationLockRef = useRef(false);
 
   const stopCamera = async () => {
     if (scannerRef.current) {
@@ -97,7 +98,8 @@ export default function ScanPage() {
   };
 
   const handleVerifyQr = async (qrPayload) => {
-    if (verifying) return;
+    if (verificationLockRef.current) return;
+    verificationLockRef.current = true;
     setVerifying(true);
     setErrorMsg('');
     try {
@@ -113,6 +115,7 @@ export default function ScanPage() {
     } catch (err) {
       setErrorMsg(err.message || `Unrecognized QR code: "${qrPayload}"`);
     } finally {
+      verificationLockRef.current = false;
       setVerifying(false);
     }
   };
@@ -121,7 +124,6 @@ export default function ScanPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setErrorMsg('');
-    setVerifying(true);
     try {
       const tempScanner = new Html5Qrcode('scanpage-file-reader');
       const decoded = await tempScanner.scanFile(file, true);
