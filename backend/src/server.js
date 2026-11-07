@@ -47,6 +47,7 @@ const teacherRoutes = require('./routes/teacherRoutes');
 const timetableRoutes = require('./routes/timetableRoutes');
 const seedRoutes = require('./routes/seedRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/nodes', nodeRoutes);
@@ -54,6 +55,7 @@ app.use('/api/navigation', navigationRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/timetable', timetableRoutes);
 app.use('/api/seed', seedRoutes);
+app.use('/api/attendance', attendanceRoutes);
 app.use('/api/attendance', attendanceRoutes);
 
 app.get('/api/health', (req, res) => {
