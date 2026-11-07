@@ -57,6 +57,9 @@ jobs:
       - name: Check JavaScript syntax
         run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
         working-directory: backend
-      - name: Run backend routing unit tests
+      - name: Run backend routing and measurement unit tests
         run: npm run test:unit
+        working-directory: backend
+      - name: Audit architectural measurements and graph integrity
+        run: npm run audit:geometry
         working-directory: backend

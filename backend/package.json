@@ -10,7 +10,8 @@
     "test:overhaul": "node src/scripts/testOverhaul.js",
     "test:multifloor": "node src/scripts/testMultiFloor.js",
     "test": "node src/scripts/testRoute.js",
-    "test:unit": "node --test src/scripts/testRoutingCorrectness.js src/scripts/testFloorCalibration.js"
+    "test:unit": "node --test src/scripts/testRoutingCorrectness.js src/scripts/testFloorCalibration.js src/scripts/testArchitecturalMeasurements.js",
+    "audit:geometry": "node src/scripts/auditCampusGeometry.js"
   },
   "keywords": [],
   "author": "",

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { auditCampusGraph } = require('../utils/campusGraphAudit');
 
 const SEED_DATA_PATH = path.join(__dirname, '../data/seedData.json');
 
@@ -851,6 +852,11 @@ function syncSeedDataFile() {
         throw new Error(`Broken vertical transit link between ${u} and ${v}`);
       }
     }
+  }
+
+  const audit = auditCampusGraph(merged);
+  if (!audit.valid) {
+    throw new Error(`Generated campus graph failed validation: ${JSON.stringify(audit.errors)}`);
   }
 
   fs.writeFileSync(SEED_DATA_PATH, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
