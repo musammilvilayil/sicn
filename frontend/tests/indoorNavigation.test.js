@@ -7,6 +7,7 @@ import {
   getSegmentDistance,
   interpolateRoutePosition,
   StepDetector,
+  validateRouteCheckpoint,
 } from '../src/utils/indoorNavigation.js';
 
 test('normalizes iOS compass headings', () => {
@@ -47,4 +48,28 @@ test('step detector rejects repeated peaks inside refractory interval', () => {
   assert.equal(detector.push(1.6, 1100), false);
   assert.equal(detector.push(0.1, 1200), false);
   assert.equal(detector.push(1.5, 1400), true);
+});
+
+test('requires the exact origin and destination landing for a floor transition', () => {
+  const route = {
+    path: [
+      { nodeId: 'GF-STAIR-A', floor: 0 },
+      { nodeId: '1F-STAIR-A', floor: 1 },
+    ],
+  };
+  assert.deepEqual(
+    validateRouteCheckpoint(route, 0, { nodeId: 'GF-STAIR-A', floor: 0 }, 0),
+    { valid: true, floor: 0, stage: 'transition-origin' }
+  );
+  assert.deepEqual(
+    validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-A', floor: 1 }, 0),
+    { valid: true, floor: 1, stage: 'transition-destination' }
+  );
+  assert.equal(validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-B', floor: 1 }, 0).valid, false);
+});
+
+test('rejects unrelated or wrong-floor checkpoints during normal route navigation', () => {
+  const route = { path: [{ nodeId: 'GF-A', floor: 0 }, { nodeId: 'GF-B', floor: 0 }] };
+  assert.equal(validateRouteCheckpoint(route, 0, { nodeId: 'GF-B', floor: 0 }, 0).valid, true);
+  assert.equal(validateRouteCheckpoint(route, 0, { nodeId: '1F-X', floor: 1 }, 0).valid, false);
 });
