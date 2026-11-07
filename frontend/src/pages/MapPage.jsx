@@ -191,7 +191,7 @@ export default function MapPage() {
       {/* FLOATING TOP SEARCH BAR & ROUTE PLANNER (GOOGLE MAPS UI) */}
       {/* ======================================================== */}
       {!showAROverlay && (
-      <header className="fixed top-3 inset-x-3 md:left-28 md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2">
+      <header className="fixed top-3 inset-x-3 md:left-[260px] md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2">
         {!showRoutePlanner ? (
           /* Collapsed Google Maps Search Pill */
           <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_8px_28px_rgba(15,23,42,0.14)] border border-slate-200/90 overflow-hidden">
@@ -521,7 +521,7 @@ export default function MapPage() {
       {!showAROverlay && routeResult && sheetSnap === 'closed' && (
         <button
           onClick={() => setSheetSnap('peek')}
-          className="fixed bottom-20 left-4 md:bottom-6 md:left-28 z-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-1.5"
+          className="fixed bottom-20 left-4 md:bottom-6 md:left-[260px] z-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-1.5"
         >
           <Sparkles size={14} />
           <span>View Active Route ({routeResult.totalDistance}m)</span>
