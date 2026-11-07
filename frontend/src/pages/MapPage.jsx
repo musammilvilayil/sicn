@@ -610,6 +610,8 @@ export default function MapPage() {
             <span>Accessible</span>
           </button>
 
+          <button onClick={() => navigate('/walkthroughs')} className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-white/95 px-3 py-1.5 text-xs font-bold text-blue-700 shadow-md transition hover:bg-blue-50"><Video size={13}/><span>Campus Walkthroughs</span></button>
+          {canEditMap && <button onClick={() => navigate('/admin/survey')} className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white/95 px-3 py-1.5 text-xs font-bold text-emerald-700 shadow-md transition hover:bg-emerald-50"><Camera size={13}/><span>Record Walkthrough</span></button>}
           {/* Admin Map Edit Toggle (Visible ONLY to Admin role!) */}
           {canEditMap && (
             <button
