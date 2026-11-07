@@ -12,6 +12,9 @@ function auditCampusGraph(graph, options = {}) {
   const edgeIds = new Set();
   const floorCounts = {};
   const measurementSummary = {
+    parsed: 0,
+    unparsed: 0,
+    missing: 0,
     nodesWithMeasurements: 0,
     nodesWithoutMeasurements: 0,
     parsedAnnotations: 0,
@@ -39,9 +42,12 @@ function auditCampusGraph(graph, options = {}) {
 
     const raw = node.metadata?.dimensions || node.metadata?.description || '';
     const parsed = parseArchitecturalMeasurement(raw);
+    if (!raw) measurementSummary.missing += 1;
     if (!parsed.measurements.length) {
+      measurementSummary.unparsed += raw ? 1 : 0;
       measurementSummary.nodesWithoutMeasurements += 1;
     } else {
+      measurementSummary.parsed += 1;
       measurementSummary.nodesWithMeasurements += 1;
       measurementSummary.parsedAnnotations += parsed.measurements.length;
       const rectangles = parsed.measurements.filter((item) => item.kind === 'rectangle');
