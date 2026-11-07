@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 
 export default function FloorMap({
   floor = 0,
@@ -16,6 +16,10 @@ export default function FloorMap({
   onSelectNode,
   onAdminMapClick,
   onSwitchFloor,
+  userPosition = null,
+  userHeading = null,
+  mapNorthHeading = 0,
+  navigationActive = false,
 }) {
   const svgRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -75,14 +79,64 @@ export default function FloorMap({
     return inboundMatch;
   }, [routeResult, floor]);
 
-  // Polyline points for active floor route segments
-  const pathPolylinePoints = useMemo(() => {
-    if (!routeResult?.path || routeResult.path.length < 2) return '';
-    return routeResult.path
-      .filter((curr) => curr.floor === floor)
-      .map((curr) => `${scaleX(curr.coordinates.x)},${scaleY(curr.coordinates.y)}`)
-      .join(' ');
+  // Keep floor segments separate; filtering all same-floor nodes can draw
+  // a false straight line across an intervening floor transition.
+  const pathPolylineSegments = useMemo(() => {
+    if (!routeResult?.path || routeResult.path.length < 2) return [];
+    const segments = [];
+    let current = [];
+    routeResult.path.forEach((node, index) => {
+      if (node.floor !== floor) {
+        if (current.length > 1) segments.push(current);
+        current = [];
+        return;
+      }
+      if (index > 0 && routeResult.path[index - 1].floor !== floor && current.length) {
+        if (current.length > 1) segments.push(current);
+        current = [];
+      }
+      current.push(`${scaleX(node.coordinates.x)},${scaleY(node.coordinates.y)}`);
+      if (index < routeResult.path.length - 1 && routeResult.path[index + 1].floor !== floor) {
+        if (current.length > 1) segments.push(current);
+        current = [];
+      }
+    });
+    if (current.length > 1) segments.push(current);
+    return segments;
   }, [routeResult, floor]);
+
+  const currentPosition = userPosition && Number(userPosition.floor) === Number(floor)
+    ? userPosition
+    : startNode && Number(startNode.floor) === Number(floor)
+      ? { ...startNode.coordinates, floor: startNode.floor }
+      : null;
+
+  // Fit the active floor's route into the map viewport when a route/floor changes.
+  useEffect(() => {
+    if (!routeResult?.path?.length || !setZoom || !setPan || typeof window === 'undefined') return;
+    const points = routeResult.path
+      .filter((node) => Number(node.floor) === Number(floor))
+      .map((node) => ({ x: scaleX(node.coordinates.x), y: scaleY(node.coordinates.y) }));
+    if (!points.length) return;
+    const minX = Math.min(...points.map((point) => point.x));
+    const maxX = Math.max(...points.map((point) => point.x));
+    const minY = Math.min(...points.map((point) => point.y));
+    const maxY = Math.max(...points.map((point) => point.y));
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const width = Math.max(110, maxX - minX);
+    const height = Math.max(90, maxY - minY);
+    const pxPerSvgX = Math.min(window.innerWidth, 1380) / 1000;
+    const pxPerSvgY = Math.min(window.innerHeight, 860) / 620;
+    const fitX = (window.innerWidth - 110) / (width * pxPerSvgX);
+    const fitY = (window.innerHeight - 300) / (height * pxPerSvgY);
+    const nextZoom = Math.max(1.12, Math.min(2.35, fitX, fitY));
+    setZoom(nextZoom);
+    setPan({
+      x: Math.max(-420, Math.min(420, (500 - centerX) * pxPerSvgX * nextZoom)),
+      y: Math.max(-320, Math.min(320, (310 - centerY) * pxPerSvgY * nextZoom)),
+    });
+  }, [routeResult, floor, setZoom, setPan]);
 
   // Subtle network edges on current floor (visible in Admin Edit Mode or light guide lines)
   const floorEdges = useMemo(() => {
@@ -570,38 +624,16 @@ export default function FloorMap({
           </g>
 
           {/* Active A* Route Polyline (Google Maps Blue Path) */}
-          {pathPolylinePoints && (
-            <g className="rendered-path-layer">
-              <polyline
-                points={pathPolylinePoints}
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth="12"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.28"
-                filter="url(#routeGlow)"
-              />
-              <polyline
-                points={pathPolylinePoints}
-                fill="none"
-                stroke="#1d4ed8"
-                strokeWidth="6.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <polyline
-                points={pathPolylinePoints}
-                fill="none"
-                stroke="#93c5fd"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray="8 10"
-                className="animated-dash-line"
-              />
-            </g>
-          )}
+          {pathPolylineSegments.map((segment, index) => {
+            const points = segment.join(' ');
+            return (
+              <g className="rendered-path-layer" key={`floor-route-${floor}-${index}`}>
+                <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" opacity="0.28" filter="url(#routeGlow)" />
+                <polyline points={points} fill="none" stroke="#1d4ed8" strokeWidth="6.5" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points={points} fill="none" stroke="#93c5fd" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="8 10" className="animated-dash-line" />
+              </g>
+            );
+          })}
 
           {/* Inter-floor Transition Action Pill */}
           {floorTransitionInfo && (
@@ -742,6 +774,22 @@ export default function FloorMap({
           </g>
 
           {/* ======================================================== */}
+          {/* Phone compass marker. Rotation is relative to the calibrated PDF north. */}
+          {currentPosition && (
+            <g className="sicn-phone-position" transform={`translate(${scaleX(currentPosition.x)},${scaleY(currentPosition.y)})`}>
+              <circle r="25" fill="#2563eb" opacity="0.14" />
+              <circle r="13" fill="#2563eb" stroke="#ffffff" strokeWidth="3" />
+              {navigationActive && userHeading !== null && (
+                <g transform={`rotate(${userHeading - mapNorthHeading})`}>
+                  <path d="M0 -39 L10 -12 L0 -18 L-10 -12 Z" fill="#1d4ed8" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" />
+                </g>
+              )}
+              <circle r="4" fill="#ffffff" />
+              <rect x="-23" y="17" width="46" height="16" rx="8" fill="#1d4ed8" stroke="#ffffff" strokeWidth="1.5" />
+              <text x="0" y="28" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="800">YOU</text>
+            </g>
+          )}
+
           {/* REAL-TIME SOCKET.IO LIVE FRIEND AVATARS                  */}
           {/* ======================================================== */}
           <g className="live-friends-layer">
