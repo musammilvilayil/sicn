@@ -130,17 +130,17 @@ export default function FloorPlanCalibrationViewer({
   useEffect(() => {
     if (calibration &&
         Number(calibration.pageNumber) === Number(pageNumber) &&
-        calibration.sourcePdf === plan.sourceName) {
+        calibration.sourcePdf === plan?.sourceName) {
       setControlPoints(calibration.controlPoints || []);
     } else {
       setControlPoints([]);
     }
-  }, [calibration, pageNumber, plan.sourceName]);
+  }, [calibration, pageNumber, plan?.sourceName]);
 
   const transform = useMemo(() => {
     const savedMatchesPage = calibration &&
       Number(calibration.pageNumber) === Number(pageNumber) &&
-      calibration.sourcePdf === plan.sourceName;
+      calibration.sourcePdf === plan?.sourceName;
     if (savedMatchesPage && calibration?.transform?.xCoefficients && calibration?.transform?.yCoefficients) {
       return calibration.transform;
     }
@@ -148,7 +148,7 @@ export default function FloorPlanCalibrationViewer({
       try { return solveAffineCalibration(controlPoints); } catch { return null; }
     }
     return null;
-  }, [calibration, controlPoints, pageNumber, plan.sourceName]);
+  }, [calibration, controlPoints, pageNumber, plan?.sourceName]);
 
   const toViewport = (node) => {
     if (!transform || !pageMetrics) return null;

@@ -95,6 +95,20 @@ export default function MapPage() {
   const setWalkedMeters = useCallback((meters) => setWalkProgress({ routeResult, meters }), [routeResult]);
   const [calibrationStartSteps, setCalibrationStartSteps] = useState(null);
 
+  // Search & Route Planner UI state
+  const [searchText, setSearchText] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [showRoutePlanner, setShowRoutePlanner] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [showFloorPlan, setShowFloorPlan] = useState(false);
+  const [autoScannerOpen, setAutoScannerOpen] = useState(false);
+  const [confirmedTransition, setConfirmedTransition] = useState(null);
+  const [headingUp, setHeadingUp] = useState(false);
+  const [autoFollow, setAutoFollow] = useState(true);
+  const [routeDeviation, setRouteDeviation] = useState(false);
+  const headingDeviationCountRef = useRef(0);
+
   const transitionPromptRef = useRef(null);
   const handlePdrStep = useCallback(() => {
     if (calibrationStartSteps !== null || !routeResult?.path?.length) return;
@@ -125,20 +139,6 @@ export default function MapPage() {
   }, [calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, confirmedTransition, setActiveStepIndex, setWalkedMeters, showToast]);
 
   const { heading, stepCount, status: sensorStatus, error: sensorError, startSensors } = usePhoneSensors(handlePdrStep);
-
-  // Search & Route Planner UI state
-  const [searchText, setSearchText] = useState('');
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [showRoutePlanner, setShowRoutePlanner] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  const [showFloorPlan, setShowFloorPlan] = useState(false);
-  const [autoScannerOpen, setAutoScannerOpen] = useState(false);
-  const [confirmedTransition, setConfirmedTransition] = useState(null);
-  const [headingUp, setHeadingUp] = useState(false);
-  const [autoFollow, setAutoFollow] = useState(true);
-  const [routeDeviation, setRouteDeviation] = useState(false);
-  const headingDeviationCountRef = useRef(0);
 
   // Admin Map Editor state
   const [adminEditMode, setAdminEditMode] = useState(false);
