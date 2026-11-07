@@ -167,13 +167,17 @@ const getUserProfile = async (req, res) => {
 
 const updateUserLocation = async (req, res) => {
   try {
-    const { nodeId } = req.body || {};
+    const { nodeId, qrPayload } = req.body || {};
     if (typeof nodeId !== 'string' || !nodeId.trim()) {
       return res.status(400).json({ message: 'Node ID is required.' });
     }
     const normalizedNodeId = nodeId.trim().toUpperCase();
-    const checkpoint = await Node.findOne({ nodeId: normalizedNodeId }).select('nodeId');
+    const checkpoint = await Node.findOne({ nodeId: normalizedNodeId }).select('nodeId qrCode');
     if (!checkpoint) return res.status(404).json({ message: 'Campus checkpoint not found.' });
+    const expectedQr = checkpoint.qrCode || 'QR_' + checkpoint.nodeId.replace(/-/g, '_');
+    if (typeof qrPayload !== 'string' || qrPayload.trim() !== expectedQr) {
+      return res.status(403).json({ message: 'A valid physical checkpoint QR scan is required to confirm location.' });
+    }
     req.user.currentLocationNodeId = normalizedNodeId;
     req.user.locationUpdatedAt = new Date();
     await req.user.save();
