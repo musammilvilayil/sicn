@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -15,6 +15,8 @@ import {
   Plus,
   Sparkles,
   Camera,
+  Compass,
+  Footprints,
 } from 'lucide-react';
 import FloorMap from '../components/FloorMap';
 import ARView from '../components/ARView';
@@ -26,6 +28,8 @@ import { api } from '../services/api';
 import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import usePhoneSensors from '../hooks/usePhoneSensors';
+import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition } from '../utils/indoorNavigation';
 
 const FLOOR_DEFS = [
   { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
@@ -74,6 +78,20 @@ export default function MapPage() {
   // Map camera state
   const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 768 ? 1.12 : 1));
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const { heading, stepCount, status: sensorStatus, error: sensorError, startSensors } = usePhoneSensors();
+  const [mapNorthHeading, setMapNorthHeading] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const saved = window.localStorage.getItem('sicn_map_north_heading');
+    return saved !== null && Number.isFinite(Number(saved)) ? Number(saved) : null;
+  });
+  const [strideLengthMeters, setStrideLengthMeters] = useState(() => {
+    if (typeof window === 'undefined') return 0.72;
+    const saved = Number(window.localStorage.getItem('sicn_stride_length'));
+    return Number.isFinite(saved) && saved >= 0.35 && saved <= 1.2 ? saved : 0.72;
+  });
+  const [walkedMeters, setWalkedMeters] = useState(0);
+  const [calibrationStartSteps, setCalibrationStartSteps] = useState(null);
+  const processedStepsRef = useRef(0);
 
   // Search & Route Planner UI state
   const [searchText, setSearchText] = useState('');
@@ -108,6 +126,7 @@ export default function MapPage() {
   }, [nodes, searchText, categoryFilter]);
 
   const handleSelectSearchDestination = (node) => {
+    setWalkedMeters(0);
     setDestinationNodeId(node.nodeId);
     setSearchText('');
     setCategoryFilter('');
@@ -117,6 +136,7 @@ export default function MapPage() {
   };
 
   const handleMapNodeAction = (node, actionType) => {
+    if (actionType === 'start') setWalkedMeters(0);
     if (actionType === 'admin_edit' && canEditMap) {
       setEditingNode(node);
       setAdminModalOpen(true);
@@ -139,6 +159,8 @@ export default function MapPage() {
   };
 
   const handleConfirmIndoorCheckpoint = (checkpoint) => {
+    setWalkedMeters(0);
+    setActiveStepIndex(0);
     setStartNodeId(checkpoint.nodeId);
     setCurrentFloor(Number(checkpoint.floor));
     api.updateMyLocation(checkpoint.nodeId, checkpoint.qrValue).catch(() => {});
@@ -148,6 +170,93 @@ export default function MapPage() {
     }
     showToast(`Location confirmed: ${checkpoint.name}`, 'success');
   };
+
+  const handleEnableCompass = async () => {
+    const enabled = await startSensors();
+    if (enabled) showToast('Phone compass and motion sensors enabled', 'success');
+    else showToast(sensorError || 'Phone sensors could not be enabled', 'error');
+  };
+
+  const handleCalibrateNorth = () => {
+    if (heading === null) {
+      showToast('Enable the phone compass first. Point the top of your phone toward the North direction marked on the floor plan.', 'info');
+      return;
+    }
+    setMapNorthHeading(heading);
+    window.localStorage.setItem('sicn_map_north_heading', String(heading));
+    showToast('North reference saved for this device', 'success');
+  };
+
+  const handleStrideCalibration = () => {
+    if (calibrationStartSteps === null) {
+      setCalibrationStartSteps(stepCount);
+      showToast('Walk exactly 10 metres on a measured, straight corridor, then tap Finish 10m calibration.', 'info');
+      return;
+    }
+    const measuredSteps = stepCount - calibrationStartSteps;
+    if (measuredSteps < 5) {
+      showToast('Not enough steps detected. Walk the measured 10 metres and try again.', 'error');
+      return;
+    }
+    const calibratedStride = Math.max(0.35, Math.min(1.2, 10 / measuredSteps));
+    setStrideLengthMeters(calibratedStride);
+    window.localStorage.setItem('sicn_stride_length', String(calibratedStride));
+    setCalibrationStartSteps(null);
+    setWalkedMeters(0);
+    showToast(`Walking distance calibrated: ${calibratedStride.toFixed(2)} m per step`, 'success');
+  };
+
+  // PDR advances along same-floor walking edges only. A staircase/lift edge
+  // never changes the confirmed floor; destination QR confirmation is required.
+  useEffect(() => {
+    if (stepCount <= processedStepsRef.current) return;
+    const newSteps = stepCount - processedStepsRef.current;
+    processedStepsRef.current = stepCount;
+    if (sensorStatus !== 'active' || calibrationStartSteps !== null || !routeResult?.path?.length) return;
+
+    let remainingSteps = newSteps;
+    let nextIndex = activeStepIndex;
+    let distanceOnSegment = walkedMeters;
+    while (remainingSteps > 0 && nextIndex < routeResult.path.length - 1) {
+      const from = routeResult.path[nextIndex];
+      const to = routeResult.path[nextIndex + 1];
+      const edge = routeResult.edges?.[nextIndex];
+      if (!from || !to || from.floor !== to.floor || ['stairs', 'lift'].includes(edge?.type)) break;
+      const segmentDistance = getSegmentDistance(routeResult, nextIndex);
+      if (segmentDistance <= 0) break;
+      distanceOnSegment += strideLengthMeters;
+      remainingSteps -= 1;
+      if (distanceOnSegment >= segmentDistance) {
+        nextIndex += 1;
+        distanceOnSegment = 0;
+      }
+    }
+    if (nextIndex !== activeStepIndex) setActiveStepIndex(nextIndex);
+    setWalkedMeters(distanceOnSegment);
+  }, [stepCount, sensorStatus, calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, setActiveStepIndex]);
+
+  useEffect(() => {
+    setWalkedMeters(0);
+    processedStepsRef.current = stepCount;
+  }, [routeResult, stepCount]);
+
+  const estimatedPosition = useMemo(() => {
+    const interpolated = interpolateRoutePosition(routeResult, activeStepIndex, walkedMeters);
+    if (interpolated) return interpolated;
+    if (startNodeObj?.coordinates) return { floor: startNodeObj.floor, ...startNodeObj.coordinates, progress: 0 };
+    return null;
+  }, [routeResult, activeStepIndex, walkedMeters, startNodeObj]);
+
+  const activeRouteSegment = routeResult?.path?.[activeStepIndex] && routeResult?.path?.[activeStepIndex + 1]
+    ? { from: routeResult.path[activeStepIndex], to: routeResult.path[activeStepIndex + 1] }
+    : null;
+  const targetBearing = activeRouteSegment ? getMapBearing(activeRouteSegment.from, activeRouteSegment.to) : null;
+  const relativeTurn = heading !== null && targetBearing !== null
+    ? getRelativeBearing(targetBearing, heading, mapNorthHeading ?? 0)
+    : null;
+  const segmentDistance = routeResult ? getSegmentDistance(routeResult, activeStepIndex) : 0;
+  const remainingDistance = Math.max(0, segmentDistance - walkedMeters);
+  const isVerticalTransition = activeRouteSegment && activeRouteSegment.from.floor !== activeRouteSegment.to.floor;
 
   const handleAdminMapClick = (coords) => {
     if (!canEditMap) return;
@@ -192,6 +301,10 @@ export default function MapPage() {
           friends={friendsInRoom}
           zoom={zoom}
           setZoom={setZoom}
+          userPosition={estimatedPosition}
+          userHeading={heading}
+          mapNorthHeading={mapNorthHeading ?? 0}
+          navigationActive={Boolean(routeResult)}
           pan={pan}
           setPan={setPan}
           adminEditMode={canEditMap && adminEditMode}
@@ -399,6 +512,25 @@ export default function MapPage() {
             <span>{autoScannerOpen ? 'QR Scanning On' : 'Auto QR Checkpoints'}</span>
           </button>
 
+          <button
+            onClick={sensorStatus === 'active' || sensorStatus === 'compass-only' ? handleCalibrateNorth : handleEnableCompass}
+            title={sensorStatus === 'active' || sensorStatus === 'compass-only' ? 'Point the phone toward the floor plan North arrow, then calibrate' : 'Enable phone compass and motion sensors'}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50 transition"
+          >
+            <Compass size={13} />
+            <span>{sensorStatus === 'active' || sensorStatus === 'compass-only' ? (mapNorthHeading === null ? 'Calibrate North' : 'Recalibrate North') : 'Enable Compass'}</span>
+          </button>
+
+          <button
+            onClick={handleStrideCalibration}
+            disabled={sensorStatus !== 'active'}
+            title="Walk a measured 10 metres to calibrate your step length"
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${calibrationStartSteps !== null ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50'} disabled:opacity-40`}
+          >
+            <Footprints size={13} />
+            <span>{calibrationStartSteps !== null ? 'Finish 10m calibration' : `Calibrate steps · ${strideLengthMeters.toFixed(2)}m`}</span>
+          </button>
+
           {/* Live Share Location Button */}
           <button
             onClick={() => setIsShareOpen(true)}
@@ -464,6 +596,32 @@ export default function MapPage() {
             </button>
           ))}
         </div>
+        {routeResult && (
+          <div className="pointer-events-auto mt-1 mx-auto w-fit max-w-[min(92vw,420px)] rounded-2xl bg-slate-950/90 text-white border border-white/15 shadow-xl px-4 py-2.5 backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <Navigation size={16} className="text-blue-300 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs font-extrabold">
+                  {isVerticalTransition
+                    ? `Reach ${activeRouteSegment.to.name}, then scan the destination QR`
+                    : relativeTurn === null
+                      ? 'Enable compass for live turn guidance'
+                      : Math.abs(relativeTurn) <= 18
+                        ? 'Walk straight'
+                        : relativeTurn > 0
+                          ? `Turn right ${Math.round(Math.abs(relativeTurn))}°`
+                          : `Turn left ${Math.round(Math.abs(relativeTurn))}°`}
+                </div>
+                <div className="text-[10px] text-slate-300 mt-0.5">
+                  {heading === null ? 'Compass unavailable' : `Facing ${Math.round(heading)}°`}
+                  {' · '}{mapNorthHeading === null ? 'North not calibrated' : 'North calibrated'}
+                  {' · '}{sensorStatus === 'active' ? `${remainingDistance.toFixed(1)} m to next point` : 'Step tracking inactive'}
+                </div>
+                {sensorError && <div className="text-[10px] text-amber-200 mt-0.5">{sensorError}</div>}
+              </div>
+            </div>
+          </div>
+        )}
       </header>
       )}
 
