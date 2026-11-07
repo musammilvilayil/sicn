@@ -140,8 +140,16 @@ export function validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint
   const isOnCurrentFloorRoute = path.some(
     (node) => node.nodeId === checkpoint.nodeId && Number(node.floor) === checkpointFloor
   );
-  if (!isOnCurrentFloorRoute || checkpointFloor !== Number(currentFloor)) {
-    return { valid: false, reason: 'This QR checkpoint is not on the active route and confirmed current floor.' };
+  if (checkpointFloor !== Number(currentFloor)) {
+    return { valid: false, reason: 'This QR checkpoint belongs to a different floor.' };
+  }
+  if (!isOnCurrentFloorRoute) {
+    return {
+      valid: true,
+      floor: checkpointFloor,
+      stage: 'off-route-checkpoint',
+      reason: 'This checkpoint confirms that you left the planned route. A new route will be calculated from here.',
+    };
   }
   return { valid: true, floor: checkpointFloor, stage: 'route-checkpoint' };
 }
