@@ -148,7 +148,7 @@ export default function ScanPage() {
     <div className="min-h-dvh bg-slate-50 pb-24">
       {/* Top Mobile App Header */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3.5">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
               <QrCode size={20} />
@@ -172,7 +172,7 @@ export default function ScanPage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+      <main className="max-w-5xl mx-auto px-4 py-4 space-y-4 md:pl-24">
         {/* Socket.io Live Broadcast Banner */}
         <div
           onClick={() => setShareOpen(true)}
