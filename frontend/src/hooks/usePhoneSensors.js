@@ -34,6 +34,8 @@ export default function usePhoneSensors() {
   }, []);
 
   const startSensors = useCallback(async () => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
     setError('');
     if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) {
       setStatus('unsupported');
