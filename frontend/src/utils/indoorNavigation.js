@@ -94,3 +94,39 @@ export class StepDetector {
     this.lastStepAt = 0;
   }
 }
+
+/**
+ * Validate a QR checkpoint against the active route. During a floor transition,
+ * only the exact origin landing or exact destination landing on the same route
+ * edge is accepted; this prevents a different staircase from changing floors.
+ */
+export function validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint, currentFloor) {
+  if (!checkpoint?.nodeId) return { valid: false, reason: 'Invalid checkpoint.' };
+  const path = routeResult?.path || [];
+  if (path.length < 2) {
+    return { valid: true, floor: Number(checkpoint.floor), stage: 'manual' };
+  }
+
+  const current = path[activeStepIndex];
+  const next = path[activeStepIndex + 1];
+  if (current && next && Number(current.floor) !== Number(next.floor)) {
+    if (checkpoint.nodeId === current.nodeId) {
+      return { valid: true, floor: Number(current.floor), stage: 'transition-origin' };
+    }
+    if (checkpoint.nodeId === next.nodeId) {
+      return { valid: true, floor: Number(next.floor), stage: 'transition-destination' };
+    }
+    return {
+      valid: false,
+      reason: 'This is not the expected staircase/lift landing for the active route.',
+    };
+  }
+
+  const isOnCurrentFloorRoute = path.some(
+    (node) => node.nodeId === checkpoint.nodeId && Number(node.floor) === Number(currentFloor)
+  );
+  if (!isOnCurrentFloorRoute) {
+    return { valid: false, reason: 'This QR checkpoint is not on the active route and current floor.' };
+  }
+  return { valid: true, floor: Number(checkpoint.floor), stage: 'route-checkpoint' };
+}
