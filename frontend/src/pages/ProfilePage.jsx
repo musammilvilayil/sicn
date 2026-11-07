@@ -27,6 +27,7 @@ export default function ProfilePage() {
     canAccessTimetableRouting,
     login,
     register,
+    changePassword,
     logout,
   } = useAuth();
 
@@ -37,6 +38,9 @@ export default function ProfilePage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -57,6 +61,22 @@ export default function ProfilePage() {
       showToast(err.message || 'Authentication error', 'error');
     } finally {
       setBusy(false);
+    }
+  };
+
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordBusy(true);
+    try {
+      await changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      showToast('Password updated. Please sign in again.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Password update failed', 'error');
+    } finally {
+      setPasswordBusy(false);
     }
   };
 
@@ -187,6 +207,47 @@ export default function ProfilePage() {
             )}
           </div>
         </section>
+
+        {user?.mustChangePassword && (
+          <section className="rounded-3xl border border-amber-300 bg-amber-50 p-5 shadow-sm space-y-3">
+            <div>
+              <h3 className="text-sm font-extrabold text-amber-950">Secure your administrator account</h3>
+              <p className="mt-1 text-xs leading-relaxed text-amber-900">
+                This is a one-time administrator password. Set a new password before continuing to use this account.
+              </p>
+            </div>
+            <form onSubmit={handlePasswordChange} className="space-y-2.5">
+              <input
+                type="password"
+                autoComplete="current-password"
+                required
+                minLength={1}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Temporary password from server terminal"
+                className="w-full rounded-xl border border-amber-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <input
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={12}
+                maxLength={128}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New password (minimum 12 characters)"
+                className="w-full rounded-xl border border-amber-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <button
+                type="submit"
+                disabled={passwordBusy || newPassword.length < 12}
+                className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-50"
+              >
+                {passwordBusy ? 'Updating password…' : 'Set new password'}
+              </button>
+            </form>
+          </section>
+        )}
 
         {/* RBAC Access Matrix */}
         <section className="bg-white border border-slate-200 rounded-3xl p-4 shadow-xs space-y-2.5">
