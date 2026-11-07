@@ -22,6 +22,13 @@ const protect = async (req, res, next) => {
     const user = await verifyRequestToken(req);
     if (!user) return res.status(401).json({ message: 'Authentication required. Please sign in.' });
     req.user = user;
+    const allowedDuringPasswordChange = req.baseUrl === '/api/auth' && ['/me', '/password'].includes(req.path);
+    if (user.mustChangePassword && !allowedDuringPasswordChange) {
+      return res.status(403).json({
+        code: 'PASSWORD_CHANGE_REQUIRED',
+        message: 'Change your temporary password before using the application.',
+      });
+    }
     return next();
   } catch (error) {
     return res.status(401).json({ message: 'Not authorized, token invalid or expired.' });
