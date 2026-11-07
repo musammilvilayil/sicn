@@ -31,7 +31,7 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import usePhoneSensors from '../hooks/usePhoneSensors';
-import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, advanceAlongRoute } from '../utils/indoorNavigation';
+import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, advanceAlongRoute, matchPositionToRoute, getRouteTurnInstruction } from '../utils/indoorNavigation';
 
 const FLOOR_DEFS = [
   { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
@@ -271,7 +271,15 @@ export default function MapPage() {
 
   const estimatedPosition = useMemo(() => {
     const interpolated = interpolateRoutePosition(routeResult, activeStepIndex, walkedMeters);
-    if (interpolated) return interpolated;
+    if (interpolated) {
+      const matched = matchPositionToRoute(interpolated, routeResult, {
+        preferredSegmentIndex: activeStepIndex,
+        maxDistance: 12,
+      });
+      return matched && matched.segmentIndex === activeStepIndex
+        ? { ...interpolated, x: matched.x, y: matched.y, mapMatched: true }
+        : interpolated;
+    }
     const routeNode = routeResult?.path?.[Math.min(activeStepIndex, (routeResult.path.length || 1) - 1)];
     if (routeNode?.coordinates) return { floor: routeNode.floor, ...routeNode.coordinates, progress: 1 };
     if (startNodeObj?.coordinates) return { floor: startNodeObj.floor, ...startNodeObj.coordinates, progress: 0 };
@@ -289,6 +297,7 @@ export default function MapPage() {
   const segmentDistance = routeResult ? getSegmentDistance(routeResult, activeStepIndex) : 0;
   const remainingDistance = Math.max(0, segmentDistance - walkedMeters);
   const isVerticalTransition = activeRouteSegment && activeRouteSegment.from.floor !== activeRouteSegment.to.floor;
+  const nextTurnInstruction = getRouteTurnInstruction(routeResult, activeStepIndex);
 
   // A sustained heading mismatch is a deviation warning, not a false location fix.
   // The user confirms their actual position with a QR checkpoint before rerouting.
@@ -703,6 +712,11 @@ export default function MapPage() {
                   {' · '}{sensorStatus === 'active' ? `${remainingDistance.toFixed(1)} m to next point` : 'Step tracking inactive'}
                 </div>
                 {sensorError && <div className="text-[10px] text-amber-200 mt-0.5">{sensorError}</div>}
+                {nextTurnInstruction && !isVerticalTransition && (
+                  <div className="mt-1 text-[10px] text-cyan-200">
+                    Next: {nextTurnInstruction.type === 'u-turn' ? 'U-turn' : `Turn ${nextTurnInstruction.type}`} at {nextTurnInstruction.atNodeName || nextTurnInstruction.atNodeId}
+                  </div>
+                )}
                 {routeDeviation && (
                   <div className="mt-2 flex items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 p-2">
                     <span className="flex-1 text-[10px] text-amber-100">Heading differs from the route. Confirm your position at the nearest QR checkpoint to recalculate safely.</span>
