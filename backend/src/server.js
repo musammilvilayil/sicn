@@ -11,6 +11,7 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+app.disable('x-powered-by');
 const allowedOrigins = (process.env.CLIENT_ORIGIN || '')
   .split(',')
   .map((origin) => origin.trim())
