@@ -238,7 +238,7 @@ export default function MapPage() {
   useEffect(() => {
     setWalkedMeters(0);
     processedStepsRef.current = stepCount;
-  }, [routeResult, stepCount]);
+  }, [routeResult]);
 
   const estimatedPosition = useMemo(() => {
     const interpolated = interpolateRoutePosition(routeResult, activeStepIndex, walkedMeters);
@@ -411,6 +411,8 @@ export default function MapPage() {
                     value={startNodeId}
                     onChange={(e) => {
                       const val = e.target.value;
+                      setWalkedMeters(0);
+                      setActiveStepIndex(0);
                       setStartNodeId(val);
                       broadcastCheckpoint(val);
                       if (destinationNodeId) {
@@ -727,7 +729,7 @@ export default function MapPage() {
           isARMode={isARMode}
           onLaunchAR={() => (isARMode ? fallbackTo2DMap() : launchARLiveView())}
           activeStepIndex={activeStepIndex}
-          onSelectStep={(idx) => setActiveStepIndex(idx)}
+          onSelectStep={(idx) => { setWalkedMeters(0); setActiveStepIndex(idx); }}
         />
       )}
 
