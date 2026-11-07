@@ -124,8 +124,11 @@ export default function IndoorCheckpointScanner({ enabled, onClose, onConfirm })
         };
         scan();
       } catch (err) {
-        stopCamera();
         if (!cancelledRef.current) {
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+          }
           setError(err?.message || 'Unable to start the camera. Check camera permission and retry.');
           setStatus('error');
         }
