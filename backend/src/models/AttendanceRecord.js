@@ -1,0 +1,4 @@
+const mongoose=require('mongoose');
+const schema=new mongoose.Schema({sessionId:{type:mongoose.Schema.Types.ObjectId,ref:'AttendanceSession',required:true},studentId:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},studentName:{type:String,required:true},studentEmail:{type:String,required:true,lowercase:true},department:{type:String,default:'General'},status:{type:String,enum:['Present','Late','Absent','Excused'],default:'Present'},method:{type:String,enum:['QR','Manual'],default:'QR'},checkedInAt:{type:Date,default:Date.now},markedBy:{type:mongoose.Schema.Types.ObjectId,ref:'User',default:null},note:{type:String,trim:true,maxlength:240,default:''}},{timestamps:true});
+schema.index({sessionId:1,studentId:1},{unique:true});schema.index({studentId:1,checkedInAt:-1});
+module.exports=mongoose.model('AttendanceRecord',schema);
