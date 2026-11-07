@@ -100,33 +100,51 @@ export class StepDetector {
  * only the exact origin landing or exact destination landing on the same route
  * edge is accepted; this prevents a different staircase from changing floors.
  */
-export function validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint, currentFloor) {
-  if (!checkpoint?.nodeId) return { valid: false, reason: 'Invalid checkpoint.' };
+export function validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint, currentFloor, transitionState = null) {
+  if (!checkpoint?.nodeId || !Number.isFinite(Number(checkpoint.floor))) {
+    return { valid: false, reason: 'Invalid checkpoint or missing floor metadata.' };
+  }
+  const checkpointFloor = Number(checkpoint.floor);
   const path = routeResult?.path || [];
   if (path.length < 2) {
-    return { valid: true, floor: Number(checkpoint.floor), stage: 'manual' };
+    return { valid: true, floor: checkpointFloor, stage: 'manual' };
   }
 
   const current = path[activeStepIndex];
   const next = path[activeStepIndex + 1];
-  if (current && next && Number(current.floor) !== Number(next.floor)) {
-    if (checkpoint.nodeId === current.nodeId) {
+  if (!current || checkpointFloor !== Number(currentFloor)) {
+    // A destination-floor QR cannot be used to skip the origin landing.
+    if (current && next && Number(current.floor) !== Number(next.floor)) {
+      return { valid: false, reason: 'Confirm the origin staircase/lift QR before scanning its destination landing.' };
+    }
+    return { valid: false, reason: 'This QR checkpoint is not on the confirmed current floor.' };
+  }
+
+  if (next && Number(current.floor) !== Number(next.floor)) {
+    if (checkpoint.nodeId === current.nodeId && checkpointFloor === Number(current.floor)) {
       return { valid: true, floor: Number(current.floor), stage: 'transition-origin' };
     }
-    if (checkpoint.nodeId === next.nodeId) {
+    const expectedOrigin = transitionState?.originNodeId === current.nodeId;
+    const expectedDestination = transitionState?.destinationNodeId === next.nodeId;
+    if (
+      expectedOrigin &&
+      expectedDestination &&
+      checkpoint.nodeId === next.nodeId &&
+      checkpointFloor === Number(next.floor)
+    ) {
       return { valid: true, floor: Number(next.floor), stage: 'transition-destination' };
     }
     return {
       valid: false,
-      reason: 'This is not the expected staircase/lift landing for the active route.',
+      reason: 'This is not the expected landing. Confirm the route origin QR first, then scan the matching destination landing.',
     };
   }
 
   const isOnCurrentFloorRoute = path.some(
-    (node) => node.nodeId === checkpoint.nodeId && Number(node.floor) === Number(currentFloor)
+    (node) => node.nodeId === checkpoint.nodeId && Number(node.floor) === checkpointFloor
   );
-  if (!isOnCurrentFloorRoute) {
-    return { valid: false, reason: 'This QR checkpoint is not on the active route and current floor.' };
+  if (!isOnCurrentFloorRoute || checkpointFloor !== Number(currentFloor)) {
+    return { valid: false, reason: 'This QR checkpoint is not on the active route and confirmed current floor.' };
   }
-  return { valid: true, floor: Number(checkpoint.floor), stage: 'route-checkpoint' };
+  return { valid: true, floor: checkpointFloor, stage: 'route-checkpoint' };
 }
