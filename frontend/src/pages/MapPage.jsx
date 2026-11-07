@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -78,7 +78,6 @@ export default function MapPage() {
   // Map camera state
   const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 768 ? 1.12 : 1));
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const { heading, stepCount, status: sensorStatus, error: sensorError, startSensors } = usePhoneSensors();
   const [mapNorthHeading, setMapNorthHeading] = useState(() => {
     if (typeof window === 'undefined') return null;
     const saved = window.localStorage.getItem('sicn_map_north_heading');
@@ -89,9 +88,29 @@ export default function MapPage() {
     const saved = Number(window.localStorage.getItem('sicn_stride_length'));
     return Number.isFinite(saved) && saved >= 0.35 && saved <= 1.2 ? saved : 0.72;
   });
-  const [walkedMeters, setWalkedMeters] = useState(0);
+  const [walkProgress, setWalkProgress] = useState({ routeResult: null, meters: 0 });
+  const walkedMeters = walkProgress.routeResult === routeResult ? walkProgress.meters : 0;
+  const setWalkedMeters = useCallback((meters) => setWalkProgress({ routeResult, meters }), [routeResult]);
   const [calibrationStartSteps, setCalibrationStartSteps] = useState(null);
-  const processedStepsRef = useRef(0);
+
+  const handlePdrStep = useCallback(() => {
+    if (calibrationStartSteps !== null || !routeResult?.path?.length) return;
+    const from = routeResult.path[activeStepIndex];
+    const to = routeResult.path[activeStepIndex + 1];
+    const edge = routeResult.edges?.[activeStepIndex];
+    if (!from || !to || from.floor !== to.floor || ['stairs', 'lift'].includes(edge?.type)) return;
+    const distance = getSegmentDistance(routeResult, activeStepIndex);
+    if (distance <= 0) return;
+    const nextDistance = walkedMeters + strideLengthMeters;
+    if (nextDistance >= distance) {
+      setActiveStepIndex((index) => Math.min(index + 1, routeResult.path.length - 2));
+      setWalkedMeters(0);
+    } else {
+      setWalkedMeters(nextDistance);
+    }
+  }, [calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, setActiveStepIndex, setWalkedMeters]);
+
+  const { heading, stepCount, status: sensorStatus, error: sensorError, startSensors } = usePhoneSensors(handlePdrStep);
 
   // Search & Route Planner UI state
   const [searchText, setSearchText] = useState('');
@@ -205,40 +224,6 @@ export default function MapPage() {
     setWalkedMeters(0);
     showToast(`Walking distance calibrated: ${calibratedStride.toFixed(2)} m per step`, 'success');
   };
-
-  // PDR advances along same-floor walking edges only. A staircase/lift edge
-  // never changes the confirmed floor; destination QR confirmation is required.
-  useEffect(() => {
-    if (stepCount <= processedStepsRef.current) return;
-    const newSteps = stepCount - processedStepsRef.current;
-    processedStepsRef.current = stepCount;
-    if (sensorStatus !== 'active' || calibrationStartSteps !== null || !routeResult?.path?.length) return;
-
-    let remainingSteps = newSteps;
-    let nextIndex = activeStepIndex;
-    let distanceOnSegment = walkedMeters;
-    while (remainingSteps > 0 && nextIndex < routeResult.path.length - 1) {
-      const from = routeResult.path[nextIndex];
-      const to = routeResult.path[nextIndex + 1];
-      const edge = routeResult.edges?.[nextIndex];
-      if (!from || !to || from.floor !== to.floor || ['stairs', 'lift'].includes(edge?.type)) break;
-      const segmentDistance = getSegmentDistance(routeResult, nextIndex);
-      if (segmentDistance <= 0) break;
-      distanceOnSegment += strideLengthMeters;
-      remainingSteps -= 1;
-      if (distanceOnSegment >= segmentDistance) {
-        nextIndex += 1;
-        distanceOnSegment = 0;
-      }
-    }
-    if (nextIndex !== activeStepIndex) setActiveStepIndex(nextIndex);
-    setWalkedMeters(distanceOnSegment);
-  }, [stepCount, sensorStatus, calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, setActiveStepIndex]);
-
-  useEffect(() => {
-    setWalkedMeters(0);
-    processedStepsRef.current = stepCount;
-  }, [routeResult]);
 
   const estimatedPosition = useMemo(() => {
     const interpolated = interpolateRoutePosition(routeResult, activeStepIndex, walkedMeters);
