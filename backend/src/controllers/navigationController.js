@@ -2,6 +2,7 @@ const Node = require('../models/Node');
 const Edge = require('../models/Edge');
 const User = require('../models/User');
 const { findShortestPath } = require('../algorithms/aStar');
+const { summarizeRouteDistanceQuality } = require('../utils/routeDistanceQuality');
 
 // @desc    Calculate shortest route between two nodes across floors using A*
 // @route   POST /api/navigation/route
@@ -35,6 +36,7 @@ const calculateRoute = async (req, res) => {
       return res.status(404).json(result);
     }
 
+    result.distanceQuality = summarizeRouteDistanceQuality(result.edges || []);
     return res.json(result);
   } catch (error) {
     console.error('calculateRoute error:', error);
