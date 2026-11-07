@@ -99,6 +99,7 @@ export default function ARView() {
   const [qrDetectionAvailable, setQrDetectionAvailable] = useState(false);
   const [motionAvailable, setMotionAvailable] = useState(false);
   const [walkedMeters, setWalkedMeters] = useState(0);
+  const [pendingCheckpoint, setPendingCheckpoint] = useState(null);
   const walkedMetersRef = useRef(0);
   const stepPeakRef = useRef({ above: false, lastStepAt: 0 });
   const qrDetectionLockRef = useRef(false);
@@ -331,15 +332,9 @@ export default function ARView() {
       try {
         const checkpoint = await api.getNodeByQR(rawValue);
         if (!cancelled && checkpoint?.nodeId) {
+          // Stop repeated detections of the same visible QR while the user confirms it.
           lastQrValueRef.current = rawValue;
-          setStartNodeId(checkpoint.nodeId);
-          setCurrentFloor(checkpoint.floor);
-          api.updateMyLocation(checkpoint.nodeId, rawValue).catch(() => {});
-          broadcastCheckpoint(checkpoint.nodeId);
-          if (destinationNodeId) {
-            await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
-          }
-          showToast(`Location confirmed: ${checkpoint.name}`, 'success');
+          setPendingCheckpoint({ ...checkpoint, qrValue: rawValue });
         }
       } catch {
         // Ignore unrelated QR codes in posters, notices or personal devices.
@@ -351,7 +346,7 @@ export default function ARView() {
     const scanFrame = async () => {
       if (cancelled) return;
       const video = videoRef.current;
-      if (video && video.readyState >= 2 && !qrDetectionLockRef.current && Date.now() - lastAttemptAt > 900) {
+      if (video && video.readyState >= 2 && !pendingCheckpoint && !qrDetectionLockRef.current && Date.now() - lastAttemptAt > 900) {
         lastAttemptAt = Date.now();
         try {
           if (detector) {
@@ -390,7 +385,22 @@ export default function ARView() {
       canvas.width = 0;
       canvas.height = 0;
     };
-  }, [sessionState, cameraReady, destinationNodeId, accessibleOnly, nodes, computeRoute, setStartNodeId, setCurrentFloor, showToast, broadcastCheckpoint]);
+  }, [sessionState, cameraReady, pendingCheckpoint, destinationNodeId, accessibleOnly, nodes, computeRoute, setStartNodeId, setCurrentFloor, showToast, broadcastCheckpoint]);
+
+  const confirmCheckpoint = useCallback(async () => {
+    if (!pendingCheckpoint?.nodeId) return;
+    const checkpoint = pendingCheckpoint;
+    setPendingCheckpoint(null);
+    setStartNodeId(checkpoint.nodeId);
+    setCurrentFloor(Number(checkpoint.floor));
+    setActiveStepIndex(0);
+    api.updateMyLocation(checkpoint.nodeId, checkpoint.qrValue).catch(() => {});
+    broadcastCheckpoint(checkpoint.nodeId);
+    if (destinationNodeId) {
+      await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
+    }
+    showToast(`Position updated: ${checkpoint.name} · Floor ${checkpoint.floor}`, 'success');
+  }, [pendingCheckpoint, setStartNodeId, setCurrentFloor, setActiveStepIndex, broadcastCheckpoint, destinationNodeId, computeRoute, accessibleOnly, nodes, showToast]);
 
   // Derive current & next A* path nodes, target bearing, and 3D arrow orientation
   const navMetrics = useMemo(() => {
@@ -703,6 +713,30 @@ export default function ARView() {
       )}
 
       {/* ======================================================== */}
+      {/* QR checkpoint confirmation: camera scanning is automatic during the AR session. */}
+      {sessionState === 'active' && pendingCheckpoint && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-slate-950/65 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl border border-emerald-300/30 bg-slate-900 p-5 text-white shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={23} /></div>
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">QR checkpoint detected</div>
+                <h3 className="text-base font-extrabold">Confirm your location</h3>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="text-sm font-bold">{pendingCheckpoint.name}</div>
+              <div className="mt-1 text-xs text-slate-300">Floor {pendingCheckpoint.floor} · {pendingCheckpoint.type || 'Indoor checkpoint'}</div>
+            </div>
+            <p className="text-xs leading-relaxed text-slate-300">Are you standing beside this corridor, lift or staircase checkpoint? Confirm to correct your live position and update the route.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setPendingCheckpoint(null)} className="rounded-xl bg-white/10 px-3 py-3 text-xs font-bold text-white hover:bg-white/15">Not here</button>
+              <button type="button" onClick={confirmCheckpoint} className="rounded-xl bg-emerald-600 px-3 py-3 text-xs font-extrabold text-white hover:bg-emerald-500">Yes, update location</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ACTIVE AR SESSION: 3D ARROW SCENE & NAVIGATION HUD       */}
       {/* ======================================================== */}
       {sessionState === 'active' && (
