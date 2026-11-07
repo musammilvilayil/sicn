@@ -16,9 +16,11 @@ export default function IndoorCheckpointScanner({ enabled, onClose, onConfirm })
   const cancelledRef = useRef(false);
   const busyRef = useRef(false);
   const lastAcceptedRef = useRef('');
+  const candidateRef = useRef(null);
   const [status, setStatus] = useState('starting');
   const [error, setError] = useState('');
   const [candidate, setCandidate] = useState(null);
+  candidateRef.current = candidate;
 
   const stopCamera = useCallback(() => {
     cancelledRef.current = true;
@@ -96,7 +98,7 @@ export default function IndoorCheckpointScanner({ enabled, onClose, onConfirm })
         const scan = async () => {
           if (cancelledRef.current) return;
           const video = videoRef.current;
-          if (video?.readyState >= 2 && !busyRef.current && !candidate) {
+          if (video?.readyState >= 2 && !busyRef.current && !candidateRef.current) {
             try {
               if (detectorRef.current) {
                 const codes = await detectorRef.current.detect(video);
@@ -135,7 +137,7 @@ export default function IndoorCheckpointScanner({ enabled, onClose, onConfirm })
       if (timerId) window.clearTimeout(timerId);
       stopCamera();
     };
-  }, [enabled, stopCamera, candidate]);
+  }, [enabled, stopCamera]);
 
   const confirmCheckpoint = () => {
     if (!candidate) return;
