@@ -48,6 +48,8 @@ export default function ProfilePage() {
   const [provisionPassword, setProvisionPassword] = useState('');
   const [provisionRole, setProvisionRole] = useState('Student');
   const [provisionTeacherId, setProvisionTeacherId] = useState('');
+  const [provisionDepartment, setProvisionDepartment] = useState('General');
+  const [provisionSemester, setProvisionSemester] = useState('');
   const [provisionBusy, setProvisionBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -99,12 +101,16 @@ export default function ProfilePage() {
         password: provisionPassword,
         role: provisionRole,
         teacherId: provisionRole === 'Teacher' ? provisionTeacherId : undefined,
+        department: provisionRole === 'Student' ? provisionDepartment : undefined,
+        semester: provisionRole === 'Student' ? provisionSemester : undefined,
       });
       showToast(`${result.user.name} account created as ${result.user.role}`, 'success');
       setProvisionName('');
       setProvisionEmail('');
       setProvisionPassword('');
       setProvisionTeacherId('');
+      setProvisionDepartment('General');
+      setProvisionSemester('');
     } catch (err) {
       showToast(err.message || 'Could not create account', 'error');
     } finally {
@@ -338,6 +344,12 @@ export default function ProfilePage() {
               </select>
               {provisionRole === 'Teacher' && (
                 <input required value={provisionTeacherId} onChange={(e) => setProvisionTeacherId(e.target.value)} placeholder="Existing faculty ID (e.g. TCH-001)" className="rounded-xl border border-slate-200 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:col-span-2" />
+              )}
+              {provisionRole === 'Student' && (
+                <>
+                  <input required value={provisionDepartment} onChange={(e) => setProvisionDepartment(e.target.value)} placeholder="Department (e.g. CSE)" className="rounded-xl border border-slate-200 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input value={provisionSemester} onChange={(e) => setProvisionSemester(e.target.value)} placeholder="Semester / batch (e.g. S5 CSE)" className="rounded-xl border border-slate-200 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                </>
               )}
               <button type="submit" disabled={provisionBusy || provisionPassword.length < 12} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50 sm:col-span-2">
                 {provisionBusy ? 'Creating account…' : 'Create account'}

@@ -149,6 +149,7 @@ function findShortestPath(startId, targetId, nodes, edges, options = {}) {
   nodes.forEach((n) => adj.set(n.nodeId, []));
 
   edges.forEach((edge) => {
+    if (!Number.isFinite(Number(edge.distance)) || Number(edge.distance) <= 0) return;
     // If wheelchair accessible mode is requested, ignore non-accessible paths
     if (accessibleOnly && !edge.accessible) {
       return;
@@ -191,6 +192,7 @@ function findShortestPath(startId, targetId, nodes, edges, options = {}) {
 
   while (!openSet.isEmpty()) {
     const currentId = openSet.dequeue();
+    if (visited.has(currentId)) continue;
 
     if (currentId === targetId) {
       // Reconstruct path

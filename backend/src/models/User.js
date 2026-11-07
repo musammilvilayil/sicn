@@ -37,10 +37,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: 'General',
     },
+    semester: { type: String, trim: true, default: '' },
     currentLocationNodeId: {
       type: String,
       default: 'GF-MAIN-ENTRANCE',
     },
+    locationUpdatedAt: { type: Date, default: null, index: true },
     avatarColor: {
       type: String,
       default: '#2563eb',

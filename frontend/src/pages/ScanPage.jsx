@@ -110,6 +110,7 @@ export default function ScanPage() {
       // Immediately calibrate start location & broadcast to Socket.io room!
       setStartNodeId(node.nodeId);
       setCurrentFloor(node.floor);
+      await api.updateMyLocation(node.nodeId, qrPayload);
       broadcastCheckpoint(node.nodeId);
       showToast(`Checked in at ${node.name}!`, 'success');
     } catch (err) {
@@ -370,7 +371,7 @@ export default function ScanPage() {
                 return (
                   <button
                     key={node.nodeId}
-                    onClick={() => handleVerifyQr(node.qrCode || node.nodeId)}
+                    onClick={() => handleVerifyQr(node.qrCode || `QR_${node.nodeId.replace(/-/g, '_')}`)}
                     className={`text-left p-3 rounded-2xl border transition ${
                       isSelected
                         ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500/20'

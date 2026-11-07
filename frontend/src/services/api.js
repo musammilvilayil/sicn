@@ -238,17 +238,33 @@ export const api = {
     return res.json();
   },
 
-  async updateMyLocation(nodeId) {
+  async updateMyLocation(nodeId, qrPayload) {
     const token = localStorage.getItem('bji_nav_token');
     if (!token) return null;
     const res = await fetch(`${API_BASE}/auth/location`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ nodeId }),
+      body: JSON.stringify({ nodeId, qrPayload }),
     });
     if (!res.ok) return null;
     return res.json();
   },
+
+  // ================= CAMPUS OCCUPANCY =================
+  async getCrowdSummary(windowMinutes = 10) { const r=await fetch(`${API_BASE}/navigation/crowd?windowMinutes=${windowMinutes}`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load occupancy');return d; },
+
+  // ================= ATTENDANCE API =================
+  async getAttendanceSettings() { const r=await fetch(`${API_BASE}/attendance/settings`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load settings');return d; },
+  async updateAttendanceSettings(p) { const r=await fetch(`${API_BASE}/attendance/settings`,{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify(p)});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to save settings');return d; },
+  async createAttendanceSession(p) { const r=await fetch(`${API_BASE}/attendance/sessions`,{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(p)});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to start session');return d; },
+  async getAttendanceSessions() { const r=await fetch(`${API_BASE}/attendance/sessions`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load sessions');return d; },
+  async refreshAttendanceQr(id) { const r=await fetch(`${API_BASE}/attendance/sessions/${encodeURIComponent(id)}/qr`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to refresh QR');return d; },
+  async closeAttendanceSession(id) { const r=await fetch(`${API_BASE}/attendance/sessions/${encodeURIComponent(id)}/close`,{method:'POST',headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to close session');return d; },
+  async getAttendanceRoster(id) { const r=await fetch(`${API_BASE}/attendance/sessions/${encodeURIComponent(id)}/roster`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load roster');return d; },
+  async markAttendance(id,p) { const r=await fetch(`${API_BASE}/attendance/sessions/${encodeURIComponent(id)}/records`,{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify(p)});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to update attendance');return d; },
+  async checkInAttendance(qrToken) { const r=await fetch(`${API_BASE}/attendance/check-in`,{method:'POST',headers:getAuthHeaders(),body:JSON.stringify({qrToken})});const d=await r.json();if(!r.ok)throw new Error(d.message||'Check-in failed');return d; },
+  async getMyAttendance() { const r=await fetch(`${API_BASE}/attendance/mine`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load your history');return d; },
+  async getAttendanceReports(p={}) { const q=new URLSearchParams(p);const r=await fetch(`${API_BASE}/attendance/reports?${q}`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load reports');return d; },
 
   // ================= DATABASE SEED (Admin Only) =================
   async reseed() {

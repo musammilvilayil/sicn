@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Teacher = require('../models/Teacher');
+const Node = require('../models/Node');
 
 const generateToken = (user) => {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET.startsWith('replace-')) {
@@ -80,7 +81,7 @@ function cryptoRandomIndex(length) {
 
 const provisionUser = async (req, res) => {
   try {
-    const { name, email, password, role, teacherId, department } = req.body || {};
+    const { name, email, password, role, teacherId, department, semester } = req.body || {};
     const allowedRoles = ['Teacher', 'Student', 'Normal_User'];
     if (!name || !email || !password || !allowedRoles.includes(role)) {
       return res.status(400).json({ message: 'Provide name, email, password and a valid non-admin role.' });
@@ -121,6 +122,7 @@ const provisionUser = async (req, res) => {
       role,
       teacherId: linkedTeacherId,
       department: department || 'General',
+      semester: typeof semester === 'string' ? semester.trim().slice(0, 40) : '',
       avatarColor: '#2563eb',
     });
 
@@ -133,6 +135,7 @@ const provisionUser = async (req, res) => {
         role: user.role,
         teacherId: user.teacherId,
         department: user.department,
+        semester: user.semester,
       },
     });
   } catch (error) {
@@ -166,11 +169,19 @@ const getUserProfile = async (req, res) => {
 
 const updateUserLocation = async (req, res) => {
   try {
-    const { nodeId } = req.body || {};
+    const { nodeId, qrPayload } = req.body || {};
     if (typeof nodeId !== 'string' || !nodeId.trim()) {
       return res.status(400).json({ message: 'Node ID is required.' });
     }
-    req.user.currentLocationNodeId = nodeId.trim().toUpperCase();
+    const normalizedNodeId = nodeId.trim().toUpperCase();
+    const checkpoint = await Node.findOne({ nodeId: normalizedNodeId }).select('nodeId qrCode');
+    if (!checkpoint) return res.status(404).json({ message: 'Campus checkpoint not found.' });
+    const expectedQr = checkpoint.qrCode || 'QR_' + checkpoint.nodeId.replace(/-/g, '_');
+    if (typeof qrPayload !== 'string' || qrPayload.trim() !== expectedQr) {
+      return res.status(403).json({ message: 'A valid physical checkpoint QR scan is required to confirm location.' });
+    }
+    req.user.currentLocationNodeId = normalizedNodeId;
+    req.user.locationUpdatedAt = new Date();
     await req.user.save();
     return res.json({
       message: 'Location updated successfully.',
