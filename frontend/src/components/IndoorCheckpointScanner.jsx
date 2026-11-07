@@ -145,7 +145,13 @@ export default function IndoorCheckpointScanner({ enabled, onClose, onConfirm })
 
   const confirmCheckpoint = () => {
     if (!candidate) return;
-    onConfirm(candidate);
+    const accepted = onConfirm(candidate);
+    if (accepted === false) {
+      lastAcceptedRef.current = '';
+      setCandidate(null);
+      setStatus('scanning');
+      return;
+    }
     setCandidate(null);
     onClose();
   };
@@ -186,7 +192,7 @@ export default function IndoorCheckpointScanner({ enabled, onClose, onConfirm })
       {candidate && (
         <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-xs font-bold text-emerald-900">Checkpoint detected. Are you standing here?</p>
-          <p className="text-[11px] text-emerald-800 mt-1">Confirming updates your current floor and recalculates the active route.</p>
+          <p className="text-[11px] text-emerald-800 mt-1">Confirming updates your checkpoint. The floor changes only after the active route's expected destination landing QR is confirmed.</p>
           <div className="flex gap-2 mt-2">
             <button type="button" onClick={confirmCheckpoint} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white">
               <CheckCircle2 size={14} /> Confirm location
