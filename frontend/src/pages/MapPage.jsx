@@ -20,6 +20,7 @@ import {
   FileText,
 } from 'lucide-react';
 import FloorMap from '../components/FloorMap';
+import FloorPlanCalibrationViewer from '../components/FloorPlanCalibrationViewer';
 import ARView from '../components/ARView';
 import DirectionsBottomSheet from '../components/DirectionsBottomSheet';
 import ShareLocationSheet from '../components/ShareLocationSheet';
@@ -29,7 +30,6 @@ import { api } from '../services/api';
 import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { FLOOR_PLANS } from '../config/floorPlans';
 import usePhoneSensors from '../hooks/usePhoneSensors';
 import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, advanceAlongRoute } from '../utils/indoorNavigation';
 
@@ -837,39 +837,15 @@ export default function MapPage() {
         />
       )}
 
-      {!showAROverlay && showFloorPlan && FLOOR_PLANS[currentFloor] && (
-        <div className="fixed inset-0 z-[90] flex flex-col bg-slate-950">
-          <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-slate-900 px-4 py-3 text-white">
-            <div className="min-w-0">
-              <div className="text-sm font-extrabold">Original Architectural Drawing</div>
-              <div className="text-xs text-slate-300">{FLOOR_PLANS[currentFloor].label} · Source PDF</div>
-              <div className="text-[10px] text-amber-200">Reference preview only — this drawing is not yet registered to the live route coordinates.</div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <a
-                href={FLOOR_PLANS[currentFloor].url}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl border border-white/20 px-3 py-2 text-xs font-bold hover:bg-white/10"
-              >
-                Open PDF
-              </a>
-              <button
-                type="button"
-                onClick={() => setShowFloorPlan(false)}
-                className="rounded-xl bg-white/10 p-2 hover:bg-white/20"
-                aria-label="Close architectural drawing"
-              >
-                <X size={18} />
-              </button>
-            </div>
-          </header>
-          <iframe
-            title={`${FLOOR_PLANS[currentFloor].label} architectural drawing`}
-            src={`${FLOOR_PLANS[currentFloor].url}#view=FitH`}
-            className="min-h-0 flex-1 w-full bg-white"
-          />
-        </div>
+      {!showAROverlay && showFloorPlan && (
+        <FloorPlanCalibrationViewer
+          floor={currentFloor}
+          nodes={nodes}
+          routeResult={routeResult}
+          userPosition={estimatedPosition}
+          adminEnabled={canEditMap}
+          onClose={() => setShowFloorPlan(false)}
+        />
       )}
 
       {/* Live Location & 6-Digit Room Sharing Modal */}
