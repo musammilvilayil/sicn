@@ -167,6 +167,9 @@ export default function ARView() {
   const [cameraReady, setCameraReady] = useState(false);
   const [userHeading, setUserHeading] = useState(null);
   const [orientationAvailable, setOrientationAvailable] = useState(false);
+  const cameraApiAvailable = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia);
+  const secureContextAvailable = typeof window !== 'undefined' && window.isSecureContext;
+  const orientationApiAvailable = typeof window !== 'undefined' && 'DeviceOrientationEvent' in window;
 
   const cleanupMediaAndSensors = useCallback(() => {
     if (fallbackTimerRef.current) {
@@ -503,6 +506,28 @@ export default function ARView() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-left space-y-1.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-300">Secure connection (HTTPS)</span>
+                <strong className={secureContextAvailable ? 'text-emerald-300' : 'text-amber-300'}>{secureContextAvailable ? 'Available' : 'Required'}</strong>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-300">Browser camera API</span>
+                <strong className={cameraApiAvailable ? 'text-emerald-300' : 'text-rose-300'}>{cameraApiAvailable ? 'Available' : 'Unavailable'}</strong>
+              </div>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-300">Compass / orientation API</span>
+                <strong className={orientationApiAvailable ? 'text-emerald-300' : 'text-amber-300'}>{orientationApiAvailable ? 'May be available' : 'Not detected'}</strong>
+              </div>
+              {(!secureContextAvailable || !cameraApiAvailable || !orientationApiAvailable) && (
+                <p className="pt-1 text-[10px] leading-relaxed text-amber-200">
+                  {(!secureContextAvailable || !cameraApiAvailable)
+                    ? 'Open this app over HTTPS and allow camera access. Without a compass, the app will still show route-step guidance.'
+                    : 'This device may not expose compass sensors. Camera guidance can still run without the 3D compass arrow.'}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2 pt-1">
