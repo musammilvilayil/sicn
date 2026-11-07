@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, Camera, CheckCircle2, CircleStop, MapPin, MicOff, Navigation, Radio, Save, Upload, Video } from 'lucide-react';
+import { ArrowLeft, Camera, CheckCircle2, CircleStop, MapPin, MicOff, Radio, Save, Upload, Video } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/NavigationContext';
@@ -179,6 +179,14 @@ export default function AdminSurveyPage() {
           if (permission !== 'granted') setNotice('Camera is active. Compass permission was not granted; video recording will still work.');
         } catch {
           setNotice('Camera is active. Compass permission is unavailable; video recording will still work.');
+        }
+      }
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+          const permission = await DeviceMotionEvent.requestPermission();
+          if (permission !== 'granted') setNotice('Camera is active. Motion permission was not granted; step samples may be unavailable.');
+        } catch {
+          setNotice('Camera is active. Motion permission is unavailable; step samples may be unavailable.');
         }
       }
 
