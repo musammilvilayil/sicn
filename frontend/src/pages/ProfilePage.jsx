@@ -30,7 +30,7 @@ export default function ProfilePage() {
     logout,
   } = useAuth();
 
-  const { startNodeObj, refreshMapData, showToast } = useNavigation();
+  const { startNodeObj, showToast } = useNavigation();
   const { roomCode, roomMembers } = useSocket();
 
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
@@ -292,7 +292,7 @@ export default function ProfilePage() {
               <p className="text-xs text-slate-500">
                 New public accounts are created with visitor permissions. Staff and administrator accounts are provisioned separately by the system owner.
               </p>
-            )}}
+            )}
 
             <button
               type="submit"
