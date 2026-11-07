@@ -191,7 +191,7 @@ export default function MapPage() {
       {/* FLOATING TOP SEARCH BAR & ROUTE PLANNER (GOOGLE MAPS UI) */}
       {/* ======================================================== */}
       {!showAROverlay && (
-      <header className="fixed top-3 inset-x-3 md:left-[260px] md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2">
+      <header className="fixed top-3 inset-x-3 md:left-[260px] md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2 sicn-map-search">
         {!showRoutePlanner ? (
           /* Collapsed Google Maps Search Pill */
           <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_8px_28px_rgba(15,23,42,0.14)] border border-slate-200/90 overflow-hidden">
@@ -446,7 +446,7 @@ export default function MapPage() {
       {/* FLOATING RIGHT-SIDE INDOOR FLOOR PICKER & CAMERA DOCK    */}
       {/* ======================================================== */}
       {!showAROverlay && (
-      <aside className="fixed right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2">
+      <aside className="fixed right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 sicn-floor-dock">
         {/* Google Maps Indoor Floor Selector (GF through 7F) */}
         <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1 flex flex-col gap-0.5 max-h-[48dvh] overflow-y-auto no-scrollbar">
           {[...FLOOR_DEFS].reverse().map((item) => {
