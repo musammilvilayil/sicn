@@ -262,6 +262,7 @@ export default function ARView() {
     setSessionState('requesting');
 
     try {
+      let orientationPermissionGranted = true;
       // 1. Crucial for iOS 13+: Trigger DeviceOrientationEvent.requestPermission()
       // directly from this exact button click BEFORE any prior async await expires
       // Safari WebKit's transient user-gesture activation token.
@@ -274,21 +275,11 @@ export default function ARView() {
         'DeviceOrientationEvent' in window &&
         typeof window.DeviceOrientationEvent.requestPermission === 'function'
       ) {
-        const motionPermission = await window.DeviceOrientationEvent.requestPermission();
-        if (motionPermission !== 'granted') {
-          throw new Error('Camera or Motion blocked. Enable them in browser settings.');
-        }
-      }
-
-      // Request DeviceMotionEvent on iOS as well if separately exposed
-      if (
-        typeof window.DeviceMotionEvent !== 'undefined' &&
-        typeof window.DeviceMotionEvent.requestPermission === 'function'
-      ) {
         try {
-          await window.DeviceMotionEvent.requestPermission();
+          const motionPermission = await window.DeviceOrientationEvent.requestPermission();
+          orientationPermissionGranted = motionPermission === 'granted';
         } catch {
-          // DeviceOrientationEvent already covers compass heading on iOS
+          orientationPermissionGranted = false;
         }
       }
 
@@ -338,7 +329,7 @@ export default function ARView() {
       setCameraReady(true);
 
       // 3. Subscribe to live compass/gyroscope orientation stream & activate AR HUD
-      if ('DeviceOrientationEvent' in window) {
+      if ('DeviceOrientationEvent' in window && orientationPermissionGranted) {
         attachOrientationListeners();
       } else {
         setOrientationAvailable(false);
