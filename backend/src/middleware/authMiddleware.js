@@ -1,66 +1,52 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_indoor_nav_key_2026';
+const getJwtSecret = () => {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET is not configured correctly.');
+  }
+  return process.env.JWT_SECRET;
+};
+
+const verifyRequestToken = async (req) => {
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Bearer ')) return null;
+  const token = header.slice(7).trim();
+  if (!token) return null;
+  const decoded = jwt.verify(token, getJwtSecret());
+  return User.findById(decoded.id).select('-password');
+};
 
 const protect = async (req, res, next) => {
-  let token;
-
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    try {
-      token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, JWT_SECRET);
-      const user = await User.findById(decoded.id).select('-password');
-      if (!user) {
-        return res.status(401).json({ message: 'Not authorized, user no longer exists' });
-      }
-      req.user = user;
-      return next();
-    } catch (error) {
-      console.error('JWT verification failed:', error.message);
-      return res.status(401).json({ message: 'Not authorized, token invalid or expired' });
-    }
+  try {
+    const user = await verifyRequestToken(req);
+    if (!user) return res.status(401).json({ message: 'Authentication required. Please sign in.' });
+    req.user = user;
+    return next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Not authorized, token invalid or expired.' });
   }
-
-  return res.status(401).json({ message: 'Authentication required. Please sign in.' });
 };
 
 const optionalAuth = async (req, res, next) => {
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    try {
-      const token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, JWT_SECRET);
-      const user = await User.findById(decoded.id).select('-password');
-      if (user) {
-        req.user = user;
-        return next();
-      }
-    } catch (err) {
-      // Ignore invalid optional token and treat as Normal_User visitor
-    }
+  try {
+    req.user = await verifyRequestToken(req) || { role: 'Normal_User', isGuest: true };
+  } catch {
+    req.user = { role: 'Normal_User', isGuest: true };
   }
-  req.user = { role: 'Normal_User', isGuest: true };
   return next();
 };
 
-const authorizeRoles = (...allowedRoles) => {
-  return (req, res, next) => {
-    const userRole = req.user?.role || 'Normal_User';
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({
-        message: `Access denied. Role '${userRole}' is not permitted to perform this action. Required role(s): ${allowedRoles.join(', ')}.`,
-        currentRole: userRole,
-        requiredRoles: allowedRoles,
-      });
-    }
-    return next();
-  };
+const authorizeRoles = (...allowedRoles) => (req, res, next) => {
+  const userRole = req.user?.role || 'Normal_User';
+  if (!allowedRoles.includes(userRole)) {
+    return res.status(403).json({
+      message: 'You do not have permission to perform this action.',
+      currentRole: userRole,
+      requiredRoles: allowedRoles,
+    });
+  }
+  return next();
 };
 
 module.exports = { protect, optionalAuth, authorizeRoles };
