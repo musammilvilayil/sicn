@@ -19,6 +19,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
+import { validateRouteCheckpoint } from '../utils/indoorNavigation';
 
 /**
  * Tilt-compensated compass heading [0, 360) clockwise from North
@@ -72,6 +73,7 @@ export default function ARView() {
   const { broadcastCheckpoint } = useSocket();
   const {
     routeResult,
+    currentFloor,
     activeStepIndex,
     setActiveStepIndex,
     setCurrentFloor,
@@ -100,6 +102,7 @@ export default function ARView() {
   const [motionAvailable, setMotionAvailable] = useState(false);
   const [walkedMeters, setWalkedMeters] = useState(0);
   const [pendingCheckpoint, setPendingCheckpoint] = useState(null);
+  const [confirmedTransition, setConfirmedTransition] = useState(null);
   const walkedMetersRef = useRef(0);
   const stepPeakRef = useRef({ above: false, lastStepAt: 0 });
   const qrDetectionLockRef = useRef(false);
@@ -390,17 +393,42 @@ export default function ARView() {
   const confirmCheckpoint = useCallback(async () => {
     if (!pendingCheckpoint?.nodeId) return;
     const checkpoint = pendingCheckpoint;
+    const validation = validateRouteCheckpoint(
+      routeResult, activeStepIndex, checkpoint, currentFloor, confirmedTransition
+    );
     setPendingCheckpoint(null);
-    setStartNodeId(checkpoint.nodeId);
-    setCurrentFloor(Number(checkpoint.floor));
-    setActiveStepIndex(0);
+
+    if (!validation.valid) {
+      // Let the camera detect the same plaque again after the user follows the
+      // correction prompt or moves to the expected landing.
+      lastQrValueRef.current = '';
+      showToast(validation.reason, 'error');
+      return;
+    }
+
     api.updateMyLocation(checkpoint.nodeId, checkpoint.qrValue).catch(() => {});
     broadcastCheckpoint(checkpoint.nodeId);
-    if (destinationNodeId) {
-      await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
+
+    if (validation.stage === 'transition-origin') {
+      const from = routeResult.path[activeStepIndex];
+      const to = routeResult.path[activeStepIndex + 1];
+      setConfirmedTransition({ originNodeId: from.nodeId, destinationNodeId: to.nodeId });
+      showToast(`Staircase confirmed on Floor ${from.floor}. Continue to Floor ${to.floor} and scan the matching landing QR.`, 'success');
+      return;
     }
-    showToast(`Position updated: ${checkpoint.name} · Floor ${checkpoint.floor}`, 'success');
-  }, [pendingCheckpoint, setStartNodeId, setCurrentFloor, setActiveStepIndex, broadcastCheckpoint, destinationNodeId, computeRoute, accessibleOnly, nodes, showToast]);
+
+    // The current floor changes only after the matching destination landing QR.
+    setConfirmedTransition(null);
+    setStartNodeId(checkpoint.nodeId);
+    setCurrentFloor(validation.floor);
+    setActiveStepIndex(0);
+    if (destinationNodeId && checkpoint.nodeId !== destinationNodeId) {
+      await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
+    } else if (checkpoint.nodeId === destinationNodeId) {
+      fallbackTo2DMap('You have reached your destination.', 'success');
+    }
+    showToast(`Position confirmed: ${checkpoint.name} · Floor ${validation.floor}`, 'success');
+  }, [pendingCheckpoint, routeResult, activeStepIndex, currentFloor, confirmedTransition, setStartNodeId, setCurrentFloor, setActiveStepIndex, broadcastCheckpoint, destinationNodeId, computeRoute, accessibleOnly, nodes, showToast, fallbackTo2DMap]);
 
   // Derive current & next A* path nodes, target bearing, and 3D arrow orientation
   const navMetrics = useMemo(() => {
@@ -545,6 +573,14 @@ export default function ARView() {
           sessionState === 'active' && cameraReady ? 'opacity-100' : 'opacity-0'
         }`}
       />
+      {confirmedTransition && (
+        <div className="absolute top-20 left-4 right-4 z-40 mx-auto max-w-lg rounded-2xl border border-amber-300/40 bg-slate-950/90 px-4 py-3 text-white shadow-xl backdrop-blur">
+          <div className="text-xs font-extrabold text-amber-300">STAIRCASE OR LIFT CONFIRMED</div>
+          <div className="mt-1 text-sm font-semibold">
+            Continue to Floor {routeResult?.path?.find((node) => node.nodeId === confirmedTransition.destinationNodeId)?.floor} and scan the matching landing QR. Your confirmed floor remains unchanged until then.
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* EXPLICIT USER-GESTURE "START AR SESSION" OVERLAY         */}
