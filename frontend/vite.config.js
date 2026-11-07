@@ -23,7 +23,7 @@ function floorplanAssetsPlugin() {
     name: 'sicn-floorplan-assets',
     configureServer(server) {
       server.middlewares.use('/floorplans', (req, res, next) => {
-        const assetName = decodeURIComponent((req.url || '').split('?')[0]).replace(/^\\/+/, '');
+        const assetName = decodeURIComponent((req.url || '').split('?')[0]).replace(/^\/+/, '');
         const sourceName = FLOORPLAN_FILES[assetName];
         if (!sourceName) return next();
 
