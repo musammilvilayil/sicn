@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+      - feat/2d-compass-pdr-navigation
 
 jobs:
   frontend:
