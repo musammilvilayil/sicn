@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const router = express.Router();
 const Node = require('../models/Node');
@@ -5,12 +7,14 @@ const Edge = require('../models/Edge');
 const Teacher = require('../models/Teacher');
 const Timetable = require('../models/Timetable');
 const User = require('../models/User');
-const seedData = require('../data/seedData.json');
 const { DEMO_USERS } = require('../scripts/seedDb');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
+const SEED_DATA_PATH = path.join(__dirname, '../data/seedData.json');
+
 router.post('/', protect, authorizeRoles('Admin'), async (req, res) => {
   try {
+    const seedData = JSON.parse(fs.readFileSync(SEED_DATA_PATH, 'utf8'));
     await Promise.all([
       Node.deleteMany({}),
       Edge.deleteMany({}),

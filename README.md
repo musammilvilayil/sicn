@@ -8,7 +8,7 @@ A mobile-first, Google Maps-inspired indoor positioning, routing, and real-time 
 ## ✨ Key Capabilities
 
 1. **Google Maps-Like Multi-Page Mobile UI (`react-router-dom` & Tailwind CSS)**
-   - **`/` (Explore & Map)**: Full-screen interactive pan-and-zoom SVG campus floor map, floating top search bar with autocomplete & category chips, vertical indoor floor picker (`1F` / `GF`), and a **swipe-up bottom sheet** (`peek` / `half` / `full`) for turn-by-turn A* directions.
+   - **`/` (Explore & Map)**: Full-screen interactive pan-and-zoom SVG campus floor map across all **8 floors (`GF` through `7F`)**, floating top search bar with autocomplete & category chips, vertical indoor floor picker (`7F` down to `GF`), and a **swipe-up bottom sheet** (`peek` / `half` / `full`) for turn-by-turn A* directions.
    - **`/scan` (QR Checkpoint Scanner)**: Live mobile camera QR scanner (`html5-qrcode`), image upload scanner, interactive checkpoint simulator, and printable campus QR plaques.
    - **`/schedule` (Timetables & Faculty Assistance)**: Dynamic schedule resolver that routes students directly to a teacher's active classroom or default cabin, plus a live Timetable CRUD Studio for Teachers and Admins.
    - **`/profile` (User Profile & RBAC Roles)**: JWT session manager, active role permissions matrix, and 1-tap Demo Role Switcher across all 4 roles.
@@ -34,7 +34,7 @@ A mobile-first, Google Maps-inspired indoor positioning, routing, and real-time 
 ## 🚀 Quick Commands
 
 ```bash
-# Seed MongoDB with 43 Nodes, 46 Edges, 4 Teachers, 15 Timetables & 4 RBAC Demo Users
+# Seed MongoDB with 133 Nodes, 154 Edges (Ground–7th Floor), 6 Teachers, 21 Timetables & 4 RBAC Demo Users
 npm run seed
 
 # Run end-to-end verification (RBAC roles + A* routing + Socket.io 6-digit rooms)
