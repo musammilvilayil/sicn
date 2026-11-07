@@ -110,10 +110,19 @@ export default function MapPage() {
       const edge = routeResult.edges?.[progress.segmentIndex];
       if (edge?.edgeId && transitionPromptRef.current !== edge.edgeId) {
         transitionPromptRef.current = edge.edgeId;
-        showToast('You are at a floor transition. Scan the origin QR, then the matching landing QR to continue.', 'info');
+        const from = routeResult.path[progress.segmentIndex];
+        const to = routeResult.path[progress.segmentIndex + 1];
+        const originAlreadyConfirmed = confirmedTransition?.originNodeId === from?.nodeId &&
+          confirmedTransition?.destinationNodeId === to?.nodeId;
+        showToast(
+          originAlreadyConfirmed
+            ? `Origin confirmed. Continue to Floor ${to?.floor} and scan the matching destination QR.`
+            : 'You are at a floor transition. Scan the origin QR, then the matching landing QR to continue.',
+          'info'
+        );
       }
     }
-  }, [calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, setActiveStepIndex, setWalkedMeters, showToast]);
+  }, [calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, confirmedTransition, setActiveStepIndex, setWalkedMeters, showToast]);
 
   const { heading, stepCount, status: sensorStatus, error: sensorError, startSensors } = usePhoneSensors(handlePdrStep);
 
