@@ -60,7 +60,7 @@ const getEdges = async (req, res) => {
 // @route   POST /api/navigation/edges
 const createEdge = async (req, res) => {
   try {
-    const { fromNode, toNode, distance, accessible, type, instruction, reverseInstruction } = req.body;
+    const { fromNode, toNode, distance, distanceEvidence, accessible, type, instruction, reverseInstruction } = req.body;
 
     if (!fromNode || !toNode) {
       return res.status(400).json({ message: 'fromNode and toNode are required' });
@@ -78,17 +78,28 @@ const createEdge = async (req, res) => {
       return res.status(404).json({ message: 'One or both endpoint nodes do not exist' });
     }
 
-    const dx = nodeU.coordinates.x - nodeV.coordinates.x;
-    const dy = nodeU.coordinates.y - nodeV.coordinates.y;
-    const computedDist = distance !== undefined
-      ? Number(distance)
-      : Math.max(2, Math.round(Math.sqrt(dx * dx + dy * dy) * 10) / 10);
+    if (distance === undefined || !Number.isFinite(Number(distance)) || Number(distance) <= 0) {
+      return res.status(400).json({
+        message: 'A positive measured distance in metres is required. Schematic map coordinates cannot be converted to metres.',
+      });
+    }
+    if (!distanceEvidence || !['architectural_plan', 'field_measured', 'admin_estimate'].includes(distanceEvidence.source)) {
+      return res.status(400).json({
+        message: 'distanceEvidence.source must be architectural_plan, field_measured, or admin_estimate.',
+      });
+    }
 
     const edge = await Edge.create({
       edgeId: `E_${u}_${v}_${Date.now()}`,
       fromNode: u,
       toNode: v,
-      distance: computedDist,
+      distance: Number(distance),
+      distanceEvidence: {
+        source: distanceEvidence.source,
+        reference: distanceEvidence.reference || '',
+        measuredAt: distanceEvidence.measuredAt || undefined,
+        notes: distanceEvidence.notes || '',
+      },
       accessible: accessible !== undefined ? Boolean(accessible) : nodeU.accessible && nodeV.accessible,
       type: type || (nodeU.floor !== nodeV.floor ? 'stairs' : 'walking'),
       instruction: instruction || `Walk towards ${nodeV.name}`,

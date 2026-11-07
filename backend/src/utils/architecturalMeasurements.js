@@ -1,14 +1,17 @@
 const UNIT_TO_METERS = { mm: 0.001, cm: 0.01, m: 1 };
 
 function toMeters(value, unit) {
-  const factor = UNIT_TO_METERS[unit];
-  if (!factor) return null;
-  return Number(value) * factor;
+  const factor = UNIT_TO_METERS[String(unit || '').toLowerCase()];
+  return factor ? Number(value) * factor : null;
+}
+
+function numberValue(value) {
+  return Number(String(value).replace(',', '.'));
 }
 
 /**
- * Parses explicit dimensions from architectural metadata without inventing a scale.
- * Supports room footprints, counted/compound footprints and linear widths.
+ * Reads only explicitly unit-labelled drawing annotations.
+ * It never infers scale or coordinates from room footprints.
  */
 function parseArchitecturalMeasurement(input) {
   const source = String(input ?? '').trim();
@@ -16,58 +19,68 @@ function parseArchitecturalMeasurement(input) {
 
   const measurements = [];
   const warnings = [];
-  // Optional leading count handles labels such as "5x 155x135 cm".
-  const pairPattern = /(?:(\d+(?:[.,]\d+)?\s*[x×]\s*)?)(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/gi;
+  const pairPattern = /(?:(\d+(?:[.,]\d+)?\s*[x×]\s*)?)(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)\b/gi;
   let match;
-  let inheritedUnit = null;
 
   while ((match = pairPattern.exec(source)) !== null) {
-    const unit = (match[4] || inheritedUnit || '').toLowerCase();
-    if (match[4]) inheritedUnit = unit;
-    if (!unit || !UNIT_TO_METERS[unit]) {
-      warnings.push('A dimension pair has no explicit unit; it was not converted.');
-      continue;
-    }
-    const first = Number(match[2].replace(',', '.'));
-    const second = Number(match[3].replace(',', '.'));
+    const unit = match[4].toLowerCase();
+    const first = numberValue(match[2]);
+    const second = numberValue(match[3]);
     if (!(first > 0 && second > 0)) {
       warnings.push('A dimension pair must contain positive values.');
       continue;
     }
+    const dimensionsMeters = [toMeters(first, unit), toMeters(second, unit)];
     measurements.push({
       kind: 'rectangle',
       sourceText: match[0],
       values: [first, second],
       unit,
-      dimensionsMeters: [toMeters(first, unit), toMeters(second, unit)],
-      areaSquareMeters: toMeters(first, unit) * toMeters(second, unit),
+      dimensionsMeters,
+      areaSquareMeters: dimensionsMeters[0] * dimensionsMeters[1],
+    });
+  }
+
+  const scalarPattern = /\b(width|riser|tread|height|depth|diameter|thickness)\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)\b|\b(\d+(?:[.,]\d+)?)\s*(mm|cm|m)\s*(?:wide|width)\b/gi;
+  while ((match = scalarPattern.exec(source)) !== null) {
+    const label = (match[1] || 'width').toLowerCase();
+    const value = numberValue(match[2] || match[4]);
+    const unit = (match[3] || match[5]).toLowerCase();
+    if (!(value > 0)) {
+      warnings.push('A linear dimension must be positive.');
+      continue;
+    }
+    measurements.push({
+      kind: 'linear_dimension',
+      label,
+      sourceText: match[0],
+      value,
+      unit,
+      meters: toMeters(value, unit),
     });
   }
 
   if (measurements.length) {
+    const rectangles = measurements.filter((item) => item.kind === 'rectangle');
+    const linear = measurements.filter((item) => item.kind === 'linear_dimension');
     return {
       source,
-      kind: measurements.length > 1 ? 'compound_footprint' : 'footprint',
+      kind: rectangles.length ? (rectangles.length > 1 ? 'compound_footprint' : 'footprint') : 'linear_dimensions',
       measurements,
-      totalAreaSquareMeters: measurements.reduce((sum, item) => sum + item.areaSquareMeters, 0),
+      totalAreaSquareMeters: rectangles.length
+        ? rectangles.reduce((sum, item) => sum + item.areaSquareMeters, 0)
+        : undefined,
+      linearDimensions: linear.reduce((result, item) => {
+        result[item.label] = item.meters;
+        return result;
+      }, {}),
       warnings,
     };
   }
 
-  const scalar = source.match(/(?:width\s*[:=]?\s*)?(\d+(?:[.,]\d+)?)\s*(mm|cm|m)\s*(?:wide|width)?/i);
-  if (scalar) {
-    const value = Number(scalar[1].replace(',', '.'));
-    const unit = scalar[2].toLowerCase();
-    if (value > 0) {
-      return {
-        source,
-        kind: 'linear_dimension',
-        measurements: [{ kind: 'width', sourceText: scalar[0], value, unit, meters: toMeters(value, unit) }],
-        warnings,
-      };
-    }
+  if (/\d+\s*[x×]\s*\d+/.test(source)) {
+    warnings.push('A dimension pair has no explicit unit; it was not converted.');
   }
-
   return {
     source,
     kind: 'unparsed',
@@ -76,4 +89,4 @@ function parseArchitecturalMeasurement(input) {
   };
 }
 
-module.exports = { parseArchitecturalMeasurement };
+module.exports = { parseArchitecturalMeasurement, toMeters };
