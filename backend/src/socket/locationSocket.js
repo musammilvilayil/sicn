@@ -209,6 +209,7 @@ function initLocationSocket(httpServer) {
 
     socket.on('update_location', async (payload = {}, ack) => {
       try {
+        pruneExpiredRooms(io);
         const activeCode = socketToRoom.get(socket.id);
         if (!activeCode || !rooms.has(activeCode)) {
           if (typeof ack === 'function') ack({ success: false, message: 'Not in an active sharing room.' });
