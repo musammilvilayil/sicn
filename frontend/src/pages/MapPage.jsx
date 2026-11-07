@@ -717,6 +717,7 @@ export default function MapPage() {
           <button
             onClick={() => {
               setZoom(1);
+              setAutoFollow(true);
               setPan({ x: 0, y: 0 });
             }}
             title="Recenter Map"
