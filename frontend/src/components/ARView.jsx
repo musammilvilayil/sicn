@@ -97,6 +97,10 @@ export default function ARView() {
   const [userHeading, setUserHeading] = useState(null);
   const [orientationAvailable, setOrientationAvailable] = useState(false);
   const [qrDetectionAvailable, setQrDetectionAvailable] = useState(false);
+  const [motionAvailable, setMotionAvailable] = useState(false);
+  const [walkedMeters, setWalkedMeters] = useState(0);
+  const walkedMetersRef = useRef(0);
+  const stepPeakRef = useRef({ above: false, lastStepAt: 0 });
   const qrDetectionLockRef = useRef(false);
   const lastQrValueRef = useRef('');
   const cameraApiAvailable = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia);
@@ -198,17 +202,24 @@ export default function ARView() {
         throw new Error('This feature requires a supported browser.');
       }
 
-      // Compass permission is optional; camera guidance still works without it.
-      if (
-        'DeviceOrientationEvent' in window &&
-        typeof window.DeviceOrientationEvent.requestPermission === 'function'
-      ) {
-        try {
-          const motionPermission = await window.DeviceOrientationEvent.requestPermission();
-          orientationPermissionGranted = motionPermission === 'granted';
-        } catch {
-          orientationPermissionGranted = false;
-        }
+      // Request iOS sensor permissions directly from this click before awaiting either prompt.
+      const permissionRequests = [];
+      let orientationRequestIndex = -1;
+      let motionRequestIndex = -1;
+      if ('DeviceOrientationEvent' in window && typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+        orientationRequestIndex = permissionRequests.length;
+        permissionRequests.push(window.DeviceOrientationEvent.requestPermission().catch(() => 'denied'));
+      }
+      if ('DeviceMotionEvent' in window && typeof window.DeviceMotionEvent.requestPermission === 'function') {
+        motionRequestIndex = permissionRequests.length;
+        permissionRequests.push(window.DeviceMotionEvent.requestPermission().catch(() => 'denied'));
+      }
+      const permissionResults = await Promise.all(permissionRequests);
+      if (orientationRequestIndex >= 0) {
+        orientationPermissionGranted = permissionResults[orientationRequestIndex] === 'granted';
+      }
+      if (motionRequestIndex >= 0) {
+        setMotionAvailable(permissionResults[motionRequestIndex] === 'granted');
       }
 
       // 2. Sequentially request Rear Camera via WebRTC (navigator.mediaDevices.getUserMedia)
@@ -370,6 +381,47 @@ export default function ARView() {
       canvas.height = 0;
     };
   }, [sessionState, cameraReady, destinationNodeId, accessibleOnly, nodes, computeRoute, setStartNodeId, setCurrentFloor, showToast, broadcastCheckpoint]);
+
+  // Estimate walking progress from motion peaks. This is a short-range estimate only;
+  // QR checkpoints remain the authoritative indoor position and floor confirmation.
+  useEffect(() => {
+    if (sessionState !== 'active') return undefined;
+    let aboveThreshold = false;
+    let lastStepAt = 0;
+    const handleMotion = (event) => {
+      const acceleration = event.acceleration;
+      const withGravity = event.accelerationIncludingGravity;
+      const magnitude = acceleration && [acceleration.x, acceleration.y, acceleration.z].every(Number.isFinite)
+        ? Math.hypot(acceleration.x, acceleration.y, acceleration.z)
+        : withGravity && [withGravity.x, withGravity.y, withGravity.z].every(Number.isFinite)
+          ? Math.abs(Math.hypot(withGravity.x, withGravity.y, withGravity.z) - 9.81)
+          : 0;
+      const peak = magnitude > 1.25;
+      const now = Date.now();
+      if (peak && !aboveThreshold && now - lastStepAt > 360) {
+        lastStepAt = now;
+        setMotionAvailable(true);
+        const nextWalked = walkedMetersRef.current + 0.7;
+        const remaining = Number(navMetrics?.stepDirection?.distance || 0);
+        walkedMetersRef.current = nextWalked;
+        setWalkedMeters(nextWalked);
+        // Never auto-advance a stair/lift transition: confirm the new floor with its QR plaque.
+        if (navMetrics && !navMetrics.isFloorChange && remaining > 0 && nextWalked >= remaining * 0.85) {
+          setActiveStepIndex((current) => Math.min(current + 1, Math.max(0, (routeResult?.path?.length || 1) - 2)));
+          walkedMetersRef.current = 0;
+          setWalkedMeters(0);
+        }
+      }
+      aboveThreshold = peak;
+    };
+    window.addEventListener('devicemotion', handleMotion, true);
+    return () => window.removeEventListener('devicemotion', handleMotion, true);
+  }, [sessionState, navMetrics, routeResult, setActiveStepIndex]);
+
+  useEffect(() => {
+    walkedMetersRef.current = 0;
+    setWalkedMeters(0);
+  }, [activeStepIndex, routeResult]);
 
   // Derive current & next A* path nodes, target bearing, and 3D arrow orientation
   const navMetrics = useMemo(() => {
@@ -653,7 +705,7 @@ export default function ARView() {
             <div className="absolute top-28 inset-x-4 z-20 flex justify-center pointer-events-none">
               <div className="max-w-md bg-slate-950/80 backdrop-blur-md text-white px-4 py-3 rounded-2xl border border-amber-300/30 shadow-xl text-center">
                 <div className="text-xs font-bold text-amber-200">Camera guidance mode</div>
-                <p className="text-[10px] text-slate-300 mt-1">QR auto-detection: {qrDetectionAvailable ? 'Active' : 'Unavailable on this browser — use Scan QR below'}</p>
+                <p className="text-[10px] text-slate-300 mt-1">QR auto-detection: {qrDetectionAvailable ? 'Active' : 'Use Scan QR below'} · Motion: {motionAvailable ? 'Active' : 'Unavailable'}</p>
                 <p className="text-[11px] text-slate-200 mt-1">
                   Compass is not available on this device. Follow the step instructions below and scan a QR checkpoint to recalibrate.
                 </p>
@@ -749,9 +801,9 @@ export default function ARView() {
                 {navMetrics.stepDirection?.distance > 0 && (
                   <div className="bg-white/10 border border-white/15 rounded-2xl px-3 py-2 text-center shrink-0">
                     <div className="text-sm font-extrabold text-emerald-400">
-                      {navMetrics.stepDirection.distance}m
+                      {Math.max(0, navMetrics.stepDirection.distance - walkedMeters).toFixed(0)}m
                     </div>
-                    <div className="text-[10px] text-slate-300 font-medium">ahead</div>
+                    <div className="text-[10px] text-slate-300 font-medium">{motionAvailable ? 'estimated left' : 'ahead'}</div>
                   </div>
                 )}
               </div>
