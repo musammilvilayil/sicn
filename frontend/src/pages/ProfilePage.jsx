@@ -143,7 +143,7 @@ export default function ProfilePage() {
     <div className="min-h-dvh bg-slate-50 pb-24">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3.5">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
               <ShieldCheck size={20} />
@@ -172,7 +172,7 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+      <main className="max-w-5xl mx-auto px-4 py-4 space-y-4 md:pl-24">
         {/* Current Active Session Card */}
         <section className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
           <div className="flex items-center gap-3.5">
