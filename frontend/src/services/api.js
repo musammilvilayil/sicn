@@ -250,6 +250,9 @@ export const api = {
     return res.json();
   },
 
+  // ================= CAMPUS OCCUPANCY =================
+  async getCrowdSummary(windowMinutes = 10) { const r=await fetch(`${API_BASE}/navigation/crowd?windowMinutes=${windowMinutes}`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load occupancy');return d; },
+
   // ================= ATTENDANCE API =================
   async getAttendanceSettings() { const r=await fetch(`${API_BASE}/attendance/settings`,{headers:getAuthHeaders()});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to load settings');return d; },
   async updateAttendanceSettings(p) { const r=await fetch(`${API_BASE}/attendance/settings`,{method:'PUT',headers:getAuthHeaders(),body:JSON.stringify(p)});const d=await r.json();if(!r.ok)throw new Error(d.message||'Unable to save settings');return d; },
