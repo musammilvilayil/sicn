@@ -1,49 +1,103 @@
-# Smart Indoor College Navigation and Campus Assistance System
-### Main Block — Bishop Jerome Institute, Kollam
+# Smart Indoor College Navigation (SICN)
+### Bishop Jerome Institute, Kollam
 
-A mobile-first, Google Maps-inspired indoor positioning, routing, and real-time campus assistance platform built with **React.js (React Router + Tailwind CSS)**, **Node.js/Express.js**, **Socket.io**, and **MongoDB**.
+SICN is a full-stack campus navigation and assistance application built with React, Vite, Tailwind CSS, Node.js, Express, MongoDB, Socket.IO, QR checkpoints and an optional camera-based navigation view.
 
----
+## Main modules
 
-## ✨ Key Capabilities
+- **Explore:** multi-floor SVG floor map, room search, accessible route selection and A* turn-by-turn directions.
+- **QR checkpoints:** scan a physical QR plaque, upload a QR image, or use the development simulator to set a known indoor position.
+- **Faculty and timetable:** resolve a teacher's current classroom or cabin using timetable data.
+- **Live sharing:** share checkpoint updates with a short-lived six-digit room code.
+- **Camera guidance:** camera preview with a compass-aligned directional overlay when the browser exposes the required sensors; otherwise, step-by-step guidance remains available.
+- **Role-based access:** Admin, Teacher, Student and Normal_User permissions.
 
-1. **Google Maps-Like Multi-Page Mobile UI (`react-router-dom` & Tailwind CSS)**
-   - **`/` (Explore & Map)**: Full-screen interactive pan-and-zoom SVG campus floor map, floating top search bar with autocomplete & category chips, vertical indoor floor picker (`1F` / `GF`), and a **swipe-up bottom sheet** (`peek` / `half` / `full`) for turn-by-turn A* directions.
-   - **`/scan` (QR Checkpoint Scanner)**: Live mobile camera QR scanner (`html5-qrcode`), image upload scanner, interactive checkpoint simulator, and printable campus QR plaques.
-   - **`/schedule` (Timetables & Faculty Assistance)**: Dynamic schedule resolver that routes students directly to a teacher's active classroom or default cabin, plus a live Timetable CRUD Studio for Teachers and Admins.
-   - **`/profile` (User Profile & RBAC Roles)**: JWT session manager, active role permissions matrix, and 1-tap Demo Role Switcher across all 4 roles.
+## Local setup
 
-2. **Role-Based Access Control (RBAC — 4 Exact Roles)**
-   - **`Admin`** (`admin@bji.ac.in` / `AdminPassword@123`): Full access including interactive **Map & Node Editor** (tap map to add nodes, edit/delete nodes, connect corridor edges, or reset seed data).
-   - **`Teacher`** (`priya.nair@bji.ac.in` / `Teacher@123`): Can create, edit, and delete class slots in their timetable (`/schedule`) in addition to full map and schedule routing.
-   - **`Student`** (`student@bji.ac.in` / `Password@123`): Full access to Faculty Finder & Dynamic Timetable Routing as well as point-to-point navigation.
-   - **`Normal_User`** (`visitor@bji.ac.in` / `Visitor@123` or Guest): Restricted to basic point-to-point map routing, QR scanning, and Live Friend Sharing (blocked from Timetable/Faculty endpoints via JWT RBAC middleware).
+Requirements: Node.js 22+, MongoDB, and a modern browser.
 
-3. **Real-Time Live Location & Friend Sharing (`Socket.io`)**
-   - Tap **Share Location** on `/` or `/profile` to generate a unique **6-digit room code**.
-   - Friends enter the 6-digit code to join the live Socket.io room.
-   - Whenever any member scans a new QR checkpoint on `/scan`, their live `nodeId` and floor coordinates broadcast instantaneously to everyone in the room, smoothly gliding their live avatar across friends' maps.
+1. Install dependencies:
 
-4. **Augmented Reality (AR) Live Camera Navigation (`A-Frame` & `AR.js`)**
-   - Tap **AR Live View** in the bottom navigation bar, top action chips, or turn-by-turn directions drawer.
-   - Streams the rear device camera via WebRTC (`getUserMedia`), tracks user compass/gyroscope heading via the `DeviceOrientation` API, and renders a live 3D directional arrow (`aframe` + `@ar-js-org/ar.js`) pointing toward the relative bearing and floor elevation of the next A* path node.
-   - Automatically and smoothly falls back to the standard 2D `FloorMap.jsx` view if camera permissions are denied or orientation sensors are unavailable.
+   ```bash
+   cd backend && npm ci
+   cd ../frontend && npm ci
+   ```
 
----
+2. Create `backend/.env` using `backend/.env.example`. Set:
+   - `MONGODB_URI`
+   - `JWT_SECRET` (generate a unique value with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`)
+   - `CLIENT_ORIGIN=http://localhost:3000`
 
-## 🚀 Quick Commands
+3. For a new database only, seed campus map, faculty and timetable data:
+
+   ```bash
+   cd backend && npm run seed
+   ```
+
+   Seeding stops if campus collections already contain data. It never deletes user or administrator accounts.
+
+4. Start the backend:
+
+   ```bash
+   npm start
+   ```
+
+   On first startup, the server creates the first Admin account. If a legacy demo Admin exists without a bootstrap marker, its known demo password is rotated once. The username/email and a randomly generated temporary password are printed in the backend terminal. Save them securely and change the password immediately from the Account page. The password is not printed again.
+
+5. Start the frontend in another terminal:
+
+   ```bash
+   cd frontend && npm run dev -- --host 0.0.0.0
+   ```
+
+   Open the Vite URL (default port 3000).
+
+## Account provisioning
+
+- Public registration creates **Normal_User** accounts only.
+- The bootstrap Admin can create Teacher, Student and visitor accounts from the Account page.
+- A Teacher account must be linked to an existing faculty profile.
+- Admin accounts are not available through public registration or the account-provisioning form.
+- Never commit `.env`, passwords, JWT secrets or production credentials.
+
+## Camera and AR support
+
+The camera view requires a secure context (**HTTPS**, except localhost) and explicit camera permission. Compass-aligned arrows additionally require a supported device-orientation sensor and permission.
+
+Browser/device behavior varies:
+- Recent Android phones generally provide camera and orientation APIs, subject to browser and manufacturer permissions.
+- iPhone/iPad Safari requires a user gesture to request motion permission. Enable Motion & Orientation Access in Safari website settings if prompted.
+- Laptops and devices without a compass can still show camera guidance and route-step instructions, but cannot provide a reliable compass-aligned 3D arrow.
+- If camera access is unavailable or denied, use the standard floor map and QR checkpoint flow.
+
+SICN uses QR checkpoints to establish known indoor positions. The current browser implementation is **not** continuous SLAM, visual-inertial odometry, UWB positioning or a certified indoor positioning system. Compass direction can be affected by magnetic interference; verify routes against the actual building before operational use.
+
+## Security and deployment notes
+
+- Configure a unique `JWT_SECRET` with at least 32 characters. The backend refuses to start without it.
+- Configure `CLIENT_ORIGIN` with the exact production frontend origin.
+- Admin passwords are generated once at bootstrap and stored as bcrypt hashes.
+- Public registration cannot assign privileged roles.
+- Socket.IO uses signed JWT identity when available; guest sockets are always treated as Normal_User. Sharing rooms expire after one hour and have a member limit.
+- Database reseeding is disabled in production and by default in development. Do not enable destructive seed operations against real data.
+- Use HTTPS, database backups, monitoring and a tested restore procedure before production launch.
+
+## Commands
 
 ```bash
-# Seed MongoDB with 43 Nodes, 46 Edges, 4 Teachers, 15 Timetables & 4 RBAC Demo Users
-npm run seed
-
-# Run end-to-end verification (RBAC roles + A* routing + Socket.io 6-digit rooms)
-npm --prefix backend run test:overhaul
-
-# Build production frontend bundle
-npm run build
-
-# Start Backend (Port 5000) & Frontend (Port 3000)
+# Root commands
 npm run server
 npm run client
+npm run build
+
+# Backend
+npm --prefix backend run seed
+npm --prefix backend run test:route
+npm --prefix backend run test:overhaul
+
+# Frontend
+npm --prefix frontend run lint
+npm --prefix frontend run build
 ```
+
+GitHub Actions runs frontend lint/build and backend JavaScript syntax checks. Database-backed integration tests still require a configured MongoDB test database and should be run separately.
