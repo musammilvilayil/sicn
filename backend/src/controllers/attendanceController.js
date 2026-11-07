@@ -4,6 +4,7 @@ const Session=require('../models/AttendanceSession');
 const Record=require('../models/AttendanceRecord');
 const User=require('../models/User');
 const Node=require('../models/Node');
+const Teacher=require('../models/Teacher');
 
 const getSettings=async()=>((await Settings.findOneAndUpdate({key:'global'},{$setOnInsert:{key:'global'}},{new:true,upsert:true,setDefaultsOnInsert:true})).toObject());
 const safe=s=>({enabled:s.enabled,qrExpirySeconds:s.qrExpirySeconds,sessionDurationMinutes:s.sessionDurationMinutes,lateAfterMinutes:s.lateAfterMinutes,minimumAttendancePercent:s.minimumAttendancePercent,requireCampusCheckpoint:s.requireCampusCheckpoint,allowTeacherManualEdits:s.allowTeacherManualEdits,allowStudentHistory:s.allowStudentHistory});
