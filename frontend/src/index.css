@@ -382,3 +382,10 @@ button {
 .sicn-ui .sicn-hero-meta span+span:before{content:"";display:inline-block;width:4px;height:4px;margin:0 9px 2px 0;border-radius:50%;background:#4b83e8}
 @media(max-width:640px){.sicn-ui .sicn-page-hero{min-height:220px;padding:22px 20px 43px}.sicn-ui .sicn-hero-copy{max-width:78%}.sicn-ui .sicn-page-hero h2{font-size:27px}.sicn-ui .sicn-page-hero p{font-size:12px}.sicn-ui .sicn-hero-art{right:-45px;top:52%;transform:translateY(-50%) scale(.72);opacity:.8}.sicn-ui .sicn-hero-meta{left:20px;bottom:15px;gap:8px;font-size:8px}}
 @media(max-width:390px){.sicn-ui .sicn-hero-copy{max-width:100%}.sicn-ui .sicn-hero-art{right:-85px;opacity:.25}.sicn-ui .sicn-page-hero h2,.sicn-ui .sicn-page-hero p{max-width:88%}}
+
+
+/* Desktop workspace geometry: reserve the complete sidebar column */
+@media(min-width:768px){
+ .sicn-ui main{width:min(calc(100vw - 290px),1120px);margin-left:calc(260px + max(0px,(100vw - 260px - 1120px)/2));margin-right:0}
+ .sicn-ui header[class*="sticky"]>div{width:min(calc(100vw - 290px),1120px);margin-left:calc(260px + max(0px,(100vw - 260px - 1120px)/2));margin-right:0;padding-left:0}
+}
