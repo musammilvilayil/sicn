@@ -41,6 +41,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: 'GF-MAIN-ENTRANCE',
     },
+    locationUpdatedAt: { type: Date, default: null, index: true },
     avatarColor: {
       type: String,
       default: '#2563eb',
