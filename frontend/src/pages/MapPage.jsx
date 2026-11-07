@@ -175,7 +175,7 @@ export default function MapPage() {
       {/* FLOATING TOP SEARCH BAR & ROUTE PLANNER (GOOGLE MAPS UI) */}
       {/* ======================================================== */}
       {!showAROverlay && (
-      <header className="fixed top-3 inset-x-3 md:left-4 md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2">
+      <header className="fixed top-3 inset-x-3 md:left-28 md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2">
         {!showRoutePlanner ? (
           /* Collapsed Google Maps Search Pill */
           <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_8px_28px_rgba(15,23,42,0.14)] border border-slate-200/90 overflow-hidden">
