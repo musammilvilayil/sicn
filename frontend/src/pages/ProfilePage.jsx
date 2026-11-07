@@ -174,6 +174,15 @@ export default function ProfilePage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-4 space-y-4 md:pl-24">
+        <section className="sicn-page-hero sicn-account-hero">
+          <div className="sicn-hero-copy">
+            <span className="sicn-eyebrow"><span className="sicn-eyebrow-dot" /> YOUR CAMPUS IDENTITY</span>
+            <h2>Your access. Your campus.</h2>
+            <p>Manage your account, review permissions and keep your campus navigation access secure.</p>
+          </div>
+          <div className="sicn-hero-art" aria-hidden="true"><div className="sicn-hero-orbit orbit-one" /><div className="sicn-hero-orbit orbit-two" /><div className="sicn-hero-qr"><ShieldCheck size={42} strokeWidth={1.6} /></div><span className="sicn-hero-pin"><KeyRound size={15} /></span></div>
+          <div className="sicn-hero-meta"><span>Role-based access</span><span>Secure account controls</span></div>
+        </section>
         {/* Current Active Session Card */}
         <section className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
           <div className="flex items-center gap-3.5">
