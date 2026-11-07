@@ -22,17 +22,13 @@ class PriorityQueue {
 }
 
 /**
- * Heuristic function: 3D Euclidean distance with vertical transition weight
+ * Until x/y coordinates are calibrated to metres on every floor, a geometric
+ * heuristic mixes map units with edge.distance metres and is not guaranteed
+ * admissible. A zero heuristic makes this search Dijkstra, preserving shortest
+ * path correctness while the floor calibration work is completed.
  */
-function heuristic(nodeA, nodeB) {
-  if (!nodeA || !nodeB) return 0;
-  const dx = (nodeA.coordinates?.x ?? 0) - (nodeB.coordinates?.x ?? 0);
-  const dy = (nodeA.coordinates?.y ?? 0) - (nodeB.coordinates?.y ?? 0);
-  const zA = nodeA.coordinates?.z ?? (nodeA.floor ?? 0) * 3.9;
-  const zB = nodeB.coordinates?.z ?? (nodeB.floor ?? 0) * 3.9;
-  const dz = zA - zB;
-  // Admissible 3D Euclidean heuristic (3.9m floor height <= 4.0m lift / 7.0m stair cost)
-  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+function heuristic() {
+  return 0;
 }
 
 /**
@@ -92,6 +88,16 @@ function formatDirections(pathNodes, pathEdges) {
       toNodeId: toNode.nodeId,
       instruction,
       distance: Math.round(edge.distance * 10) / 10,
+      ...(toNode.floor !== fromNode.floor ? {
+        transition: {
+          edgeId: edge.edgeId,
+          type: edge.type,
+          fromNodeId: fromNode.nodeId,
+          toNodeId: toNode.nodeId,
+          fromFloor: fromNode.floor,
+          toFloor: toNode.floor,
+        },
+      } : {}),
     });
   }
 
@@ -218,6 +224,19 @@ function findShortestPath(startId, targetId, nodes, edges, options = {}) {
       const estimatedTimeMinutes = Math.max(1, Math.round((walkingTimeMin + verticalDelayMin) * 10) / 10);
 
       const directions = formatDirections(pathNodes, pathEdges);
+      const transitions = pathEdges.flatMap((edge, index) => {
+        const fromNode = pathNodes[index];
+        const toNode = pathNodes[index + 1];
+        if (fromNode.floor === toNode.floor) return [];
+        return [{
+          edgeId: edge.edgeId,
+          type: edge.type,
+          fromNodeId: fromNode.nodeId,
+          toNodeId: toNode.nodeId,
+          fromFloor: fromNode.floor,
+          toFloor: toNode.floor,
+        }];
+      });
 
       return {
         success: true,
@@ -228,6 +247,7 @@ function findShortestPath(startId, targetId, nodes, edges, options = {}) {
         floorsCovered,
         directions,
         edges: pathEdges,
+        transitions,
       };
     }
 
