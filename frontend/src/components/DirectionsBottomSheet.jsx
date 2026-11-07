@@ -92,7 +92,7 @@ export default function DirectionsBottomSheet({
   return (
     <section
       aria-label="Turn-by-turn directions drawer"
-      className={`fixed bottom-16 md:bottom-20 inset-x-0 md:left-4 md:right-auto md:w-[410px] z-30 bg-white/98 backdrop-blur-xl rounded-t-3xl md:rounded-3xl border border-slate-200/90 shadow-[0_-8px_32px_rgba(15,23,42,0.16)] transition-all duration-300 ease-out flex flex-col overflow-hidden ${heightClasses}`}
+      className={`fixed bottom-16 md:bottom-20 inset-x-0 md:left-[260px] md:right-auto md:w-[410px] z-30 bg-white/98 backdrop-blur-xl rounded-t-3xl md:rounded-3xl border border-slate-200/90 shadow-[0_-8px_32px_rgba(15,23,42,0.16)] transition-all duration-300 ease-out flex flex-col overflow-hidden ${heightClasses}`}
     >
       {/* Swipe / Drag Handle Zone */}
       <div
