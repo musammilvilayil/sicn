@@ -7,7 +7,7 @@ import { api } from '../services/api';
 const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
-  const { user, effectiveRole } = useAuth();
+  const { user, token, effectiveRole } = useAuth();
   const { startNodeId, showToast } = useNavigation();
 
   const socketRef = useRef(null);
@@ -30,6 +30,7 @@ export const SocketProvider = ({ children }) => {
     const socket = io('/', {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
+      auth: token ? { token } : {},
     });
     socketRef.current = socket;
 
@@ -67,7 +68,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       socket.disconnect();
     };
-  }, [showToast]);
+  }, [showToast, token]);
 
   const createShareRoom = useCallback(
     (customName) => {
