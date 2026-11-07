@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, CheckCircle2, Loader2, MapPin, X } from 'lucide-react';
+import { CheckCircle2, Loader2, MapPin, X } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { api } from '../services/api';
 
