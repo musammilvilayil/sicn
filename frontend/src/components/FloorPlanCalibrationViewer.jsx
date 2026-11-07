@@ -29,6 +29,7 @@ export default function FloorPlanCalibrationViewer({
   const [selectedNodeId, setSelectedNodeId] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [verificationNote, setVerificationNote] = useState('');
   const [error, setError] = useState('');
 
   const floorNodes = useMemo(
@@ -125,15 +126,27 @@ export default function FloorPlanCalibrationViewer({
     return () => { cancelled = true; };
   }, [plan?.url, pageNumber]);
 
+  useEffect(() => {
+    if (!calibration) return;
+    if (Number(calibration.pageNumber) === Number(pageNumber) && calibration.sourcePdf === plan.sourceName) {
+      setControlPoints(calibration.controlPoints || []);
+    } else {
+      setControlPoints([]);
+    }
+  }, [calibration, pageNumber, plan.sourceName]);
+
   const transform = useMemo(() => {
-    if (calibration?.transform?.xCoefficients && calibration?.transform?.yCoefficients) {
+    const savedMatchesPage = calibration &&
+      Number(calibration.pageNumber) === Number(pageNumber) &&
+      calibration.sourcePdf === plan.sourceName;
+    if (savedMatchesPage && calibration?.transform?.xCoefficients && calibration?.transform?.yCoefficients) {
       return calibration.transform;
     }
     if (controlPoints.length >= 3) {
       try { return solveAffineCalibration(controlPoints); } catch { return null; }
     }
     return null;
-  }, [calibration, controlPoints]);
+  }, [calibration, controlPoints, pageNumber, plan.sourceName]);
 
   const toViewport = (node) => {
     if (!transform || !pageMetrics) return null;
@@ -179,6 +192,25 @@ export default function FloorPlanCalibrationViewer({
       setMessage('Plan registered. This registration is not field-verified yet.');
     } catch (err) {
       setError(err.message || 'Unable to save calibration.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!calibration || verificationNote.trim().length < 20) {
+      setError('Describe the physical walkthrough and measured checks (at least 20 characters).');
+      return;
+    }
+    if (!window.confirm('Confirm that this floor was physically walked and the registered checkpoints/corridors were checked against the plan?')) return;
+    setSaving(true);
+    setError('');
+    try {
+      const result = await api.verifyFloorCalibration(floor, verificationNote.trim());
+      setCalibration(result);
+      setMessage('Physical verification attestation saved.');
+    } catch (err) {
+      setError(err.message || 'Unable to save field verification.');
     } finally {
       setSaving(false);
     }
@@ -279,8 +311,32 @@ export default function FloorPlanCalibrationViewer({
 
           {calibration && (
             <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-[11px] leading-5 text-amber-100">
-              <AlertTriangle size={13} className="mr-1 inline" />
-              Registered geometry is not field-verified. Check corridor lengths and QR locations on site before relying on this as a precise map.
+              {calibration.fieldVerified ? (
+                <>
+                  <CheckCircle2 size={13} className="mr-1 inline text-emerald-300" />
+                  Field verification attested on {new Date(calibration.fieldVerifiedAt).toLocaleDateString()}.
+                  {calibration.fieldVerificationNote && <div className="mt-1 text-amber-50">{calibration.fieldVerificationNote}</div>}
+                </>
+              ) : (
+                <>
+                  <AlertTriangle size={13} className="mr-1 inline" />
+                  Registered geometry is not field-verified. Check corridor lengths and QR locations on site before relying on this as a precise map.
+                </>
+              )}
+            </div>
+          )}
+          {calibration && adminEnabled && !calibration.fieldVerified && (
+            <div className="mt-3 space-y-2">
+              <label className="block text-[11px] font-bold text-slate-300">On-site verification notes</label>
+              <textarea
+                value={verificationNote}
+                onChange={(event) => setVerificationNote(event.target.value)}
+                placeholder="Record the corridors walked, measured distances, QR locations and any corrections…"
+                className="min-h-20 w-full rounded-xl border border-white/10 bg-slate-800 p-3 text-xs text-white"
+              />
+              <button onClick={handleVerify} disabled={saving || verificationNote.trim().length < 20} className="w-full rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-100 disabled:opacity-40">
+                Attest physical walkthrough
+              </button>
             </div>
           )}
 
