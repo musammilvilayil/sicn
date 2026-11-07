@@ -120,6 +120,8 @@ export default function MapPage() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [autoScannerOpen, setAutoScannerOpen] = useState(false);
   const [confirmedTransition, setConfirmedTransition] = useState(null);
+  const [headingUp, setHeadingUp] = useState(false);
+  const [autoFollow, setAutoFollow] = useState(true);
 
   // Admin Map Editor state
   const [adminEditMode, setAdminEditMode] = useState(false);
@@ -319,6 +321,9 @@ export default function MapPage() {
           userHeading={heading}
           mapNorthHeading={mapNorthHeading ?? 0}
           navigationActive={Boolean(routeResult)}
+          headingUp={headingUp}
+          autoFollow={autoFollow}
+          onUserPan={() => setAutoFollow(false)}
           pan={pan}
           setPan={setPan}
           adminEditMode={canEditMap && adminEditMode}
@@ -535,6 +540,26 @@ export default function MapPage() {
           >
             <Compass size={13} />
             <span>{sensorStatus === 'active' || sensorStatus === 'compass-only' ? (mapNorthHeading === null ? 'Calibrate North' : 'Recalibrate North') : 'Enable Compass'}</span>
+          </button>
+
+          <button
+            onClick={() => setHeadingUp((value) => !value)}
+            disabled={heading === null || !routeResult}
+            title="Rotate the floor map to keep your phone heading at the top"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50 transition disabled:opacity-40"
+          >
+            <Compass size={13} />
+            <span>{headingUp ? 'Heading Up' : 'North Up'}</span>
+          </button>
+
+          <button
+            onClick={() => setAutoFollow((value) => !value)}
+            disabled={!routeResult}
+            title="Keep the estimated location centred on the map"
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${autoFollow ? 'bg-blue-600 text-white border-blue-600' : 'bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50'} disabled:opacity-40`}
+          >
+            <LocateFixed size={13} />
+            <span>{autoFollow ? 'Auto-follow On' : 'Auto-follow Off'}</span>
           </button>
 
           <button
