@@ -197,6 +197,17 @@ export const api = {
     return data;
   },
 
+  async provisionUser(userData) {
+    const res = await fetch(`${API_BASE}/auth/provision`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(userData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Account provisioning failed');
+    return data;
+  },
+
   async register(userData) {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
