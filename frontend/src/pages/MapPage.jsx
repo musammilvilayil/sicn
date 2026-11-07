@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -31,7 +31,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { FLOOR_PLANS } from '../config/floorPlans';
 import usePhoneSensors from '../hooks/usePhoneSensors';
-import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint } from '../utils/indoorNavigation';
+import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, advanceAlongRoute } from '../utils/indoorNavigation';
 
 const FLOOR_DEFS = [
   { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
@@ -95,22 +95,25 @@ export default function MapPage() {
   const setWalkedMeters = useCallback((meters) => setWalkProgress({ routeResult, meters }), [routeResult]);
   const [calibrationStartSteps, setCalibrationStartSteps] = useState(null);
 
+  const transitionPromptRef = useRef(null);
   const handlePdrStep = useCallback(() => {
     if (calibrationStartSteps !== null || !routeResult?.path?.length) return;
-    const from = routeResult.path[activeStepIndex];
-    const to = routeResult.path[activeStepIndex + 1];
-    const edge = routeResult.edges?.[activeStepIndex];
-    if (!from || !to || from.floor !== to.floor || ['stairs', 'lift'].includes(edge?.type)) return;
-    const distance = getSegmentDistance(routeResult, activeStepIndex);
-    if (distance <= 0) return;
-    const nextDistance = walkedMeters + strideLengthMeters;
-    if (nextDistance >= distance) {
-      setActiveStepIndex((index) => Math.min(index + 1, routeResult.path.length - 1));
-      setWalkedMeters(0);
-    } else {
-      setWalkedMeters(nextDistance);
+    const progress = advanceAlongRoute(
+      routeResult, activeStepIndex, walkedMeters, strideLengthMeters
+    );
+    if (progress.segmentIndex !== activeStepIndex) {
+      setActiveStepIndex(progress.segmentIndex);
+      transitionPromptRef.current = null;
     }
-  }, [calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, setActiveStepIndex, setWalkedMeters]);
+    setWalkedMeters(progress.walkedMeters);
+    if (progress.blockedByTransition) {
+      const edge = routeResult.edges?.[progress.segmentIndex];
+      if (edge?.edgeId && transitionPromptRef.current !== edge.edgeId) {
+        transitionPromptRef.current = edge.edgeId;
+        showToast('You are at a floor transition. Scan the origin QR, then the matching landing QR to continue.', 'info');
+      }
+    }
+  }, [calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, setActiveStepIndex, setWalkedMeters, showToast]);
 
   const { heading, stepCount, status: sensorStatus, error: sensorError, startSensors } = usePhoneSensors(handlePdrStep);
 
@@ -193,6 +196,7 @@ export default function MapPage() {
     }
 
     setWalkedMeters(0);
+    transitionPromptRef.current = null;
     api.updateMyLocation(checkpoint.nodeId, checkpoint.qrValue).catch(() => {});
     broadcastCheckpoint(checkpoint.nodeId);
 
@@ -217,7 +221,12 @@ export default function MapPage() {
     } else if (checkpoint.nodeId === destinationNodeId) {
       clearRoute();
     }
-    showToast(`Location confirmed: ${checkpoint.name}`, 'success');
+    showToast(
+      validation.stage === 'off-route-checkpoint'
+        ? `Off-route checkpoint confirmed. Recalculating from ${checkpoint.name}.`
+        : `Location confirmed: ${checkpoint.name}`,
+      'success'
+    );
     return true;
   };
 
