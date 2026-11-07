@@ -1,23 +1,49 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 
+function createTemporaryPassword() {
+  return crypto.randomBytes(24).toString('base64url');
+}
+
+function printCredentials(email, password, action) {
+  console.log('\n======================================================');
+  console.log(` ${action} — SAVE THESE CREDENTIALS`);
+  console.log('======================================================');
+  console.log(`Username / Email : ${email}`);
+  console.log(`Temporary password: ${password}`);
+  console.log('Sign in and change this password immediately.');
+  console.log('This password will not be displayed again.');
+  console.log('======================================================\n');
+}
+
 /**
- * Creates the first administrator exactly once.
- * The password is generated at runtime and printed only when a new account
- * is created. Existing administrator credentials are never displayed.
+ * Provision one administrator on first startup. If a legacy seeded Admin
+ * exists without a bootstrap marker, rotate its potentially-known demo
+ * password once instead of leaving public demo credentials active.
  */
 async function ensureBootstrapAdmin() {
-  const existingAdmin = await User.findOne({ role: 'Admin' }).select('_id email').lean();
+  const existingAdmin = await User.findOne({ role: 'Admin' }).sort({ createdAt: 1 });
+
   if (existingAdmin) {
-    console.log(`Bootstrap admin already configured: ${existingAdmin.email}`);
-    return { created: false, email: existingAdmin.email };
+    if (existingAdmin.bootstrapAdminInitializedAt) {
+      console.log(`Bootstrap admin already configured: ${existingAdmin.email}`);
+      return { created: false, email: existingAdmin.email };
+    }
+
+    const password = createTemporaryPassword();
+    existingAdmin.password = password;
+    existingAdmin.mustChangePassword = true;
+    existingAdmin.bootstrapAdminInitializedAt = new Date();
+    await existingAdmin.save();
+    printCredentials(existingAdmin.email, password, 'EXISTING ADMIN PASSWORD ROTATED');
+    return { created: false, rotated: true, email: existingAdmin.email };
   }
 
   const email = String(process.env.BOOTSTRAP_ADMIN_EMAIL || 'admin@bji.ac.in')
     .trim()
     .toLowerCase();
   const name = String(process.env.BOOTSTRAP_ADMIN_NAME || 'Campus Administrator').trim();
-  const password = crypto.randomBytes(24).toString('base64url');
+  const password = createTemporaryPassword();
 
   const account = await User.create({
     name,
@@ -26,17 +52,11 @@ async function ensureBootstrapAdmin() {
     role: 'Admin',
     department: 'Administration',
     avatarColor: '#1d4ed8',
+    mustChangePassword: true,
+    bootstrapAdminInitializedAt: new Date(),
   });
 
-  console.log('\n======================================================');
-  console.log(' FIRST ADMINISTRATOR CREATED — SAVE THESE CREDENTIALS');
-  console.log('======================================================');
-  console.log(`Username / Email : ${account.email}`);
-  console.log(`Temporary password: ${password}`);
-  console.log('Sign in and change this password immediately.');
-  console.log('This password will not be displayed again.');
-  console.log('======================================================\n');
-
+  printCredentials(account.email, password, 'FIRST ADMINISTRATOR CREATED');
   return { created: true, email: account.email };
 }
 
