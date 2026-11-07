@@ -21,6 +21,7 @@ const formatAuthResponse = (user) => ({
   department: user.department,
   currentLocationNodeId: user.currentLocationNodeId,
   avatarColor: user.avatarColor,
+  mustChangePassword: Boolean(user.mustChangePassword),
   token: generateToken(user),
 });
 
