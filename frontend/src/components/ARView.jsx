@@ -166,6 +166,7 @@ export default function ARView() {
   const [aframeReady, setAframeReady] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [userHeading, setUserHeading] = useState(null);
+  const [orientationAvailable, setOrientationAvailable] = useState(false);
 
   const cleanupMediaAndSensors = useCallback(() => {
     if (fallbackTimerRef.current) {
@@ -226,17 +227,11 @@ export default function ARView() {
 
     const handleOrientation = (event) => {
       const heading = extractCompassHeading(event);
-      if (heading === null) {
-        if (!receivedValidReading) {
-          showDeniedAndFallback(
-            'Orientation sensors unavailable on this device. Switching back to 2D Map...'
-          );
-        }
-        return;
-      }
+      if (heading === null) return;
 
       receivedValidReading = true;
       setUserHeading(heading);
+      setOrientationAvailable(true);
     };
 
     const sensorWatchdog = setTimeout(() => {
@@ -270,13 +265,15 @@ export default function ARView() {
       // 1. Crucial for iOS 13+: Trigger DeviceOrientationEvent.requestPermission()
       // directly from this exact button click BEFORE any prior async await expires
       // Safari WebKit's transient user-gesture activation token.
-      if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) {
-        throw new Error(
-          'Camera or Motion blocked. Device lacks orientation sensors.'
-        );
+      if (typeof window === 'undefined') {
+        throw new Error('This feature requires a supported browser.');
       }
 
-      if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+      // Compass permission is optional; camera guidance still works without it.
+      if (
+        'DeviceOrientationEvent' in window &&
+        typeof window.DeviceOrientationEvent.requestPermission === 'function'
+      ) {
         const motionPermission = await window.DeviceOrientationEvent.requestPermission();
         if (motionPermission !== 'granted') {
           throw new Error('Camera or Motion blocked. Enable them in browser settings.');
@@ -341,7 +338,12 @@ export default function ARView() {
       setCameraReady(true);
 
       // 3. Subscribe to live compass/gyroscope orientation stream & activate AR HUD
-      attachOrientationListeners();
+      if ('DeviceOrientationEvent' in window) {
+        attachOrientationListeners();
+      } else {
+        setOrientationAvailable(false);
+        setErrorMessage('This device does not expose a browser compass. Camera guidance is available; follow the step card and scan QR checkpoints to recalibrate.');
+      }
       setSessionState('active');
     } catch (err) {
       console.warn('AR Session permission error:', err);
@@ -384,7 +386,7 @@ export default function ARView() {
     const floorDelta = (nextNode?.floor ?? 0) - (currNode?.floor ?? 0);
     const pitch = floorDelta > 0 ? 32 : floorDelta < 0 ? -32 : 0;
 
-    const isAligned = Math.abs(relativeAngle) <= 20;
+    const isAligned = userHeading !== null && Math.abs(relativeAngle) <= 20;
     const isFloorChange = floorDelta !== 0;
 
     const arrowColor = isFloorChange
@@ -436,6 +438,8 @@ export default function ARView() {
     ? navMetrics.floorDelta > 0
       ? 'Take Stairs / Lift Up'
       : 'Take Stairs / Lift Down'
+    : !orientationAvailable
+    ? (navMetrics.stepDirection?.instruction || 'Follow the next navigation step')
     : navMetrics.isAligned
     ? 'Aligned • Walk Straight'
     : navMetrics.relativeAngle > 0
@@ -599,7 +603,7 @@ export default function ARView() {
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-slate-950/65 via-transparent to-slate-950/75" />
 
           {/* Transparent Embedded A-Frame + AR.js 3D Directional Arrow Scene */}
-          {aframeReady && (
+          {aframeReady && orientationAvailable && (
             <div className="absolute inset-0 pointer-events-none">
               <a-scene
                 embedded
@@ -675,13 +679,13 @@ export default function ARView() {
           )}
 
           {/* Initializing Compass Sensor Calibration Indicator */}
-          {userHeading === null && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-              <div className="bg-slate-900/85 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl border border-white/15 shadow-2xl flex items-center gap-3">
-                <Compass size={18} className="text-blue-400 animate-spin" />
-                <span className="text-xs font-semibold tracking-wide">
-                  Calibrating Compass &amp; Gyroscope...
-                </span>
+          {!orientationAvailable && (
+            <div className="absolute top-28 inset-x-4 z-20 flex justify-center pointer-events-none">
+              <div className="max-w-md bg-slate-950/80 backdrop-blur-md text-white px-4 py-3 rounded-2xl border border-amber-300/30 shadow-xl text-center">
+                <div className="text-xs font-bold text-amber-200">Camera guidance mode</div>
+                <p className="text-[11px] text-slate-200 mt-1">
+                  Compass is not available on this device. Follow the step instructions below and scan a QR checkpoint to recalibrate.
+                </p>
               </div>
             </div>
           )}
@@ -703,9 +707,9 @@ export default function ARView() {
                   <div className="text-xs font-semibold text-slate-200 truncate">
                     Heading:{' '}
                     <strong>
-                      {userHeading !== null
+                      {orientationAvailable && userHeading !== null
                         ? `${Math.round(userHeading)}° ${formatCardinal(userHeading)}`
-                        : 'Calibrating...'}
+                        : 'Compass unavailable · Step guidance'}
                     </strong>{' '}
                     • Target {Math.round(navMetrics.targetBearing)}°
                   </div>
