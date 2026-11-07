@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../services/api';
 import {
   Compass,
   Map as MapIcon,
@@ -15,87 +17,6 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
-
-// Singleton promise so A-Frame + AR.js custom elements & components register once per session
-let aframeBootstrapPromise = null;
-
-async function ensureAFrameAndARJS() {
-  if (typeof window === 'undefined') return null;
-  if (aframeBootstrapPromise) return aframeBootstrapPromise;
-
-  aframeBootstrapPromise = (async () => {
-    const aframeModule = await import('aframe');
-    const AFRAME = window.AFRAME || aframeModule.default || aframeModule;
-
-    if (AFRAME && !window.AFRAME) {
-      window.AFRAME = AFRAME;
-    }
-    if (AFRAME?.THREE && !window.THREE) {
-      window.THREE = AFRAME.THREE;
-    }
-
-    // Load AR.js location/orientation module on top of A-Frame
-    try {
-      await import('@ar-js-org/ar.js/aframe/build/aframe-ar-location-only.js');
-    } catch (err) {
-      console.warn('AR.js optional extension warning:', err);
-    }
-
-    // Register custom smooth 3D directional arrow component on A-Frame
-    if (AFRAME && !AFRAME.components['ar-nav-arrow']) {
-      AFRAME.registerComponent('ar-nav-arrow', {
-        schema: {
-          yaw: { type: 'number', default: 0 },
-          pitch: { type: 'number', default: 0 },
-          color: { type: 'string', default: '#3b82f6' },
-        },
-        init() {
-          this.currentYaw = this.data.yaw;
-          this.currentPitch = this.data.pitch;
-          this.pulsePhase = 0;
-          this.applyColors(this.data.color);
-        },
-        update(oldData) {
-          if (oldData.color !== this.data.color) {
-            this.applyColors(this.data.color);
-          }
-        },
-        applyColors(hexColor) {
-          const meshes = this.el.querySelectorAll('[data-arrow-tint]');
-          meshes.forEach((meshEl) => {
-            meshEl.setAttribute('material', 'color', hexColor);
-            meshEl.setAttribute('material', 'emissive', hexColor);
-          });
-        },
-        tick(_time, timeDelta) {
-          const dt = Math.min((timeDelta || 16) / 1000, 0.1);
-          // Shortest angular delta in [-180, 180] for smooth compass wraparound
-          const deltaYaw = ((this.data.yaw - this.currentYaw + 540) % 360) - 180;
-          this.currentYaw = (this.currentYaw + deltaYaw * Math.min(1, dt * 10) + 360) % 360;
-
-          const deltaPitch = this.data.pitch - this.currentPitch;
-          this.currentPitch += deltaPitch * Math.min(1, dt * 8);
-
-          // Subtle floating hover animation in 3D space
-          this.pulsePhase += dt * 3.2;
-          const bobOffset = Math.sin(this.pulsePhase) * 0.045;
-
-          this.el.object3D.position.set(0, -0.32 + bobOffset, -2.6);
-          this.el.object3D.rotation.set(
-            (this.currentPitch * Math.PI) / 180,
-            (this.currentYaw * Math.PI) / 180,
-            0,
-            'YXZ'
-          );
-        },
-      });
-    }
-
-    return AFRAME;
-  })();
-
-  return aframeBootstrapPromise;
-}
 
 /**
  * Tilt-compensated compass heading [0, 360) clockwise from North
@@ -145,16 +66,22 @@ function formatCardinal(deg) {
 }
 
 export default function ARView() {
+  const navigate = useNavigate();
   const {
     routeResult,
     activeStepIndex,
     setActiveStepIndex,
     setCurrentFloor,
+    setStartNodeId,
+    destinationNodeId,
+    accessibleOnly,
+    nodes,
+    computeRoute,
+    showToast,
     fallbackTo2DMap,
   } = useNavigation();
 
   const videoRef = useRef(null);
-  const arrowRigRef = useRef(null);
   const streamRef = useRef(null);
   const orientationCleanupRef = useRef(null);
   const fallbackTimerRef = useRef(null);
@@ -163,10 +90,12 @@ export default function ARView() {
   // 'prompt' -> 'requesting' -> 'active' | 'denied'
   const [sessionState, setSessionState] = useState('prompt');
   const [errorMessage, setErrorMessage] = useState('');
-  const [aframeReady, setAframeReady] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [userHeading, setUserHeading] = useState(null);
   const [orientationAvailable, setOrientationAvailable] = useState(false);
+  const [qrDetectionAvailable, setQrDetectionAvailable] = useState(false);
+  const qrDetectionLockRef = useRef(false);
+  const lastQrValueRef = useRef('');
   const cameraApiAvailable = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia);
   const secureContextAvailable = typeof window !== 'undefined' && window.isSecureContext;
   const orientationApiAvailable = typeof window !== 'undefined' && 'DeviceOrientationEvent' in window;
@@ -203,17 +132,10 @@ export default function ARView() {
     [cleanupMediaAndSensors, fallbackTo2DMap]
   );
 
-  // Preload A-Frame & AR.js custom elements in background while user views the Start AR Session prompt
+  // Keep camera lifecycle independent of optional WebGL frameworks for iOS Safari stability.
   useEffect(() => {
     mountedRef.current = true;
-    ensureAFrameAndARJS()
-      .then(() => {
-        if (mountedRef.current) setAframeReady(true);
-      })
-      .catch((err) => {
-        console.error('Failed to initialize A-Frame/AR.js:', err);
-      });
-
+    setQrDetectionAvailable(typeof window !== 'undefined' && 'BarcodeDetector' in window);
     return () => {
       mountedRef.current = false;
       cleanupMediaAndSensors();
@@ -327,7 +249,7 @@ export default function ARView() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
+        await videoRef.current.play();
       }
       setCameraReady(true);
 
@@ -348,6 +270,62 @@ export default function ARView() {
       showDeniedAndFallback(deniedMsg);
     }
   };
+
+  // Automatically recognize valid campus QR checkpoints from the live camera where supported.
+  useEffect(() => {
+    if (sessionState !== 'active' || !cameraReady || !('BarcodeDetector' in window)) return undefined;
+    let cancelled = false;
+    let timerId;
+    let lastAttemptAt = 0;
+    let detector;
+    try {
+      detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+    } catch {
+      setQrDetectionAvailable(false);
+      return undefined;
+    }
+
+    const scanFrame = async () => {
+      if (cancelled) return;
+      const video = videoRef.current;
+      if (video && video.readyState >= 2 && !qrDetectionLockRef.current && Date.now() - lastAttemptAt > 650) {
+        lastAttemptAt = Date.now();
+        try {
+          const codes = await detector.detect(video);
+          const rawValue = codes?.[0]?.rawValue;
+          if (rawValue && rawValue !== lastQrValueRef.current) {
+            qrDetectionLockRef.current = true;
+            try {
+              const checkpoint = await api.getNodeByQR(rawValue);
+              if (!cancelled && checkpoint?.nodeId) {
+                lastQrValueRef.current = rawValue;
+                setStartNodeId(checkpoint.nodeId);
+                setCurrentFloor(checkpoint.floor);
+                if (destinationNodeId) {
+                  await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
+                }
+                showToast(`Location confirmed: ${checkpoint.name}`, 'success');
+              }
+            } catch {
+              // Ignore unrelated QR codes in posters, notices and personal devices.
+            } finally {
+              qrDetectionLockRef.current = false;
+            }
+          }
+        } catch {
+          // A camera frame can be temporarily unavailable while Safari adjusts exposure.
+        }
+      }
+      timerId = window.setTimeout(scanFrame, 700);
+    };
+
+    scanFrame();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timerId);
+      qrDetectionLockRef.current = false;
+    };
+  }, [sessionState, cameraReady, destinationNodeId, accessibleOnly, nodes, computeRoute, setStartNodeId, setCurrentFloor, showToast]);
 
   // Derive current & next A* path nodes, target bearing, and 3D arrow orientation
   const navMetrics = useMemo(() => {
@@ -414,17 +392,6 @@ export default function ARView() {
       stepDirection,
     };
   }, [routeResult, activeStepIndex, userHeading]);
-
-  // Sync updated yaw/pitch/color attributes into A-Frame custom component
-  useEffect(() => {
-    if (sessionState !== 'active' || !aframeReady || !arrowRigRef.current || !navMetrics) return;
-    arrowRigRef.current.setAttribute(
-      'ar-nav-arrow',
-      `yaw: ${navMetrics.aframeYaw.toFixed(2)}; pitch: ${navMetrics.aframePitch.toFixed(
-        2
-      )}; color: ${navMetrics.arrowColor}`
-    );
-  }, [sessionState, aframeReady, navMetrics]);
 
   if (!navMetrics) return null;
 
@@ -618,87 +585,30 @@ export default function ARView() {
           {/* Subtle Vignette for HUD Contrast over bright hallways */}
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-slate-950/65 via-transparent to-slate-950/75" />
 
-          {/* Transparent Embedded A-Frame + AR.js 3D Directional Arrow Scene */}
-          {aframeReady && orientationAvailable && (
-            <div className="absolute inset-0 pointer-events-none">
-              <a-scene
-                embedded
-                vr-mode-ui="enabled: false"
-                xr-mode-ui="enabled: false"
-                device-orientation-permission-ui="enabled: false"
-                renderer="alpha: true; antialias: true; colorManagement: true;"
-                style={{ width: '100%', height: '100%' }}
-              >
-                <a-light type="ambient" color="#ffffff" intensity="0.95" />
-                <a-light type="directional" color="#ffffff" intensity="1.15" position="1 3 2" />
-
-                <a-camera
-                  position="0 0 0"
-                  look-controls="enabled: false"
-                  wasd-controls="enabled: false"
-                />
-
-                {/* 3D Floating Directional Arrow Rig */}
-                <a-entity
-                  ref={arrowRigRef}
-                  position="0 -0.32 -2.6"
-                  ar-nav-arrow={`yaw: ${navMetrics.aframeYaw}; pitch: ${navMetrics.aframePitch}; color: ${navMetrics.arrowColor}`}
+          {/* Lightweight camera HUD; avoids A-Frame/WebGL conflicts on iOS Safari. */}
+          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+            {orientationAvailable ? (
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="grid place-items-center w-28 h-28 rounded-full border border-white/35 bg-slate-950/25 backdrop-blur-sm shadow-2xl"
+                  style={{ transform: `rotate(${navMetrics.relativeAngle}deg)`, transition: 'transform 180ms ease-out' }}
                 >
-                  {/* Glowing Horizon Compass Halo */}
-                  <a-ring
-                    rotation="-90 0 0"
-                    position="0 -0.22 0"
-                    radius-inner="0.48"
-                    radius-outer="0.56"
-                    material="color: #ffffff; opacity: 0.35; transparent: true; side: double"
-                  />
-                  <a-torus
-                    data-arrow-tint="true"
-                    rotation="90 0 0"
-                    position="0 -0.22 0"
-                    radius="0.52"
-                    radius-tubular="0.018"
-                    material={`color: ${navMetrics.arrowColor}; emissive: ${navMetrics.arrowColor}; emissiveIntensity: 0.45; opacity: 0.85; transparent: true`}
-                  />
-
-                  {/* 3D Arrow Shaft pointing along -Z (forward into camera view) */}
-                  <a-cylinder
-                    data-arrow-tint="true"
-                    position="0 0 0.18"
-                    rotation="90 0 0"
-                    radius="0.095"
-                    height="0.68"
-                    material={`color: ${navMetrics.arrowColor}; emissive: ${navMetrics.arrowColor}; emissiveIntensity: 0.3; metalness: 0.25; roughness: 0.3`}
-                  />
-
-                  {/* 3D Arrowhead Cone pointing toward -Z */}
-                  <a-cone
-                    data-arrow-tint="true"
-                    position="0 0 -0.34"
-                    rotation="-90 0 0"
-                    radius-bottom="0.26"
-                    radius-top="0.005"
-                    height="0.48"
-                    material={`color: ${navMetrics.arrowColor}; emissive: ${navMetrics.arrowColor}; emissiveIntensity: 0.38; metalness: 0.25; roughness: 0.25`}
-                  />
-
-                  {/* Tail Stabilizer Accent Ring */}
-                  <a-torus
-                    position="0 0 0.48"
-                    radius="0.11"
-                    radius-tubular="0.02"
-                    material="color: #f8fafc; opacity: 0.9; transparent: true"
-                  />
-                </a-entity>
-              </a-scene>
-            </div>
-          )}
+                  <svg viewBox="0 0 100 100" className="w-20 h-20 drop-shadow-xl" aria-label="Navigation direction">
+                    <path d="M50 5 L83 83 L50 66 L17 83 Z" fill={navMetrics.arrowColor} stroke="white" strokeWidth="3" strokeLinejoin="round" />
+                    <path d="M50 5 L50 66 L17 83 Z" fill="white" fillOpacity=".22" />
+                  </svg>
+                </div>
+                <span className="rounded-full bg-slate-950/75 px-3 py-1.5 text-[11px] font-bold text-white">Follow the arrow</span>
+              </div>
+            ) : null}
+          </div>
 
           {/* Initializing Compass Sensor Calibration Indicator */}
           {!orientationAvailable && (
             <div className="absolute top-28 inset-x-4 z-20 flex justify-center pointer-events-none">
               <div className="max-w-md bg-slate-950/80 backdrop-blur-md text-white px-4 py-3 rounded-2xl border border-amber-300/30 shadow-xl text-center">
                 <div className="text-xs font-bold text-amber-200">Camera guidance mode</div>
+                <p className="text-[10px] text-slate-300 mt-1">QR auto-detection: {qrDetectionAvailable ? 'Available' : 'Use the Scan QR button below'}</p>
                 <p className="text-[11px] text-slate-200 mt-1">
                   Compass is not available on this device. Follow the step instructions below and scan a QR checkpoint to recalibrate.
                 </p>
@@ -802,7 +712,7 @@ export default function ARView() {
               </div>
 
               {/* Stepper Controls to advance along A* path nodes */}
-              <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/10">
                 <button
                   onClick={() => handleStepChange(navMetrics.idx - 1)}
                   disabled={navMetrics.idx === 0}
@@ -812,9 +722,12 @@ export default function ARView() {
                   <span>Prev</span>
                 </button>
 
-                <span className="text-[11px] text-slate-400 truncate">
+                <span className="text-[11px] text-slate-400 truncate min-w-0 flex-1">
                   From: <strong className="text-slate-200">{navMetrics.currNode?.name}</strong>
                 </span>
+                <button type="button" onClick={() => { cleanupMediaAndSensors(); fallbackTo2DMap(); navigate('/scan'); }} className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold">
+                  <Camera size={14} /> Scan QR
+                </button>
 
                 {!navMetrics.isFinalLeg ? (
                   <button
