@@ -35,7 +35,7 @@ const edgeSchema = new mongoose.Schema(
       notes: { type: String, trim: true },
     },
     geometry: {
-      kind: { type: String, enum: ['corridor_centerline', 'door_connector', 'room_entry_connector', 'stair_path', 'lift_path'] },
+      kind: { type: String, enum: ['corridor_centerline', 'door_connector', 'room_entry_connector'] },
       coordinateSystem: { type: String, enum: ['local_metric_m'] },
       coordinateFrameId: { type: String, trim: true },
       floor: { type: Number, min: 0, max: 7 },

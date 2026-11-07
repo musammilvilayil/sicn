@@ -3,7 +3,7 @@
 ## Scope delivered
 
 - Adds a strict metric-polyline contract for route-edge geometry.
-- Supports corridor centrelines, door connectors, room-entry connectors, stair paths and lift paths.
+- Supports corridor centrelines, door connectors and room-entry connectors.
 - Measures a route edge by summing every polyline segment, so bends are included rather than measuring only the endpoint chord.
 - Requires an explicit per-floor metric coordinate frame and a source reference (drawing page or field-survey record).
 - Distinguishes candidate, reviewed and field-verified geometry. Field verification requires a named verifier, timestamp and `field_measured` distance provenance.
@@ -32,7 +32,7 @@ The polyline length must match the edge distance within max(0.15 m, 2%). A revie
 
 1. Extract vector paths and text from each PDF page and map page numbers to floors.
 2. Calibrate each page into its own metric frame using multiple known dimensions, and inspect residual error.
-3. Trace wall boundaries, walkable corridor centrelines, door openings, room footprints and door-to-room connectors.
+3. Trace wall boundaries, walkable corridor centrelines, door openings, room footprints and door-to-room connectors; model vertical stair/lift transitions with per-floor landing geometry plus separately measured vertical transit data.
 4. Review the extracted geometry visually against the source PDF; reject ambiguous/low-confidence features.
 5. Measure actual walkable route lengths on site, including bends and door approaches; record verifier/date.
 6. Verify QR sticker locations and test route instructions on Android Chrome and iOS Safari.

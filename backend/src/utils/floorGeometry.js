@@ -2,8 +2,6 @@ const GEOMETRY_KINDS = new Set([
   'corridor_centerline',
   'door_connector',
   'room_entry_connector',
-  'stair_path',
-  'lift_path',
 ]);
 const VERIFICATION_STATES = new Set(['candidate', 'reviewed', 'field_verified']);
 
