@@ -1,0 +1,65 @@
+name: SICN CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/sicn-complete-mobile-ar-admin-redesign
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  frontend:
+    name: Frontend lint and production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: frontend
+      - name: Run frontend indoor navigation unit tests
+        run: npm run test:unit
+        working-directory: frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+      - name: Verify original floor-plan PDFs are bundled
+        run: |
+          test -s dist/floorplans/ground-floor.pdf
+          test -s dist/floorplans/first-floor.pdf
+          test -s dist/floorplans/second-third-floor.pdf
+          test -s dist/floorplans/fourth-fifth-floor.pdf
+          test -s dist/floorplans/sixth-seventh-floor.pdf
+        working-directory: frontend
+
+  backend:
+    name: Backend syntax and dependency checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+      - name: Check JavaScript syntax
+        run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
+        working-directory: backend
+      - name: Run backend routing and measurement unit tests
+        run: npm run test:unit
+        working-directory: backend
+      - name: Audit architectural measurements and graph integrity
+        run: npm run audit:geometry
+        working-directory: backend

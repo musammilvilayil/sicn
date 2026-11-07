@@ -1,0 +1,435 @@
+@import "tailwindcss";
+
+/* Hide horizontal chip scrollbars while preserving touch scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ======================================================== */
+/* SVG ARCHITECTURAL BLUEPRINT FLOOR PLAN STYLES            */
+/* ======================================================== */
+.room-shape {
+  stroke-width: 2;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+.room-classroom {
+  fill: #eff6ff;
+  stroke: #93c5fd;
+}
+
+.room-lab {
+  fill: #e0f2fe;
+  stroke: #7dd3fc;
+}
+
+.room-workshop {
+  fill: #f0fdf4;
+  stroke: #86efac;
+}
+
+.room-office {
+  fill: #fffbeb;
+  stroke: #fcd34d;
+}
+
+.room-principal {
+  fill: #faf5ff;
+  stroke: #d8b4fe;
+}
+
+.room-hod {
+  fill: #fdf2f8;
+  stroke: #f9a8d4;
+}
+
+.room-library {
+  fill: #f0fdfa;
+  stroke: #5eead4;
+}
+
+.room-hall {
+  fill: #f8fafc;
+  stroke: #cbd5e1;
+}
+
+.room-faculty {
+  fill: #fdf4ff;
+  stroke: #e879f9;
+}
+
+.room-general {
+  fill: #f8fafc;
+  stroke: #cbd5e1;
+}
+
+.room-terrace {
+  fill: #ecfdf5;
+  stroke: #34d399;
+  stroke-dasharray: 6 4;
+}
+
+.room-label-bold {
+  font-size: 11px;
+  font-weight: 800;
+  fill: #1e293b;
+  letter-spacing: 0.03em;
+}
+
+.room-dim-text {
+  font-size: 9px;
+  fill: #64748b;
+  font-weight: 600;
+}
+
+.corridor-text {
+  font-size: 9.5px;
+  font-weight: 700;
+  fill: #94a3b8;
+  letter-spacing: 0.06em;
+}
+
+.stair-housing {
+  fill: #fef3c7;
+  stroke: #f59e0b;
+  stroke-width: 1.8;
+}
+
+.stair-text {
+  font-size: 9px;
+  font-weight: 800;
+  fill: #b45309;
+}
+
+.lift-housing {
+  fill: #cffafe;
+  stroke: #06b6d4;
+  stroke-width: 1.8;
+}
+
+.lift-text {
+  font-size: 9px;
+  font-weight: 800;
+  fill: #0e7490;
+}
+
+.entrance-porch-shape {
+  fill: #dcfce7;
+  stroke: #22c55e;
+  stroke-width: 2;
+}
+
+.entrance-text {
+  font-size: 10px;
+  font-weight: 800;
+  fill: #15803d;
+}
+
+/* ======================================================== */
+/* REAL-TIME ANIMATIONS (ROUTE DASH, BEACON, FRIEND GLIDE)  */
+/* ======================================================== */
+.animated-dash-line {
+  animation: routeDashFlow 1.2s linear infinite;
+}
+
+@keyframes routeDashFlow {
+  from {
+    stroke-dashoffset: 36;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.pulsing-beacon {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mapBeaconPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes mapBeaconPulse {
+
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.95);
+  }
+
+  50% {
+    opacity: 0.12;
+    transform: scale(1.35);
+  }
+}
+
+/* Smooth glide when a friend scans a new QR checkpoint via Socket.io */
+.friend-avatar-glide {
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-fade-in {
+  animation: uiFadeIn 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: uiSlideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes uiFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes uiSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ======================================================== */
+/* EMBEDDED A-FRAME / AR.JS TRANSPARENT CAMERA OVERLAY      */
+/* ======================================================== */
+a-scene[embedded] {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+a-scene[embedded] .a-canvas {
+  background: transparent !important;
+}
+
+.a-enter-vr,
+.a-enter-ar,
+.a-orientation-modal {
+  display: none !important;
+}
+
+/* ======================================================== */
+/* PRINT MEDIA FOR CAMPUS QR PLAQUES                        */
+/* ======================================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-qr-grid,
+  .printable-qr-grid * {
+    visibility: visible;
+  }
+
+  .printable-qr-grid {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2cm;
+  }
+}
+/* ======================================================== */
+/* RESPONSIVE CAMPUS APP FOUNDATION                         */
+/* ======================================================== */
+:root {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --sicn-ink: #0f172a;
+  --sicn-blue: #2563eb;
+  --sicn-surface: #ffffff;
+  --sicn-canvas: #f5f7fb;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--sicn-canvas);
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+  background: var(--sicn-canvas);
+  color: var(--sicn-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overscroll-behavior-y: contain;
+}
+
+#root {
+  min-height: 100dvh;
+  isolation: isolate;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgb(37 99 235 / 45%);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 380px) {
+  .safe-mobile-gutter {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* SICN PRODUCT DESIGN SYSTEM */
+:root{--sicn-navy:#101d3b;--sicn-blue:#2864e8;--sicn-blue-dark:#1d4fc4;--sicn-blue-soft:#edf3ff;--sicn-line:#e3e9f2;--sicn-canvas:#f4f7fc;--sicn-ink:#17243b}
+.sicn-ui{color:var(--sicn-ink);background:radial-gradient(ellipse at 78% -12%,rgba(40,100,232,.075),transparent 34rem),var(--sicn-canvas)}
+.sicn-ui :is(h1,h2,h3,h4){letter-spacing:-.025em}
+.sicn-ui main{width:min(100% - 2rem,1120px);margin-inline:auto;padding-top:1.6rem;padding-bottom:calc(6.5rem + env(safe-area-inset-bottom))}
+.sicn-ui main>section,.sicn-ui main>div[class*="bg-white"][class*="border"]{border-radius:22px;border-color:var(--sicn-line);box-shadow:0 8px 28px rgba(20,42,82,.05)}
+.sicn-ui header[class*="sticky"]{background:rgba(255,255,255,.9);border-color:var(--sicn-line);box-shadow:0 1px 0 rgba(20,42,82,.025);backdrop-filter:blur(18px)}
+.sicn-ui header[class*="sticky"]>div{width:min(100%,1120px)}
+.sicn-ui button[class*="bg-blue-600"],.sicn-ui button[class*="bg-indigo-600"]{background:linear-gradient(135deg,var(--sicn-blue),var(--sicn-blue-dark));box-shadow:0 5px 14px rgba(40,100,232,.16)}
+.sicn-ui input:not([type="checkbox"]):not([type="radio"]),.sicn-ui select,.sicn-ui textarea{border-color:#dce4f0;border-radius:13px;background-color:#fbfcff;color:var(--sicn-ink)}
+.sicn-ui input:focus,.sicn-ui select:focus,.sicn-ui textarea:focus{border-color:var(--sicn-blue);box-shadow:0 0 0 3px rgba(40,100,232,.11)}
+.sicn-ui main [class*="rounded-3xl"][class*="border"]{border-color:var(--sicn-line)}
+.sicn-mobile-nav{background:rgba(255,255,255,.96);border-top:1px solid rgba(222,230,241,.95);box-shadow:0 -12px 36px rgba(16,29,59,.09);backdrop-filter:blur(22px)}
+.sicn-mobile-link{color:#8490a4;min-height:52px}.sicn-mobile-link.is-active{color:var(--sicn-blue);background:var(--sicn-blue-soft)}
+.sicn-mobile-link.is-active:after{content:"";position:absolute;top:2px;left:50%;width:17px;height:3px;border-radius:99px;transform:translateX(-50%);background:var(--sicn-blue)}
+.sicn-desktop-nav{width:226px;padding:17px 13px 13px;border:1px solid rgba(255,255,255,.1);border-radius:25px;color:#e9efff;background:linear-gradient(165deg,#142747,#101d38 70%,#0d1830);box-shadow:0 24px 65px rgba(12,28,58,.24)}
+.sicn-brand-lockup{display:flex;align-items:center;gap:11px;padding:7px 8px 19px}.sicn-brand-mark{display:grid;place-items:center;width:43px;height:43px;flex:none;border:1px solid rgba(126,174,255,.28);border-radius:15px;color:#fff;background:linear-gradient(145deg,#3978f6,#2354c2);box-shadow:0 8px 20px rgba(40,100,232,.32)}
+.sicn-brand-name{color:#fff;font-size:18px;font-weight:900;letter-spacing:.09em;line-height:1.1}.sicn-brand-subtitle{margin-top:4px;color:#9db0d1;font-size:8px;font-weight:800;letter-spacing:.13em;white-space:nowrap}
+.sicn-nav-section-label{padding:0 11px 9px;color:#7186aa;font-size:9px;font-weight:900;letter-spacing:.16em}.sicn-nav-link{min-height:48px;color:#aab8d1}.sicn-nav-link:hover{color:#fff;background:rgba(255,255,255,.07)}.sicn-nav-link.is-active{color:#fff;background:linear-gradient(100deg,rgba(53,112,239,.28),rgba(53,112,239,.1));box-shadow:inset 2px 0 #5d91ff}
+.sicn-nav-icon{display:grid;place-items:center;width:22px;flex:none}.sicn-nav-caption{margin-left:auto;max-width:82px;overflow:hidden;color:#7186aa;font-size:9px;font-weight:600;text-align:right;text-overflow:ellipsis;white-space:nowrap}.sicn-nav-link.is-active .sicn-nav-caption{color:#9ebeff}.sicn-nav-active-mark{width:6px;height:6px;flex:none;border-radius:50%;background:#68a0ff;box-shadow:0 0 0 4px rgba(104,160,255,.12)}
+.sicn-nav-footer{display:flex;align-items:center;gap:10px;margin-top:18px;padding:12px 10px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(255,255,255,.045)}.sicn-status-indicator{display:grid;place-items:center;width:29px;height:29px;flex:none;border-radius:10px;color:#8fa6ca;background:rgba(255,255,255,.08)}.sicn-status-indicator.is-live{color:#6ee7b7;background:rgba(16,185,129,.14)}
+.sicn-nav-footer-title{color:#e8efff;font-size:10px;font-weight:800}.sicn-nav-footer-copy{margin-top:3px;color:#8ea2c5;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sicn-nav-version{padding:13px 7px 1px;color:#60769b;font-size:8px;font-weight:800;letter-spacing:.09em}.sicn-nav-version span{color:#5c8cf0;padding-inline:3px}
+.sicn-toast>div{border-color:rgba(255,255,255,.18)}.sicn-toast-error{color:#fff;background:rgba(159,34,55,.96)}.sicn-toast-success{color:#fff;background:rgba(8,112,83,.96)}.sicn-toast-info{color:#fff;background:rgba(16,29,59,.96)}
+@media(min-width:768px){.sicn-ui main{width:min(100% - 2rem,1080px);margin-left:max(260px,calc((100vw - 1080px)/2 + 90px));margin-right:auto}.sicn-ui header[class*="sticky"]>div{padding-left:245px}}
+@media(min-width:1440px){.sicn-ui main{margin-left:max(270px,calc((100vw - 1120px)/2 + 110px))}}
+@media(max-width:767px){.sicn-ui main{width:min(100% - 1.25rem,680px);padding-top:1rem}.sicn-ui header[class*="sticky"]{padding-top:max(.75rem,env(safe-area-inset-top))}.sicn-desktop-nav{display:none}}
+@media(max-width:380px){.sicn-mobile-link{font-size:9px}.sicn-mobile-link svg{width:18px;height:18px}}
+
+
+/* Page-level editorial hero panels */
+.sicn-ui .sicn-page-hero{position:relative;isolation:isolate;display:flex;align-items:center;min-height:218px;overflow:hidden;padding:28px 30px;border:1px solid #dce6f5;border-radius:25px;background:linear-gradient(112deg,#fff 0%,#f7faff 56%,#eaf2ff 100%);box-shadow:0 14px 36px rgba(24,57,112,.07)}
+.sicn-ui .sicn-hero-copy{position:relative;z-index:2;max-width:610px}
+.sicn-ui .sicn-eyebrow{display:inline-flex;align-items:center;gap:8px;color:#4f6f9f;font-size:9px;font-weight:900;letter-spacing:.17em}
+.sicn-ui .sicn-eyebrow-dot{width:7px;height:7px;border-radius:50%;background:#2c72ef;box-shadow:0 0 0 4px rgba(44,114,239,.1)}
+.sicn-ui .sicn-page-hero h2{max-width:590px;margin:13px 0 8px;color:#142747;font-size:clamp(25px,3vw,37px);font-weight:850;line-height:1.08;letter-spacing:-.045em}
+.sicn-ui .sicn-page-hero p{max-width:540px;margin:0;color:#667895;font-size:13px;line-height:1.7}
+.sicn-ui .sicn-hero-art{position:absolute;right:8%;top:50%;width:165px;height:165px;transform:translateY(-50%);display:grid;place-items:center;color:#2d6ee8}
+.sicn-ui .sicn-hero-orbit{position:absolute;border:1px solid rgba(48,112,224,.16);border-radius:50%}
+.sicn-ui .orbit-one{inset:5px}.sicn-ui .orbit-two{inset:23px;border-style:dashed}
+.sicn-ui .sicn-hero-qr{display:grid;place-items:center;width:88px;height:88px;border:1px solid rgba(65,119,221,.2);border-radius:27px;background:rgba(255,255,255,.84);box-shadow:0 12px 30px rgba(42,93,178,.13)}
+.sicn-ui .sicn-hero-pin{position:absolute;right:12px;top:17px;display:grid;place-items:center;width:30px;height:30px;border:1px solid #d7e4fb;border-radius:11px;background:#fff;box-shadow:0 6px 15px rgba(42,93,178,.12)}
+.sicn-ui .sicn-hero-meta{position:absolute;left:30px;bottom:17px;display:flex;gap:18px;color:#6d83a5;font-size:9px;font-weight:800;letter-spacing:.04em}
+.sicn-ui .sicn-hero-meta span+span:before{content:"";display:inline-block;width:4px;height:4px;margin:0 9px 2px 0;border-radius:50%;background:#4b83e8}
+@media(max-width:640px){.sicn-ui .sicn-page-hero{min-height:220px;padding:22px 20px 43px}.sicn-ui .sicn-hero-copy{max-width:78%}.sicn-ui .sicn-page-hero h2{font-size:27px}.sicn-ui .sicn-page-hero p{font-size:12px}.sicn-ui .sicn-hero-art{right:-45px;top:52%;transform:translateY(-50%) scale(.72);opacity:.8}.sicn-ui .sicn-hero-meta{left:20px;bottom:15px;gap:8px;font-size:8px}}
+@media(max-width:390px){.sicn-ui .sicn-hero-copy{max-width:100%}.sicn-ui .sicn-hero-art{right:-85px;opacity:.25}.sicn-ui .sicn-page-hero h2,.sicn-ui .sicn-page-hero p{max-width:88%}}
+
+
+/* Desktop workspace geometry: reserve the complete sidebar column */
+@media(min-width:768px){
+ .sicn-ui main{width:min(calc(100vw - 290px),1120px);margin-left:calc(260px + max(0px,(100vw - 260px - 1120px)/2));margin-right:0}
+ .sicn-ui header[class*="sticky"]>div{width:min(calc(100vw - 290px),1120px);margin-left:calc(260px + max(0px,(100vw - 260px - 1120px)/2));margin-right:0;padding-left:0}
+}
+
+
+/* Map workspace controls */
+.sicn-map-search>div:first-child{border:1px solid rgba(215,226,243,.95);border-radius:21px;box-shadow:0 18px 48px rgba(18,39,78,.15);background:rgba(255,255,255,.96)}
+.sicn-map-search input{font-size:13px!important;font-weight:600!important}
+.sicn-map-search>div:first-child button{transition:transform .18s ease,filter .18s ease}
+.sicn-map-search>div:first-child button:active{transform:scale(.96)}
+.sicn-map-search .no-scrollbar{padding:3px 1px 7px}
+.sicn-map-search .no-scrollbar button{border-radius:999px;box-shadow:0 5px 14px rgba(18,39,78,.08);font-size:10px;letter-spacing:.01em}
+.sicn-floor-dock>div{border:1px solid rgba(215,226,243,.95);box-shadow:0 14px 34px rgba(18,39,78,.14);border-radius:17px}
+.sicn-floor-dock button{min-width:37px;min-height:34px;border-radius:11px}
+@media(max-width:767px){
+ .sicn-map-search{top:max(12px,env(safe-area-inset-top))}
+ .sicn-floor-dock{right:8px;transform:translateY(-50%) scale(.94);transform-origin:right center}
+ .sicn-map-search>div:first-child{border-radius:18px}
+}
+@media(max-width:380px){.sicn-map-search{inset-inline:8px}.sicn-map-search input{font-size:11px!important}}
+
+
+/* SICN responsive map workspace */
+.sicn-map-page{isolation:isolate;background:#edf2f8}
+.sicn-floor-map{touch-action:none;overscroll-behavior:contain;-webkit-user-select:none;user-select:none}
+.sicn-floor-map-svg{display:block;max-width:100%;max-height:100%;overflow:visible}
+.sicn-map-search{max-width:min(410px,calc(100vw - 24px))}
+.sicn-floor-dock{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 180px)}
+@media(max-width:767px){
+ .sicn-map-page{height:100dvh;min-height:100svh}
+ .sicn-map-search{top:max(8px,env(safe-area-inset-top));left:10px;right:10px;width:auto;max-width:none}
+ .sicn-map-search>div:first-child{border-radius:17px}
+ .sicn-map-search input{font-size:12px!important}
+ .sicn-map-search .no-scrollbar{max-width:100%;padding-bottom:5px}
+ .sicn-floor-dock{right:7px;top:52%;transform:translateY(-50%) scale(.9);transform-origin:right center}
+ .sicn-floor-dock>div{max-height:42dvh}
+ .sicn-floor-map-svg{max-width:none;width:min(100vw,1000px);height:auto;max-height:72dvh}
+}
+@media(max-width:390px){
+ .sicn-map-search{left:7px;right:7px}
+ .sicn-map-search>div:first-child{border-radius:15px}
+ .sicn-floor-dock{right:4px;transform:translateY(-50%) scale(.82)}
+}
+@media(max-height:700px) and (max-width:767px){
+ .sicn-floor-dock{top:50%}
+ .sicn-floor-map-svg{max-height:62dvh}
+}

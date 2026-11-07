@@ -1,0 +1,16 @@
+const r=require('express').Router();
+const {protect,authorizeRoles}=require('../middleware/authMiddleware');
+const c=require('../controllers/attendanceController');
+r.use(protect);
+r.get('/settings',authorizeRoles('Student','Teacher','Admin'),c.getAttendanceSettings);
+r.put('/settings',authorizeRoles('Admin'),c.updateAttendanceSettings);
+r.get('/mine',authorizeRoles('Student'),c.mine);
+r.post('/check-in',authorizeRoles('Student'),c.checkIn);
+r.get('/sessions',authorizeRoles('Teacher','Admin'),c.listSessions);
+r.post('/sessions',authorizeRoles('Teacher','Admin'),c.createSession);
+r.get('/sessions/:sessionId/qr',authorizeRoles('Teacher','Admin'),c.refreshQr);
+r.post('/sessions/:sessionId/close',authorizeRoles('Teacher','Admin'),c.closeSession);
+r.get('/sessions/:sessionId/roster',authorizeRoles('Teacher','Admin'),c.roster);
+r.put('/sessions/:sessionId/records',authorizeRoles('Teacher','Admin'),c.manualMark);
+r.get('/reports',authorizeRoles('Admin'),c.reports);
+module.exports=r;

@@ -1,0 +1,4540 @@
+{
+  "nodes": [
+    {
+      "nodeId": "GF-MAIN-ENTRANCE",
+      "name": "Main Entrance & Porch",
+      "floor": 0,
+      "type": "entrance",
+      "coordinates": {
+        "x": 50,
+        "y": 30,
+        "z": 0
+      },
+      "qrCode": "QR_GF_MAIN_ENTRANCE",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-00",
+        "department": "Main Administrative Block",
+        "description": "Primary college entrance with ramp and steps",
+        "dimensions": "Open Porch"
+      }
+    },
+    {
+      "nodeId": "GF-RAMP",
+      "name": "Entrance Access Ramp (1:12)",
+      "floor": 0,
+      "type": "checkpoint",
+      "coordinates": {
+        "x": 45,
+        "y": 30,
+        "z": 0
+      },
+      "qrCode": "QR_GF_RAMP",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "Wheelchair barrier-free ramp 1:12 slope"
+      }
+    },
+    {
+      "nodeId": "GF-FOYER",
+      "name": "Main Entrance Foyer & Checkpoint",
+      "floor": 0,
+      "type": "checkpoint",
+      "coordinates": {
+        "x": 50,
+        "y": 40,
+        "z": 0
+      },
+      "qrCode": "QR_GF_FOYER",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "Central entry security and information foyer"
+      }
+    },
+    {
+      "nodeId": "GF-PRO",
+      "name": "Public Relations Office",
+      "floor": 0,
+      "type": "office",
+      "coordinates": {
+        "x": 65,
+        "y": 40,
+        "z": 0
+      },
+      "qrCode": "QR_GF_PRO",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-01",
+        "department": "Public Relations",
+        "dimensions": "743x775 cm",
+        "description": "Public enquiries and admissions helpdesk"
+      }
+    },
+    {
+      "nodeId": "GF-VISITOR-RM",
+      "name": "Visitor & Security Room",
+      "floor": 0,
+      "type": "office",
+      "coordinates": {
+        "x": 75,
+        "y": 40,
+        "z": 0
+      },
+      "qrCode": "QR_GF_VISITOR_RM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-02",
+        "dimensions": "622x499 cm",
+        "description": "Visitor holding room and campus security desk"
+      }
+    },
+    {
+      "nodeId": "GF-CORR-CENTRAL",
+      "name": "Ground Floor Central Corridor Junction",
+      "floor": 0,
+      "type": "corridor",
+      "coordinates": {
+        "x": 50,
+        "y": 50,
+        "z": 0
+      },
+      "qrCode": "QR_GF_CORR_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "2.76m wide central main passage"
+      }
+    },
+    {
+      "nodeId": "GF-STAIR-A",
+      "name": "Main Staircase A (Ground Floor)",
+      "floor": 0,
+      "type": "stair",
+      "coordinates": {
+        "x": 42,
+        "y": 55,
+        "z": 0
+      },
+      "qrCode": "QR_GF_STAIR_A",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "description": "Section A-A Main wide stairway (Width 246cm, Riser 15cm, Tread 30cm)"
+      }
+    },
+    {
+      "nodeId": "GF-LIFT-1",
+      "name": "Lift 1 (Ground Floor)",
+      "floor": 0,
+      "type": "lift",
+      "coordinates": {
+        "x": 48,
+        "y": 52,
+        "z": 0
+      },
+      "qrCode": "QR_GF_LIFT_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "250x190 cm",
+        "capacity": 10,
+        "description": "Passenger elevator connecting GF through 7th Floor"
+      }
+    },
+    {
+      "nodeId": "GF-CORR-WEST",
+      "name": "Ground Floor West Corridor",
+      "floor": 0,
+      "type": "corridor",
+      "coordinates": {
+        "x": 30,
+        "y": 55,
+        "z": 0
+      },
+      "qrCode": "QR_GF_CORR_WEST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "Passage to CAD Lab, Drawing Workshop, and Students Club"
+      }
+    },
+    {
+      "nodeId": "GF-CAD-LAB",
+      "name": "CAD Lab",
+      "floor": 0,
+      "type": "lab",
+      "coordinates": {
+        "x": 20,
+        "y": 65,
+        "z": 0
+      },
+      "qrCode": "QR_GF_CAD_LAB",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-10",
+        "dimensions": "1783x1239 cm",
+        "department": "Computer / Civil Engineering",
+        "capacity": 65,
+        "description": "Computer Aided Design and Engineering Simulation Lab"
+      }
+    },
+    {
+      "nodeId": "GF-DRAWING-WS",
+      "name": "Drawing Workshop",
+      "floor": 0,
+      "type": "lab",
+      "coordinates": {
+        "x": 15,
+        "y": 45,
+        "z": 0
+      },
+      "qrCode": "QR_GF_DRAWING_WS",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-11",
+        "dimensions": "891x1766 cm",
+        "department": "Civil & Mechanical Engineering",
+        "capacity": 70,
+        "description": "Engineering graphics drafting and workshop hall"
+      }
+    },
+    {
+      "nodeId": "GF-STUDENTS-CLUB",
+      "name": "Students Club",
+      "floor": 0,
+      "type": "room",
+      "coordinates": {
+        "x": 20,
+        "y": 30,
+        "z": 0
+      },
+      "qrCode": "QR_GF_STUDENTS_CLUB",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-12",
+        "dimensions": "504x1215 cm",
+        "description": "Student activity center, council office and club hub"
+      }
+    },
+    {
+      "nodeId": "GF-TOILET-DISABLED",
+      "name": "Accessible Restroom (Ground Floor)",
+      "floor": 0,
+      "type": "restroom",
+      "coordinates": {
+        "x": 35,
+        "y": 40,
+        "z": 0
+      },
+      "qrCode": "QR_GF_TOILET_DISABLED",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "150x250 cm",
+        "description": "Wheelchair accessible restroom"
+      }
+    },
+    {
+      "nodeId": "GF-CORR-EAST",
+      "name": "Ground Floor East Corridor",
+      "floor": 0,
+      "type": "corridor",
+      "coordinates": {
+        "x": 70,
+        "y": 50,
+        "z": 0
+      },
+      "qrCode": "QR_GF_CORR_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "2.73m wide east wing corridor"
+      }
+    },
+    {
+      "nodeId": "GF-LIFT-2",
+      "name": "Lift 2 (Ground Floor)",
+      "floor": 0,
+      "type": "lift",
+      "coordinates": {
+        "x": 72,
+        "y": 52,
+        "z": 0
+      },
+      "qrCode": "QR_GF_LIFT_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "207x305 cm",
+        "capacity": 13,
+        "description": "Service and stretcher elevator"
+      }
+    },
+    {
+      "nodeId": "GF-STAIR-B",
+      "name": "Fire Escape Staircase B (Ground Floor)",
+      "floor": 0,
+      "type": "stair",
+      "coordinates": {
+        "x": 90,
+        "y": 52,
+        "z": 0
+      },
+      "qrCode": "QR_GF_STAIR_B",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "description": "Section B-B Fire escape stair (Width 190cm, Riser 15cm, Tread 30cm)"
+      }
+    },
+    {
+      "nodeId": "GF-DRAWING-HALL",
+      "name": "Drawing Hall",
+      "floor": 0,
+      "type": "hall",
+      "coordinates": {
+        "x": 85,
+        "y": 65,
+        "z": 0
+      },
+      "qrCode": "QR_GF_DRAWING_HALL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-20",
+        "dimensions": "1476x1309 cm",
+        "capacity": 100,
+        "description": "Large multi-purpose architectural drawing studio"
+      }
+    },
+    {
+      "nodeId": "GF-BASIC-SCIENCE",
+      "name": "Basic Science Laboratory",
+      "floor": 0,
+      "type": "lab",
+      "coordinates": {
+        "x": 70,
+        "y": 70,
+        "z": 0
+      },
+      "qrCode": "QR_GF_BASIC_SCIENCE",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-21",
+        "dimensions": "1783x1239 cm",
+        "department": "Basic Science & Humanities",
+        "capacity": 60,
+        "description": "Physics and Chemistry undergraduate experimental lab"
+      }
+    },
+    {
+      "nodeId": "GF-VALUATION-RM",
+      "name": "Valuation Control Room",
+      "floor": 0,
+      "type": "room",
+      "coordinates": {
+        "x": 55,
+        "y": 70,
+        "z": 0
+      },
+      "qrCode": "QR_GF_VALUATION_RM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-22",
+        "dimensions": "1783x1239 cm",
+        "description": "University paper evaluation and confidential processing hall"
+      }
+    },
+    {
+      "nodeId": "GF-EXAM-CELL",
+      "name": "Exam Cell",
+      "floor": 0,
+      "type": "office",
+      "coordinates": {
+        "x": 40,
+        "y": 70,
+        "z": 0
+      },
+      "qrCode": "QR_GF_EXAM_CELL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "GF-23",
+        "dimensions": "1783x1239 cm",
+        "description": "Examination office, question paper custody and control"
+      }
+    },
+    {
+      "nodeId": "GF-TOILET-MENS",
+      "name": "Restroom Complex (Ground Floor)",
+      "floor": 0,
+      "type": "restroom",
+      "coordinates": {
+        "x": 60,
+        "y": 40,
+        "z": 0
+      },
+      "qrCode": "QR_GF_TOILET_MENS",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "Male and female restrooms with washbasins"
+      }
+    },
+    {
+      "nodeId": "1F-STAIR-A",
+      "name": "Main Staircase A (1st Floor Landing)",
+      "floor": 1,
+      "type": "stair",
+      "coordinates": {
+        "x": 42,
+        "y": 55,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_STAIR_A",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "description": "1st Floor landing for Section A-A Main Staircase"
+      }
+    },
+    {
+      "nodeId": "1F-STAIR-B",
+      "name": "Fire Escape Staircase B (1st Floor Landing)",
+      "floor": 1,
+      "type": "stair",
+      "coordinates": {
+        "x": 90,
+        "y": 52,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_STAIR_B",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "description": "1st Floor landing for Fire Escape Staircase"
+      }
+    },
+    {
+      "nodeId": "1F-LIFT-1",
+      "name": "Lift 1 (1st Floor)",
+      "floor": 1,
+      "type": "lift",
+      "coordinates": {
+        "x": 48,
+        "y": 52,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_LIFT_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "250x190 cm",
+        "description": "Passenger lift landing on 1st Floor"
+      }
+    },
+    {
+      "nodeId": "1F-LIFT-2",
+      "name": "Lift 2 (1st Floor)",
+      "floor": 1,
+      "type": "lift",
+      "coordinates": {
+        "x": 72,
+        "y": 52,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_LIFT_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "207x305 cm",
+        "description": "Service elevator landing on 1st Floor"
+      }
+    },
+    {
+      "nodeId": "1F-CORR-CENTRAL",
+      "name": "First Floor Central Corridor Junction",
+      "floor": 1,
+      "type": "corridor",
+      "coordinates": {
+        "x": 50,
+        "y": 50,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_CORR_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "First floor central 2.76m wide passage connecting wings"
+      }
+    },
+    {
+      "nodeId": "1F-CORR-WEST",
+      "name": "First Floor West Corridor",
+      "floor": 1,
+      "type": "corridor",
+      "coordinates": {
+        "x": 30,
+        "y": 55,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_CORR_WEST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "Hallway leading to Class 02, Class 03, and Staff Room"
+      }
+    },
+    {
+      "nodeId": "1F-CLASS-02",
+      "name": "Class 02",
+      "floor": 1,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 65,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_CLASS_02",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "102",
+        "dimensions": "876x1203 cm",
+        "department": "Computer Science & Engineering",
+        "capacity": 70,
+        "description": "Smart Lecture Classroom equipped with AV projector"
+      }
+    },
+    {
+      "nodeId": "1F-CLASS-03",
+      "name": "Class 03",
+      "floor": 1,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 45,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_CLASS_03",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "103",
+        "dimensions": "876x1203 cm",
+        "department": "Computer Science & Engineering",
+        "capacity": 70,
+        "description": "Main Lecture Hall for CSE S5"
+      }
+    },
+    {
+      "nodeId": "1F-STAFF-ROOM",
+      "name": "Faculty Staff Room",
+      "floor": 1,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 25,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_STAFF_ROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "104",
+        "dimensions": "616x1235 cm",
+        "department": "Faculty Staff Hub",
+        "capacity": 25,
+        "description": "Teaching faculty workstations and conference table"
+      }
+    },
+    {
+      "nodeId": "1F-PRINCIPAL-RM",
+      "name": "Principal's Office",
+      "floor": 1,
+      "type": "office",
+      "coordinates": {
+        "x": 45,
+        "y": 35,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_PRINCIPAL_RM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "110",
+        "dimensions": "576x1044 cm",
+        "description": "Office of the Principal / Director with attached balcony"
+      }
+    },
+    {
+      "nodeId": "1F-OFFICE",
+      "name": "Administrative Office",
+      "floor": 1,
+      "type": "office",
+      "coordinates": {
+        "x": 58,
+        "y": 35,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_OFFICE",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "111",
+        "dimensions": "1144x576 cm",
+        "description": "Central Institute administrative and student affairs office"
+      }
+    },
+    {
+      "nodeId": "1F-RECORDS",
+      "name": "Records Room",
+      "floor": 1,
+      "type": "room",
+      "coordinates": {
+        "x": 35,
+        "y": 35,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_RECORDS",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "112",
+        "dimensions": "884x877 cm",
+        "description": "Student archives and institutional records archive"
+      }
+    },
+    {
+      "nodeId": "1F-CONF-HALL",
+      "name": "Conference Hall",
+      "floor": 1,
+      "type": "hall",
+      "coordinates": {
+        "x": 70,
+        "y": 35,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_CONF_HALL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "115",
+        "dimensions": "587x878 cm",
+        "capacity": 45,
+        "description": "Air-conditioned institutional board and conference room"
+      }
+    },
+    {
+      "nodeId": "1F-CORR-EAST",
+      "name": "First Floor East Corridor",
+      "floor": 1,
+      "type": "corridor",
+      "coordinates": {
+        "x": 70,
+        "y": 50,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_CORR_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "Passage to HOD Chambers, Faculty Rooms and Library"
+      }
+    },
+    {
+      "nodeId": "1F-WAITING-LOBBY",
+      "name": "HOD Waiting Lobby",
+      "floor": 1,
+      "type": "room",
+      "coordinates": {
+        "x": 65,
+        "y": 60,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_WAITING_LOBBY",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "280x599 cm",
+        "description": "Visitor and student waiting lobby for HOD appointments"
+      }
+    },
+    {
+      "nodeId": "1F-HOD-CS",
+      "name": "HOD Room & Office (Computer Science)",
+      "floor": 1,
+      "type": "office",
+      "coordinates": {
+        "x": 75,
+        "y": 65,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_HOD_CS",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "120",
+        "dimensions": "400x600 cm + 276x288 cm",
+        "department": "Computer Science & Engineering",
+        "description": "Chamber of Head of Department (Dr. Priya Nair)"
+      }
+    },
+    {
+      "nodeId": "1F-FACULTY-ROOM",
+      "name": "CSE Faculty Cabin Room",
+      "floor": 1,
+      "type": "room",
+      "coordinates": {
+        "x": 85,
+        "y": 40,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_FACULTY_ROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "125",
+        "dimensions": "240x1044 cm",
+        "department": "Computer Science & Engineering",
+        "description": "Faculty cubicles and teacher consultation room"
+      }
+    },
+    {
+      "nodeId": "1F-DEPT-LIBRARY",
+      "name": "Department Library",
+      "floor": 1,
+      "type": "library",
+      "coordinates": {
+        "x": 65,
+        "y": 70,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_DEPT_LIBRARY",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "128",
+        "dimensions": "585x531 cm",
+        "department": "Computer Science & Engineering",
+        "capacity": 35,
+        "description": "Technical reference library, journals and reading area"
+      }
+    },
+    {
+      "nodeId": "1F-KTU-EXAM-CELL",
+      "name": "KTU Exam Cell (1st Floor)",
+      "floor": 1,
+      "type": "office",
+      "coordinates": {
+        "x": 50,
+        "y": 70,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_KTU_EXAM_CELL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "130",
+        "dimensions": "1206x1223 cm",
+        "description": "Kerala Technological University exam coordination wing"
+      }
+    },
+    {
+      "nodeId": "1F-SR-PROF-1",
+      "name": "Senior Professor 1 Cabin",
+      "floor": 1,
+      "type": "office",
+      "coordinates": {
+        "x": 80,
+        "y": 70,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_SR_PROF_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "132",
+        "dimensions": "295x350 cm",
+        "description": "Private office cabin of Senior Professor"
+      }
+    },
+    {
+      "nodeId": "1F-SR-PROF-2",
+      "name": "Senior Professor 2 Cabin",
+      "floor": 1,
+      "type": "office",
+      "coordinates": {
+        "x": 88,
+        "y": 70,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_SR_PROF_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "133",
+        "dimensions": "295x300 cm",
+        "description": "Private office cabin of Senior Professor"
+      }
+    },
+    {
+      "nodeId": "1F-RESTROOM",
+      "name": "Restroom Facility (1st Floor)",
+      "floor": 1,
+      "type": "restroom",
+      "coordinates": {
+        "x": 35,
+        "y": 50,
+        "z": 3.9
+      },
+      "qrCode": "QR_1F_RESTROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "description": "First floor gents & ladies restrooms"
+      }
+    },
+    {
+      "nodeId": "2F-STAIR-A",
+      "name": "Main Staircase A (2nd Floor Landing)",
+      "floor": 2,
+      "type": "stair",
+      "coordinates": {
+        "x": 42,
+        "y": 55,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_STAIR_A",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 246 cm",
+        "description": "2nd Floor landing for Section A-A Main Staircase (Riser 15cm, Tread 30cm)"
+      }
+    },
+    {
+      "nodeId": "2F-STAIR-B",
+      "name": "Fire Escape Staircase B (2nd Floor Landing)",
+      "floor": 2,
+      "type": "stair",
+      "coordinates": {
+        "x": 90,
+        "y": 52,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_STAIR_B",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 190 cm",
+        "description": "2nd Floor curved East Fire Escape Staircase (Section B-B)"
+      }
+    },
+    {
+      "nodeId": "2F-LIFT-1",
+      "name": "Lift 1 (2nd Floor)",
+      "floor": 2,
+      "type": "lift",
+      "coordinates": {
+        "x": 48,
+        "y": 52,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_LIFT_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "250x190 cm",
+        "capacity": 10,
+        "description": "Central passenger elevator landing on 2nd Floor"
+      }
+    },
+    {
+      "nodeId": "2F-LIFT-2",
+      "name": "Lift 2 (2nd Floor)",
+      "floor": 2,
+      "type": "lift",
+      "coordinates": {
+        "x": 72,
+        "y": 52,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_LIFT_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "207x305 cm",
+        "capacity": 13,
+        "description": "East wing service & stretcher elevator landing on 2nd Floor"
+      }
+    },
+    {
+      "nodeId": "2F-CORR-CENTRAL",
+      "name": "2nd Floor Central Corridor Junction",
+      "floor": 2,
+      "type": "corridor",
+      "coordinates": {
+        "x": 50,
+        "y": 50,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_CORR_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "2nd Floor central lobby connecting lifts, main staircase, and wings"
+      }
+    },
+    {
+      "nodeId": "2F-CORR-EAST",
+      "name": "2nd Floor East Passage",
+      "floor": 2,
+      "type": "corridor",
+      "coordinates": {
+        "x": 70,
+        "y": 50,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_CORR_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.73m wide passage",
+        "description": "2nd Floor east wing passage to Lift 2, Fire Stair B, and east rooms/terrace"
+      }
+    },
+    {
+      "nodeId": "2F-CORR-WEST",
+      "name": "2nd Floor West Corridor",
+      "floor": 2,
+      "type": "corridor",
+      "coordinates": {
+        "x": 30,
+        "y": 55,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_CORR_WEST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "2nd Floor west wing academic passage"
+      }
+    },
+    {
+      "nodeId": "2F-CLASS-201",
+      "name": "Classroom 201",
+      "floor": 2,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 68,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_CLASS_201",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "201",
+        "dimensions": "905x1230 cm",
+        "department": "Civil Engineering",
+        "capacity": 72,
+        "description": "2nd Floor Smart Lecture Hall (S3 Civil)"
+      }
+    },
+    {
+      "nodeId": "2F-CLASS-202",
+      "name": "Classroom 202",
+      "floor": 2,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 48,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_CLASS_202",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "202",
+        "dimensions": "850x1265 cm",
+        "department": "Civil Engineering",
+        "capacity": 70,
+        "description": "2nd Floor Structural Mechanics Lecture Room (S5 Civil)"
+      }
+    },
+    {
+      "nodeId": "2F-TUTORIAL-201",
+      "name": "Tutorial Room 201",
+      "floor": 2,
+      "type": "room",
+      "coordinates": {
+        "x": 20,
+        "y": 28,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_TUTORIAL_201",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "203",
+        "dimensions": "1106x990 cm",
+        "department": "Civil Engineering",
+        "capacity": 45,
+        "description": "Remedial & small-group tutorial classroom"
+      }
+    },
+    {
+      "nodeId": "2F-RESTROOM",
+      "name": "2nd Floor Restrooms & Accessible Toilet",
+      "floor": 2,
+      "type": "restroom",
+      "coordinates": {
+        "x": 36,
+        "y": 46,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_RESTROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "255x186 cm",
+        "description": "Gents, Ladies, and Wheelchair Accessible D.Toilet (2nd Floor)"
+      }
+    },
+    {
+      "nodeId": "2F-SURVEY-LAB",
+      "name": "Geomatics & Structural CADD Lab",
+      "floor": 2,
+      "type": "lab",
+      "coordinates": {
+        "x": 46,
+        "y": 35,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_SURVEY_LAB",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "208",
+        "dimensions": "877x876 cm",
+        "department": "Civil Engineering",
+        "capacity": 45,
+        "description": "Total station surveying & GIS modeling laboratory"
+      }
+    },
+    {
+      "nodeId": "2F-PROG-LAB",
+      "name": "Systems & Networks Computing Lab",
+      "floor": 2,
+      "type": "lab",
+      "coordinates": {
+        "x": 56,
+        "y": 68,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_PROG_LAB",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "210",
+        "dimensions": "1014x1230 cm",
+        "department": "Computer Science & Engineering",
+        "capacity": 66,
+        "description": "High-performance Linux networking and OS lab"
+      }
+    },
+    {
+      "nodeId": "2F-CLASS-203",
+      "name": "Classroom 203",
+      "floor": 2,
+      "type": "room",
+      "coordinates": {
+        "x": 66,
+        "y": 35,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_CLASS_203",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "212",
+        "dimensions": "565x1036 cm",
+        "department": "Computer Science & Engineering",
+        "capacity": 60,
+        "description": "2nd Floor East Wing Lecture Room"
+      }
+    },
+    {
+      "nodeId": "2F-HOD-CIVIL",
+      "name": "Head of Civil Engineering Department",
+      "floor": 2,
+      "type": "office",
+      "coordinates": {
+        "x": 76,
+        "y": 68,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_HOD_CIVIL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "215",
+        "dimensions": "570x837 cm",
+        "department": "Civil Engineering",
+        "description": "HOD Civil Engineering chamber with 570x355 cm waiting lobby"
+      }
+    },
+    {
+      "nodeId": "2F-FACULTY-CIVIL",
+      "name": "Civil Engineering Faculty Room",
+      "floor": 2,
+      "type": "room",
+      "coordinates": {
+        "x": 84,
+        "y": 38,
+        "z": 7.8
+      },
+      "qrCode": "QR_2F_FACULTY_CIVIL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "218",
+        "dimensions": "508x876 cm",
+        "department": "Civil Engineering",
+        "capacity": 20,
+        "description": "Civil Engineering teaching staff workstations"
+      }
+    },
+    {
+      "nodeId": "3F-STAIR-A",
+      "name": "Main Staircase A (3rd Floor Landing)",
+      "floor": 3,
+      "type": "stair",
+      "coordinates": {
+        "x": 42,
+        "y": 55,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_STAIR_A",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 246 cm",
+        "description": "3rd Floor landing for Section A-A Main Staircase (Riser 15cm, Tread 30cm)"
+      }
+    },
+    {
+      "nodeId": "3F-STAIR-B",
+      "name": "Fire Escape Staircase B (3rd Floor Landing)",
+      "floor": 3,
+      "type": "stair",
+      "coordinates": {
+        "x": 90,
+        "y": 52,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_STAIR_B",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 190 cm",
+        "description": "3rd Floor curved East Fire Escape Staircase (Section B-B)"
+      }
+    },
+    {
+      "nodeId": "3F-LIFT-1",
+      "name": "Lift 1 (3rd Floor)",
+      "floor": 3,
+      "type": "lift",
+      "coordinates": {
+        "x": 48,
+        "y": 52,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_LIFT_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "250x190 cm",
+        "capacity": 10,
+        "description": "Central passenger elevator landing on 3rd Floor"
+      }
+    },
+    {
+      "nodeId": "3F-LIFT-2",
+      "name": "Lift 2 (3rd Floor)",
+      "floor": 3,
+      "type": "lift",
+      "coordinates": {
+        "x": 72,
+        "y": 52,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_LIFT_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "207x305 cm",
+        "capacity": 13,
+        "description": "East wing service & stretcher elevator landing on 3rd Floor"
+      }
+    },
+    {
+      "nodeId": "3F-CORR-CENTRAL",
+      "name": "3rd Floor Central Corridor Junction",
+      "floor": 3,
+      "type": "corridor",
+      "coordinates": {
+        "x": 50,
+        "y": 50,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_CORR_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "3rd Floor central lobby connecting lifts, main staircase, and wings"
+      }
+    },
+    {
+      "nodeId": "3F-CORR-EAST",
+      "name": "3rd Floor East Passage",
+      "floor": 3,
+      "type": "corridor",
+      "coordinates": {
+        "x": 70,
+        "y": 50,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_CORR_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.73m wide passage",
+        "description": "3rd Floor east wing passage to Lift 2, Fire Stair B, and east rooms/terrace"
+      }
+    },
+    {
+      "nodeId": "3F-CORR-WEST",
+      "name": "3rd Floor West Corridor",
+      "floor": 3,
+      "type": "corridor",
+      "coordinates": {
+        "x": 30,
+        "y": 55,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_CORR_WEST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "3rd Floor west wing academic passage"
+      }
+    },
+    {
+      "nodeId": "3F-CLASS-301",
+      "name": "Classroom 301",
+      "floor": 3,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 68,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_CLASS_301",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "301",
+        "dimensions": "905x1230 cm",
+        "department": "Mechanical Engineering",
+        "capacity": 72,
+        "description": "3rd Floor Lecture Classroom (S5 Mechanical)"
+      }
+    },
+    {
+      "nodeId": "3F-CLASS-302",
+      "name": "Classroom 302",
+      "floor": 3,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 48,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_CLASS_302",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "302",
+        "dimensions": "850x1265 cm",
+        "department": "Mechanical Engineering",
+        "capacity": 70,
+        "description": "3rd Floor Lecture Classroom (S7 Mechanical)"
+      }
+    },
+    {
+      "nodeId": "3F-TUTORIAL-301",
+      "name": "Tutorial Room 301",
+      "floor": 3,
+      "type": "room",
+      "coordinates": {
+        "x": 20,
+        "y": 28,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_TUTORIAL_301",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "303",
+        "dimensions": "1106x990 cm",
+        "department": "Mechanical Engineering",
+        "capacity": 45,
+        "description": "Thermodynamics & Design Tutorial Room"
+      }
+    },
+    {
+      "nodeId": "3F-RESTROOM",
+      "name": "3rd Floor Restrooms & Accessible Toilet",
+      "floor": 3,
+      "type": "restroom",
+      "coordinates": {
+        "x": 36,
+        "y": 46,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_RESTROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "255x186 cm",
+        "description": "3rd Floor Gents, Ladies, and Disabled Restroom"
+      }
+    },
+    {
+      "nodeId": "3F-JURY-HALL",
+      "name": "Architecture Jury & Review Hall",
+      "floor": 3,
+      "type": "hall",
+      "coordinates": {
+        "x": 46,
+        "y": 35,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_JURY_HALL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "308",
+        "dimensions": "588x1308 cm",
+        "department": "Architecture",
+        "capacity": 75,
+        "description": "Critique and portfolio presentation hall for B.Arch students"
+      }
+    },
+    {
+      "nodeId": "3F-EMBEDDED-LAB",
+      "name": "Microprocessor & Robotics Lab",
+      "floor": 3,
+      "type": "lab",
+      "coordinates": {
+        "x": 56,
+        "y": 68,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_EMBEDDED_LAB",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "310",
+        "dimensions": "1014x1230 cm",
+        "department": "Electronics & Mechanical",
+        "capacity": 60,
+        "description": "Embedded controllers, IoT sensors, and mechatronics lab"
+      }
+    },
+    {
+      "nodeId": "3F-HOD-MECH",
+      "name": "Head of Mechanical Engineering Department",
+      "floor": 3,
+      "type": "office",
+      "coordinates": {
+        "x": 66,
+        "y": 35,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_HOD_MECH",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "312",
+        "dimensions": "570x837 cm",
+        "department": "Mechanical Engineering",
+        "description": "Chamber of Head of Mechanical Engineering"
+      }
+    },
+    {
+      "nodeId": "3F-ARCH-STUDIO",
+      "name": "B.Arch Design Studio",
+      "floor": 3,
+      "type": "hall",
+      "coordinates": {
+        "x": 76,
+        "y": 68,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_ARCH_STUDIO",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "315",
+        "dimensions": "877x876 cm",
+        "department": "Architecture",
+        "capacity": 65,
+        "description": "Drafting tables and architectural model-making studio"
+      }
+    },
+    {
+      "nodeId": "3F-FACULTY-MECH",
+      "name": "Mechanical & Architecture Faculty Room",
+      "floor": 3,
+      "type": "room",
+      "coordinates": {
+        "x": 84,
+        "y": 38,
+        "z": 11.7
+      },
+      "qrCode": "QR_3F_FACULTY_MECH",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "318",
+        "dimensions": "508x876 cm",
+        "department": "Mechanical & Architecture",
+        "capacity": 22,
+        "description": "3rd Floor faculty cubicles and consultation room"
+      }
+    },
+    {
+      "nodeId": "4F-STAIR-A",
+      "name": "Main Staircase A (4th Floor Landing)",
+      "floor": 4,
+      "type": "stair",
+      "coordinates": {
+        "x": 42,
+        "y": 55,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_STAIR_A",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 246 cm",
+        "description": "4th Floor landing for Section A-A Main Staircase (Riser 15cm, Tread 30cm)"
+      }
+    },
+    {
+      "nodeId": "4F-STAIR-B",
+      "name": "Fire Escape Staircase B (4th Floor Landing)",
+      "floor": 4,
+      "type": "stair",
+      "coordinates": {
+        "x": 90,
+        "y": 52,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_STAIR_B",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 190 cm",
+        "description": "4th Floor curved East Fire Escape Staircase (Section B-B)"
+      }
+    },
+    {
+      "nodeId": "4F-LIFT-1",
+      "name": "Lift 1 (4th Floor)",
+      "floor": 4,
+      "type": "lift",
+      "coordinates": {
+        "x": 48,
+        "y": 52,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_LIFT_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "250x190 cm",
+        "capacity": 10,
+        "description": "Central passenger elevator landing on 4th Floor"
+      }
+    },
+    {
+      "nodeId": "4F-LIFT-2",
+      "name": "Lift 2 (4th Floor)",
+      "floor": 4,
+      "type": "lift",
+      "coordinates": {
+        "x": 72,
+        "y": 52,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_LIFT_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "207x305 cm",
+        "capacity": 13,
+        "description": "East wing service & stretcher elevator landing on 4th Floor"
+      }
+    },
+    {
+      "nodeId": "4F-CORR-CENTRAL",
+      "name": "4th Floor Central Corridor Junction",
+      "floor": 4,
+      "type": "corridor",
+      "coordinates": {
+        "x": 50,
+        "y": 50,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_CORR_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "4th Floor central lobby connecting lifts, main staircase, and wings"
+      }
+    },
+    {
+      "nodeId": "4F-CORR-EAST",
+      "name": "4th Floor East Passage",
+      "floor": 4,
+      "type": "corridor",
+      "coordinates": {
+        "x": 70,
+        "y": 50,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_CORR_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.73m wide passage",
+        "description": "4th Floor east wing passage to Lift 2, Fire Stair B, and east rooms/terrace"
+      }
+    },
+    {
+      "nodeId": "4F-CORR-WEST",
+      "name": "4th Floor West Corridor",
+      "floor": 4,
+      "type": "corridor",
+      "coordinates": {
+        "x": 30,
+        "y": 55,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_CORR_WEST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "4th Floor west wing academic passage"
+      }
+    },
+    {
+      "nodeId": "4F-CLASS-401",
+      "name": "Classroom 401",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 68,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_CLASS_401",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "401",
+        "dimensions": "905x1230 cm",
+        "department": "Computer Science & Engineering",
+        "capacity": 72,
+        "description": "4th Floor West Wing Classroom (905x1230 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-CLASS-402",
+      "name": "Classroom 402",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 48,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_CLASS_402",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "402",
+        "dimensions": "850x1265 cm",
+        "department": "Computer Science & Engineering",
+        "capacity": 70,
+        "description": "4th Floor West Wing Classroom (850x1265 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-TUTORIAL-4A",
+      "name": "Tutorial Room 4A",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 20,
+        "y": 28,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_TUTORIAL_4A",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "403",
+        "dimensions": "1106x990 cm",
+        "department": "Computer Science & Engineering",
+        "capacity": 48,
+        "description": "4th Floor South-West Tutorial Room (1106x990 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-SICK-ROOM",
+      "name": "Sick Room & First Aid",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 33,
+        "y": 33,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_SICK_ROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "404",
+        "dimensions": "300x594 cm",
+        "description": "Campus Sick Room & Medical Rest Bay with attached 180x286 cm washroom"
+      }
+    },
+    {
+      "nodeId": "4F-STORE-RM",
+      "name": "Store Room (4th Floor)",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 35,
+        "y": 68,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_STORE_RM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "405",
+        "dimensions": "240x1044 cm",
+        "description": "4th Floor equipment and academic store room (240x1044 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-RESTROOM",
+      "name": "4th Floor Restrooms & D.Toilet",
+      "floor": 4,
+      "type": "restroom",
+      "coordinates": {
+        "x": 36,
+        "y": 47,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_RESTROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "255x186 cm",
+        "description": "4th Floor Toilets & Wheelchair Accessible D.Toilet (255x186 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-HOD-CS-PG",
+      "name": "Head of CS Department (4th Floor Wing)",
+      "floor": 4,
+      "type": "office",
+      "coordinates": {
+        "x": 46,
+        "y": 70,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_HOD_CS_PG",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "408",
+        "dimensions": "570x837 cm",
+        "department": "Computer Science & Engineering",
+        "description": "Head of CS Department chamber (570x837 cm) with 570x355 cm Waiting Area"
+      }
+    },
+    {
+      "nodeId": "4F-TUTORIAL-4B",
+      "name": "Tutorial Room 4B",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 52,
+        "y": 34,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_TUTORIAL_4B",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "410",
+        "dimensions": "588x1308 cm",
+        "capacity": 45,
+        "description": "Central Wing Tutorial Room (588x1308 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-CLASS-403",
+      "name": "Classroom 403",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 60,
+        "y": 68,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_CLASS_403",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "411",
+        "dimensions": "1014x1230 cm",
+        "capacity": 75,
+        "description": "Large 4th Floor Central Lecture Classroom (1014x1230 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-TUTORIAL-4C",
+      "name": "Tutorial Room 4C",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 65,
+        "y": 35,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_TUTORIAL_4C",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "412",
+        "dimensions": "296x876 cm",
+        "capacity": 30,
+        "description": "East Passage Tutorial & Counseling Room (296x876 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-DRAWING-HALL",
+      "name": "Drawing Hall (4th Floor)",
+      "floor": 4,
+      "type": "hall",
+      "coordinates": {
+        "x": 74,
+        "y": 68,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_DRAWING_HALL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "415",
+        "dimensions": "877x876 cm",
+        "capacity": 65,
+        "description": "4th Floor East Wing Drawing Hall (877x876 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-FACULTY-RM",
+      "name": "Faculty Room (4th Floor)",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 85,
+        "y": 65,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_FACULTY_RM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "416",
+        "dimensions": "508x876 cm",
+        "capacity": 20,
+        "description": "4th Floor East Wing Faculty Room (508x876 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-CLASS-404",
+      "name": "Classroom 404",
+      "floor": 4,
+      "type": "room",
+      "coordinates": {
+        "x": 78,
+        "y": 35,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_CLASS_404",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "418",
+        "dimensions": "565x1036 cm",
+        "capacity": 60,
+        "description": "4th Floor East Wing Classroom (565x1036 cm)"
+      }
+    },
+    {
+      "nodeId": "4F-POWER-RM",
+      "name": "Power & Electrical Room (4F)",
+      "floor": 4,
+      "type": "office",
+      "coordinates": {
+        "x": 89,
+        "y": 36,
+        "z": 15.6
+      },
+      "qrCode": "QR_4F_POWER_RM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "420",
+        "dimensions": "298x420 cm",
+        "description": "Electrical distribution & UPS power room (298x420 cm)"
+      }
+    },
+    {
+      "nodeId": "5F-STAIR-A",
+      "name": "Main Staircase A (5th Floor Landing)",
+      "floor": 5,
+      "type": "stair",
+      "coordinates": {
+        "x": 42,
+        "y": 55,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_STAIR_A",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 246 cm",
+        "description": "5th Floor landing for Section A-A Main Staircase (Riser 15cm, Tread 30cm)"
+      }
+    },
+    {
+      "nodeId": "5F-STAIR-B",
+      "name": "Fire Escape Staircase B (5th Floor Landing)",
+      "floor": 5,
+      "type": "stair",
+      "coordinates": {
+        "x": 90,
+        "y": 52,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_STAIR_B",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 190 cm",
+        "description": "5th Floor curved East Fire Escape Staircase (Section B-B)"
+      }
+    },
+    {
+      "nodeId": "5F-LIFT-1",
+      "name": "Lift 1 (5th Floor)",
+      "floor": 5,
+      "type": "lift",
+      "coordinates": {
+        "x": 48,
+        "y": 52,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_LIFT_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "250x190 cm",
+        "capacity": 10,
+        "description": "Central passenger elevator landing on 5th Floor"
+      }
+    },
+    {
+      "nodeId": "5F-LIFT-2",
+      "name": "Lift 2 (5th Floor)",
+      "floor": 5,
+      "type": "lift",
+      "coordinates": {
+        "x": 72,
+        "y": 52,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_LIFT_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "207x305 cm",
+        "capacity": 13,
+        "description": "East wing service & stretcher elevator landing on 5th Floor"
+      }
+    },
+    {
+      "nodeId": "5F-CORR-CENTRAL",
+      "name": "5th Floor Central Corridor Junction",
+      "floor": 5,
+      "type": "corridor",
+      "coordinates": {
+        "x": 50,
+        "y": 50,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_CORR_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "5th Floor central lobby connecting lifts, main staircase, and wings"
+      }
+    },
+    {
+      "nodeId": "5F-CORR-EAST",
+      "name": "5th Floor East Passage",
+      "floor": 5,
+      "type": "corridor",
+      "coordinates": {
+        "x": 70,
+        "y": 50,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_CORR_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.73m wide passage",
+        "description": "5th Floor east wing passage to Lift 2, Fire Stair B, and east rooms/terrace"
+      }
+    },
+    {
+      "nodeId": "5F-CORR-WEST",
+      "name": "5th Floor West Corridor",
+      "floor": 5,
+      "type": "corridor",
+      "coordinates": {
+        "x": 30,
+        "y": 55,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_CORR_WEST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "5th Floor west wing academic passage"
+      }
+    },
+    {
+      "nodeId": "5F-CLASS-501",
+      "name": "Classroom 501",
+      "floor": 5,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 68,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_CLASS_501",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "501",
+        "dimensions": "905x1230 cm",
+        "department": "Electrical & Electronics Engineering",
+        "capacity": 72,
+        "description": "5th Floor EEE Lecture Classroom (905x1230 cm)"
+      }
+    },
+    {
+      "nodeId": "5F-CLASS-502",
+      "name": "Classroom 502",
+      "floor": 5,
+      "type": "room",
+      "coordinates": {
+        "x": 18,
+        "y": 48,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_CLASS_502",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "502",
+        "dimensions": "850x1265 cm",
+        "department": "Electrical & Electronics Engineering",
+        "capacity": 70,
+        "description": "5th Floor EEE Lecture Classroom (850x1265 cm)"
+      }
+    },
+    {
+      "nodeId": "5F-TUTORIAL-501",
+      "name": "Tutorial Room 501",
+      "floor": 5,
+      "type": "room",
+      "coordinates": {
+        "x": 20,
+        "y": 28,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_TUTORIAL_501",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "503",
+        "dimensions": "1106x990 cm",
+        "department": "Electrical & Electronics Engineering",
+        "capacity": 48,
+        "description": "5th Floor EEE Tutorial Room (1106x990 cm)"
+      }
+    },
+    {
+      "nodeId": "5F-RESTROOM",
+      "name": "5th Floor Restrooms & D.Toilet",
+      "floor": 5,
+      "type": "restroom",
+      "coordinates": {
+        "x": 36,
+        "y": 46,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_RESTROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "255x186 cm",
+        "description": "5th Floor Toilets & Wheelchair Accessible D.Toilet (255x186 cm)"
+      }
+    },
+    {
+      "nodeId": "5F-CLASS-503",
+      "name": "Classroom 503",
+      "floor": 5,
+      "type": "room",
+      "coordinates": {
+        "x": 44,
+        "y": 68,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_CLASS_503",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "505",
+        "dimensions": "1014x1230 cm",
+        "department": "Electrical & Electronics Engineering",
+        "capacity": 75,
+        "description": "5th Floor Power Systems Classroom (1014x1230 cm)"
+      }
+    },
+    {
+      "nodeId": "5F-EEE-WAITING",
+      "name": "EEE HOD Waiting Area",
+      "floor": 5,
+      "type": "checkpoint",
+      "coordinates": {
+        "x": 55,
+        "y": 59,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_EEE_WAITING",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "507",
+        "dimensions": "570x355 cm",
+        "department": "Electrical & Electronics Engineering",
+        "description": "Waiting lobby outside Electrical & Electronics HOD Chamber (570x355 cm)"
+      }
+    },
+    {
+      "nodeId": "5F-HOD-EEE",
+      "name": "Head of Electrical & Electronics Department",
+      "floor": 5,
+      "type": "office",
+      "coordinates": {
+        "x": 58,
+        "y": 70,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_HOD_EEE",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "508",
+        "dimensions": "570x837 cm",
+        "department": "Electrical & Electronics Engineering",
+        "description": "Chamber of Head of Electrical & Electronics Dept (570x837 cm)"
+      }
+    },
+    {
+      "nodeId": "5F-OPEN-TERRACE",
+      "name": "5th Floor East Open Terrace",
+      "floor": 5,
+      "type": "hall",
+      "coordinates": {
+        "x": 80,
+        "y": 62,
+        "z": 19.5
+      },
+      "qrCode": "QR_5F_OPEN_TERRACE",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "5T",
+        "dimensions": "Open Terrace Deck",
+        "description": "Large East Wing Open Terrace accessed via doors D1 & D2"
+      }
+    },
+    {
+      "nodeId": "6F-STAIR-A",
+      "name": "Main Staircase A (6th Floor Landing)",
+      "floor": 6,
+      "type": "stair",
+      "coordinates": {
+        "x": 42,
+        "y": 55,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_STAIR_A",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 246 cm",
+        "description": "6th Floor landing for Section A-A Main Staircase (Riser 15cm, Tread 30cm)"
+      }
+    },
+    {
+      "nodeId": "6F-STAIR-B",
+      "name": "Fire Escape Staircase B (6th Floor Landing)",
+      "floor": 6,
+      "type": "stair",
+      "coordinates": {
+        "x": 90,
+        "y": 52,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_STAIR_B",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 190 cm",
+        "description": "6th Floor curved East Fire Escape Staircase (Section B-B)"
+      }
+    },
+    {
+      "nodeId": "6F-LIFT-1",
+      "name": "Lift 1 (6th Floor)",
+      "floor": 6,
+      "type": "lift",
+      "coordinates": {
+        "x": 48,
+        "y": 52,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_LIFT_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "250x190 cm",
+        "capacity": 10,
+        "description": "Central passenger elevator landing on 6th Floor"
+      }
+    },
+    {
+      "nodeId": "6F-LIFT-2",
+      "name": "Lift 2 (6th Floor)",
+      "floor": 6,
+      "type": "lift",
+      "coordinates": {
+        "x": 72,
+        "y": 52,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_LIFT_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "207x305 cm",
+        "capacity": 13,
+        "description": "East wing service & stretcher elevator landing on 6th Floor"
+      }
+    },
+    {
+      "nodeId": "6F-CORR-CENTRAL",
+      "name": "6th Floor Central Corridor Junction",
+      "floor": 6,
+      "type": "corridor",
+      "coordinates": {
+        "x": 50,
+        "y": 50,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_CORR_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "6th Floor central lobby connecting lifts, main staircase, and wings"
+      }
+    },
+    {
+      "nodeId": "6F-CORR-EAST",
+      "name": "6th Floor East Passage",
+      "floor": 6,
+      "type": "corridor",
+      "coordinates": {
+        "x": 70,
+        "y": 50,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_CORR_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.73m wide passage",
+        "description": "6th Floor east wing passage to Lift 2, Fire Stair B, and east rooms/terrace"
+      }
+    },
+    {
+      "nodeId": "6F-CORR-WEST",
+      "name": "6th Floor West Corridor",
+      "floor": 6,
+      "type": "corridor",
+      "coordinates": {
+        "x": 30,
+        "y": 55,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_CORR_WEST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "6th Floor west wing academic passage"
+      }
+    },
+    {
+      "nodeId": "6F-SEMINAR-HALL",
+      "name": "Main Seminar Hall (6th Floor)",
+      "floor": 6,
+      "type": "hall",
+      "coordinates": {
+        "x": 20,
+        "y": 66,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_SEMINAR_HALL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "601",
+        "dimensions": "1776x1230 cm",
+        "capacity": 250,
+        "description": "Grand 6th Floor Seminar Auditorium (1776x1230 cm) with breakable safety glass panels"
+      }
+    },
+    {
+      "nodeId": "6F-SEMINAR-STAGE",
+      "name": "Seminar Hall Stage & Podium",
+      "floor": 6,
+      "type": "hall",
+      "coordinates": {
+        "x": 20,
+        "y": 42,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_SEMINAR_STAGE",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "601-S",
+        "dimensions": "905x1230 cm",
+        "description": "Auditorium stage and speaker podium (905x1230 cm)"
+      }
+    },
+    {
+      "nodeId": "6F-TUTORIAL-601",
+      "name": "Tutorial Room 601",
+      "floor": 6,
+      "type": "room",
+      "coordinates": {
+        "x": 38,
+        "y": 35,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_TUTORIAL_601",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "602",
+        "dimensions": "615x877 cm",
+        "capacity": 40,
+        "description": "6th Floor Tutorial Room (615x877 cm) adjacent to Seminar Wing"
+      }
+    },
+    {
+      "nodeId": "6F-CLASS-601",
+      "name": "Classroom 601",
+      "floor": 6,
+      "type": "room",
+      "coordinates": {
+        "x": 46,
+        "y": 68,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_CLASS_601",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "603",
+        "dimensions": "659x877 cm",
+        "capacity": 50,
+        "description": "6th Floor Lecture Classroom (659x877 cm)"
+      }
+    },
+    {
+      "nodeId": "6F-RESTROOM",
+      "name": "6th Floor Wash & Restroom Block",
+      "floor": 6,
+      "type": "restroom",
+      "coordinates": {
+        "x": 58,
+        "y": 68,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_RESTROOM",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "5x 155x135 cm + 260x142 cm",
+        "description": "6th Floor multi-stall washroom complex serving Seminar Hall"
+      }
+    },
+    {
+      "nodeId": "6F-OPEN-TERRACE",
+      "name": "6th Floor Open Terrace",
+      "floor": 6,
+      "type": "hall",
+      "coordinates": {
+        "x": 78,
+        "y": 62,
+        "z": 23.4
+      },
+      "qrCode": "QR_6F_OPEN_TERRACE",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "6T",
+        "dimensions": "1124x1353 cm",
+        "description": "6th Floor open parapet terrace overlooking 5th Floor open terrace"
+      }
+    },
+    {
+      "nodeId": "7F-STAIR-A",
+      "name": "Main Staircase A (7th Floor Landing)",
+      "floor": 7,
+      "type": "stair",
+      "coordinates": {
+        "x": 42,
+        "y": 55,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_STAIR_A",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 246 cm",
+        "description": "7th Floor landing for Section A-A Main Staircase (Riser 15cm, Tread 30cm)"
+      }
+    },
+    {
+      "nodeId": "7F-STAIR-B",
+      "name": "Fire Escape Staircase B (7th Floor Landing)",
+      "floor": 7,
+      "type": "stair",
+      "coordinates": {
+        "x": 90,
+        "y": 52,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_STAIR_B",
+      "accessible": false,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "Width 190 cm",
+        "description": "7th Floor curved East Fire Escape Staircase (Section B-B)"
+      }
+    },
+    {
+      "nodeId": "7F-LIFT-1",
+      "name": "Lift 1 (7th Floor)",
+      "floor": 7,
+      "type": "lift",
+      "coordinates": {
+        "x": 48,
+        "y": 52,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_LIFT_1",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "250x190 cm",
+        "capacity": 10,
+        "description": "Central passenger elevator landing on 7th Floor"
+      }
+    },
+    {
+      "nodeId": "7F-LIFT-2",
+      "name": "Lift 2 (7th Floor)",
+      "floor": 7,
+      "type": "lift",
+      "coordinates": {
+        "x": 72,
+        "y": 52,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_LIFT_2",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "207x305 cm",
+        "capacity": 13,
+        "description": "East wing service & stretcher elevator landing on 7th Floor"
+      }
+    },
+    {
+      "nodeId": "7F-CORR-CENTRAL",
+      "name": "7th Floor Central Corridor Junction",
+      "floor": 7,
+      "type": "corridor",
+      "coordinates": {
+        "x": 50,
+        "y": 50,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_CORR_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.76m wide passage",
+        "description": "7th Floor central lobby connecting lifts, main staircase, and wings"
+      }
+    },
+    {
+      "nodeId": "7F-CORR-EAST",
+      "name": "7th Floor East Passage",
+      "floor": 7,
+      "type": "corridor",
+      "coordinates": {
+        "x": 70,
+        "y": 50,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_CORR_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "dimensions": "2.73m wide passage",
+        "description": "7th Floor east wing passage to Lift 2, Fire Stair B, and east rooms/terrace"
+      }
+    },
+    {
+      "nodeId": "7F-TERRACE-WEST",
+      "name": "7th Floor West Sky Terrace",
+      "floor": 7,
+      "type": "hall",
+      "coordinates": {
+        "x": 26,
+        "y": 60,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_TERRACE_WEST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "7T-W",
+        "dimensions": "1353x1824 cm",
+        "description": "7th Floor West Wing open terrace deck above Seminar Hall"
+      }
+    },
+    {
+      "nodeId": "7F-TERRACE-CENTRAL",
+      "name": "7th Floor Central Rooftop Terrace",
+      "floor": 7,
+      "type": "hall",
+      "coordinates": {
+        "x": 55,
+        "y": 66,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_TERRACE_CENTRAL",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "7T-C",
+        "dimensions": "1168x1327 cm",
+        "description": "Central 7th Floor open rooftop terrace court"
+      }
+    },
+    {
+      "nodeId": "7F-TERRACE-EAST",
+      "name": "7th Floor East Rooftop Deck",
+      "floor": 7,
+      "type": "checkpoint",
+      "coordinates": {
+        "x": 80,
+        "y": 64,
+        "z": 27.3
+      },
+      "qrCode": "QR_7F_TERRACE_EAST",
+      "accessible": true,
+      "building": "Main Block",
+      "metadata": {
+        "roomNumber": "7T-E",
+        "dimensions": "Open Terrace",
+        "description": "East rooftop deck adjacent to Lift 2 & Fire Escape Staircase B"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "edgeId": "E_GF_ENTRANCE_RAMP",
+      "fromNode": "GF-MAIN-ENTRANCE",
+      "toNode": "GF-RAMP",
+      "distance": 5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step towards the wheelchair access ramp at the entrance porch",
+      "reverseInstruction": "Walk from the ramp back to the main entrance porch",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_ENTRANCE_FOYER",
+      "fromNode": "GF-MAIN-ENTRANCE",
+      "toNode": "GF-FOYER",
+      "distance": 10,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk through the main entrance doors into the Ground Floor Foyer",
+      "reverseInstruction": "Exit the Ground Floor Foyer towards the outdoor entrance porch",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_RAMP_FOYER",
+      "fromNode": "GF-RAMP",
+      "toNode": "GF-FOYER",
+      "distance": 6,
+      "accessible": true,
+      "type": "ramp",
+      "instruction": "Roll/walk smoothly up the 1:12 ramp into the entrance foyer",
+      "reverseInstruction": "Descend the access ramp towards the outer porch",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_FOYER_PRO",
+      "fromNode": "GF-FOYER",
+      "toNode": "GF-PRO",
+      "distance": 15,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn right and walk east to the Public Relations Office",
+      "reverseInstruction": "Exit the Public Relations Office and return west to the central foyer",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_PRO_VISITOR",
+      "fromNode": "GF-PRO",
+      "toNode": "GF-VISITOR-RM",
+      "distance": 10,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Continue east past the PRO desk to the Visitor & Security Room",
+      "reverseInstruction": "Walk west towards the Public Relations Office",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_FOYER_CORRCENTRAL",
+      "fromNode": "GF-FOYER",
+      "toNode": "GF-CORR-CENTRAL",
+      "distance": 10,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk straight ahead along the main corridor towards the central corridor junction",
+      "reverseInstruction": "Walk south along the corridor towards the entrance foyer",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRCENTRAL_LIFT1",
+      "fromNode": "GF-CORR-CENTRAL",
+      "toNode": "GF-LIFT-1",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Approach Lift 1 on your left",
+      "reverseInstruction": "Step out from Lift 1 into the central corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRCENTRAL_STAIRA",
+      "fromNode": "GF-CORR-CENTRAL",
+      "toNode": "GF-STAIR-A",
+      "distance": 9,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn slightly left and walk towards Main Staircase A",
+      "reverseInstruction": "Walk from Main Staircase A into the central corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRCENTRAL_CORRWEST",
+      "fromNode": "GF-CORR-CENTRAL",
+      "toNode": "GF-CORR-WEST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Follow the 2.76m wide corridor westward towards the lab and workshop wing",
+      "reverseInstruction": "Walk eastward along the passage towards the central junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRWEST_CADLAB",
+      "fromNode": "GF-CORR-WEST",
+      "toNode": "GF-CAD-LAB",
+      "distance": 14,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn right into the CAD Laboratory entrance",
+      "reverseInstruction": "Exit the CAD Laboratory into the west corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRWEST_DRAWINGWS",
+      "fromNode": "GF-CORR-WEST",
+      "toNode": "GF-DRAWING-WS",
+      "distance": 18,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk west towards the Drawing Workshop doors",
+      "reverseInstruction": "Exit the Drawing Workshop into the west corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRWEST_STUDENTSCLUB",
+      "fromNode": "GF-CORR-WEST",
+      "toNode": "GF-STUDENTS-CLUB",
+      "distance": 26,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Continue down the corridor to the Students Club",
+      "reverseInstruction": "Exit the Students Club into the west hallway",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRWEST_TOILETDISABLED",
+      "fromNode": "GF-CORR-WEST",
+      "toNode": "GF-TOILET-DISABLED",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Access the Ground Floor Accessible Restroom",
+      "reverseInstruction": "Exit the restroom back into the hallway",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRCENTRAL_CORREAST",
+      "fromNode": "GF-CORR-CENTRAL",
+      "toNode": "GF-CORR-EAST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east along the 2.73m wide passage towards the East Wing",
+      "reverseInstruction": "Walk west along the passage returning to Central Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORREAST_LIFT2",
+      "fromNode": "GF-CORR-EAST",
+      "toNode": "GF-LIFT-2",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Arrive at Lift 2 on the right",
+      "reverseInstruction": "Exit Lift 2 into the east corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORREAST_STAIRB",
+      "fromNode": "GF-CORR-EAST",
+      "toNode": "GF-STAIR-B",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk straight to the east fire exit to reach Fire Escape Staircase B",
+      "reverseInstruction": "Walk from Fire Escape Staircase B into the east corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORREAST_DRAWINGHALL",
+      "fromNode": "GF-CORR-EAST",
+      "toNode": "GF-DRAWING-HALL",
+      "distance": 21,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter the Drawing Hall through double doors D1",
+      "reverseInstruction": "Exit Drawing Hall into the east corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORREAST_BASICSCIENCE",
+      "fromNode": "GF-CORR-EAST",
+      "toNode": "GF-BASIC-SCIENCE",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn north into the Basic Science Laboratory",
+      "reverseInstruction": "Exit Basic Science Lab into the east corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRCENTRAL_VALUATION",
+      "fromNode": "GF-CORR-CENTRAL",
+      "toNode": "GF-VALUATION-RM",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk straight north to the Valuation Control Room",
+      "reverseInstruction": "Exit Valuation Control Room back to the central junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_CORRCENTRAL_EXAMCELL",
+      "fromNode": "GF-CORR-CENTRAL",
+      "toNode": "GF-EXAM-CELL",
+      "distance": 22,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk northwest into the Exam Cell office",
+      "reverseInstruction": "Exit Exam Cell back to the central corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_GF_FOYER_TOILETMENS",
+      "fromNode": "GF-FOYER",
+      "toNode": "GF-TOILET-MENS",
+      "distance": 14,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn to the Ground Floor Restrooms",
+      "reverseInstruction": "Exit restrooms towards the foyer",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_A",
+      "fromNode": "GF-STAIR-A",
+      "toNode": "1F-STAIR-A",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Main Staircase A up to the 1st Floor (Width 246cm)",
+      "reverseInstruction": "Descend Main Staircase A down to the Ground Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_B",
+      "fromNode": "GF-STAIR-B",
+      "toNode": "1F-STAIR-B",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Fire Escape Staircase B up to the 1st Floor",
+      "reverseInstruction": "Descend Fire Escape Staircase B down to the Ground Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_1",
+      "fromNode": "GF-LIFT-1",
+      "toNode": "1F-LIFT-1",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 1 up to the 1st Floor",
+      "reverseInstruction": "Take Lift 1 down to the Ground Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_2",
+      "fromNode": "GF-LIFT-2",
+      "toNode": "1F-LIFT-2",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 2 up to the 1st Floor",
+      "reverseInstruction": "Take Lift 2 down to the Ground Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_STAIRA_CORRCENTRAL",
+      "fromNode": "1F-STAIR-A",
+      "toNode": "1F-CORR-CENTRAL",
+      "distance": 9,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Exit the Staircase A landing into the 1st Floor Central Corridor",
+      "reverseInstruction": "Approach Main Staircase A landing",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_LIFT1_CORRCENTRAL",
+      "fromNode": "1F-LIFT-1",
+      "toNode": "1F-CORR-CENTRAL",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step out of Lift 1 into the 1st Floor Central Corridor",
+      "reverseInstruction": "Approach Lift 1",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRCENTRAL_CORRWEST",
+      "fromNode": "1F-CORR-CENTRAL",
+      "toNode": "1F-CORR-WEST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk west along the 2.76m wide hallway towards Classrooms 02 & 03",
+      "reverseInstruction": "Walk east along the hallway towards the central lobby",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRWEST_CLASS02",
+      "fromNode": "1F-CORR-WEST",
+      "toNode": "1F-CLASS-02",
+      "distance": 15,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn right and enter Classroom 02 (Door D1)",
+      "reverseInstruction": "Exit Classroom 02 into the west corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRWEST_CLASS03",
+      "fromNode": "1F-CORR-WEST",
+      "toNode": "1F-CLASS-03",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk to Classroom 03 on the left",
+      "reverseInstruction": "Exit Classroom 03 into the west corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRWEST_STAFFROOM",
+      "fromNode": "1F-CORR-WEST",
+      "toNode": "1F-STAFF-ROOM",
+      "distance": 32,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Proceed to the end of the west corridor and enter the Faculty Staff Room",
+      "reverseInstruction": "Exit the Faculty Staff Room towards the west corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRWEST_RESTROOM",
+      "fromNode": "1F-CORR-WEST",
+      "toNode": "1F-RESTROOM",
+      "distance": 7,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn into the 1st Floor Restroom complex",
+      "reverseInstruction": "Exit restrooms into the west corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRCENTRAL_PRINCIPAL",
+      "fromNode": "1F-CORR-CENTRAL",
+      "toNode": "1F-PRINCIPAL-RM",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk south along the administrative corridor to Principal's Office",
+      "reverseInstruction": "Exit Principal's Office into the central corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRCENTRAL_OFFICE",
+      "fromNode": "1F-CORR-CENTRAL",
+      "toNode": "1F-OFFICE",
+      "distance": 17,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter the Main Administrative Office",
+      "reverseInstruction": "Exit the Administrative Office to the central corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRCENTRAL_RECORDS",
+      "fromNode": "1F-CORR-CENTRAL",
+      "toNode": "1F-RECORDS",
+      "distance": 21,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk to the Records Room",
+      "reverseInstruction": "Exit Records Room into the central corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRCENTRAL_CORREAST",
+      "fromNode": "1F-CORR-CENTRAL",
+      "toNode": "1F-CORR-EAST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk eastward along the passage towards the Computer Science & Academic Wing",
+      "reverseInstruction": "Walk westward along the corridor back to central junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORREAST_LIFT2",
+      "fromNode": "1F-CORR-EAST",
+      "toNode": "1F-LIFT-2",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Arrive at Lift 2 landing",
+      "reverseInstruction": "Exit Lift 2 into the east corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORREAST_STAIRB",
+      "fromNode": "1F-CORR-EAST",
+      "toNode": "1F-STAIR-B",
+      "distance": 20,
+      "accessible": false,
+      "type": "walking",
+      "instruction": "Walk east to Fire Escape Staircase B",
+      "reverseInstruction": "Enter east corridor from Fire Escape Staircase B",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORREAST_CONFHALL",
+      "fromNode": "1F-CORR-EAST",
+      "toNode": "1F-CONF-HALL",
+      "distance": 15,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn into the Conference Hall",
+      "reverseInstruction": "Exit Conference Hall into east corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORREAST_WAITINGLOBBY",
+      "fromNode": "1F-CORR-EAST",
+      "toNode": "1F-WAITING-LOBBY",
+      "distance": 11,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step into the HOD Waiting Lobby",
+      "reverseInstruction": "Exit Waiting Lobby into the east corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_WAITINGLOBBY_HODCS",
+      "fromNode": "1F-WAITING-LOBBY",
+      "toNode": "1F-HOD-CS",
+      "distance": 11,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter the Head of Computer Science Department Office",
+      "reverseInstruction": "Exit HOD Office into the waiting lobby",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORREAST_FACULTYRM",
+      "fromNode": "1F-CORR-EAST",
+      "toNode": "1F-FACULTY-ROOM",
+      "distance": 18,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk down the passage and enter the CSE Faculty Cabin Room",
+      "reverseInstruction": "Exit the Faculty Room into the east corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORREAST_DEPTLIB",
+      "fromNode": "1F-CORR-EAST",
+      "toNode": "1F-DEPT-LIBRARY",
+      "distance": 21,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn north and enter the Department Library",
+      "reverseInstruction": "Exit the Department Library into the corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORRCENTRAL_KTUEXAM",
+      "fromNode": "1F-CORR-CENTRAL",
+      "toNode": "1F-KTU-EXAM-CELL",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk north to the KTU Exam Cell",
+      "reverseInstruction": "Exit KTU Exam Cell to central corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORREAST_SRPROF1",
+      "fromNode": "1F-CORR-EAST",
+      "toNode": "1F-SR-PROF-1",
+      "distance": 22,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Proceed to Senior Professor 1 Cabin (Prof. Dr. Ananya Sharma)",
+      "reverseInstruction": "Exit Senior Professor 1 Cabin into corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_1F_CORREAST_SRPROF2",
+      "fromNode": "1F-CORR-EAST",
+      "toNode": "1F-SR-PROF-2",
+      "distance": 27,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Proceed to Senior Professor 2 Cabin",
+      "reverseInstruction": "Exit Senior Professor 2 Cabin into corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_STAIRA_CORRCENTRAL",
+      "fromNode": "2F-STAIR-A",
+      "toNode": "2F-CORR-CENTRAL",
+      "distance": 9,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step off Main Staircase A into the 2nd Floor Central Corridor",
+      "reverseInstruction": "Walk from 2nd Floor Central Corridor to Main Staircase A landing",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_LIFT1_CORRCENTRAL",
+      "fromNode": "2F-LIFT-1",
+      "toNode": "2F-CORR-CENTRAL",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Exit Lift 1 into the 2nd Floor Central Corridor",
+      "reverseInstruction": "Approach Lift 1 on the 2nd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORRCENTRAL_CORREAST",
+      "fromNode": "2F-CORR-CENTRAL",
+      "toNode": "2F-CORR-EAST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east along the 2.73m passage on the 2nd Floor",
+      "reverseInstruction": "Walk west back to the 2nd Floor Central Corridor Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORREAST_LIFT2",
+      "fromNode": "2F-CORR-EAST",
+      "toNode": "2F-LIFT-2",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Arrive at Lift 2 landing on the 2nd Floor",
+      "reverseInstruction": "Step out of Lift 2 into the 2nd Floor East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORREAST_STAIRB",
+      "fromNode": "2F-CORR-EAST",
+      "toNode": "2F-STAIR-B",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east to Fire Escape Staircase B (2nd Floor)",
+      "reverseInstruction": "Enter the 2nd Floor East Passage from Fire Escape Staircase B",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORRCENTRAL_CORRWEST",
+      "fromNode": "2F-CORR-CENTRAL",
+      "toNode": "2F-CORR-WEST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk west along the 2.76m wide 2nd Floor corridor",
+      "reverseInstruction": "Walk east along the corridor to the 2nd Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORRWEST_CLASS201",
+      "fromNode": "2F-CORR-WEST",
+      "toNode": "2F-CLASS-201",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn right into Classroom 201",
+      "reverseInstruction": "Exit Classroom 201 into 2nd Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORRWEST_CLASS202",
+      "fromNode": "2F-CORR-WEST",
+      "toNode": "2F-CLASS-202",
+      "distance": 14,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Classroom 202 on your left",
+      "reverseInstruction": "Exit Classroom 202 into 2nd Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORRWEST_TUT201",
+      "fromNode": "2F-CORR-WEST",
+      "toNode": "2F-TUTORIAL-201",
+      "distance": 28,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk to the end of West Corridor to Tutorial Room 201",
+      "reverseInstruction": "Exit Tutorial Room 201 to West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORRWEST_RESTROOM",
+      "fromNode": "2F-CORR-WEST",
+      "toNode": "2F-RESTROOM",
+      "distance": 11,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter 2nd Floor Restrooms & Accessible Toilet",
+      "reverseInstruction": "Exit Restrooms into 2nd Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORRCENTRAL_SURVEYLAB",
+      "fromNode": "2F-CORR-CENTRAL",
+      "toNode": "2F-SURVEY-LAB",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk south from Central Junction to Geomatics & CADD Lab",
+      "reverseInstruction": "Exit Geomatics Lab to 2nd Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORRCENTRAL_PROGLAB",
+      "fromNode": "2F-CORR-CENTRAL",
+      "toNode": "2F-PROG-LAB",
+      "distance": 19,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk north into Systems & Networks Computing Lab",
+      "reverseInstruction": "Exit Systems & Networks Lab to Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORREAST_CLASS203",
+      "fromNode": "2F-CORR-EAST",
+      "toNode": "2F-CLASS-203",
+      "distance": 15.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn south into Classroom 203",
+      "reverseInstruction": "Exit Classroom 203 into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORREAST_HODCIVIL",
+      "fromNode": "2F-CORR-EAST",
+      "toNode": "2F-HOD-CIVIL",
+      "distance": 19,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Head of Civil Engineering Department Office",
+      "reverseInstruction": "Exit HOD Civil Office into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_2F_CORREAST_FACCIVIL",
+      "fromNode": "2F-CORR-EAST",
+      "toNode": "2F-FACULTY-CIVIL",
+      "distance": 18.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter the Civil Engineering Faculty Room",
+      "reverseInstruction": "Exit Civil Faculty Room into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_STAIRA_CORRCENTRAL",
+      "fromNode": "3F-STAIR-A",
+      "toNode": "3F-CORR-CENTRAL",
+      "distance": 9,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step off Main Staircase A into the 3rd Floor Central Corridor",
+      "reverseInstruction": "Walk from 3rd Floor Central Corridor to Main Staircase A landing",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_LIFT1_CORRCENTRAL",
+      "fromNode": "3F-LIFT-1",
+      "toNode": "3F-CORR-CENTRAL",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Exit Lift 1 into the 3rd Floor Central Corridor",
+      "reverseInstruction": "Approach Lift 1 on the 3rd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORRCENTRAL_CORREAST",
+      "fromNode": "3F-CORR-CENTRAL",
+      "toNode": "3F-CORR-EAST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east along the 2.73m passage on the 3rd Floor",
+      "reverseInstruction": "Walk west back to the 3rd Floor Central Corridor Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORREAST_LIFT2",
+      "fromNode": "3F-CORR-EAST",
+      "toNode": "3F-LIFT-2",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Arrive at Lift 2 landing on the 3rd Floor",
+      "reverseInstruction": "Step out of Lift 2 into the 3rd Floor East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORREAST_STAIRB",
+      "fromNode": "3F-CORR-EAST",
+      "toNode": "3F-STAIR-B",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east to Fire Escape Staircase B (3rd Floor)",
+      "reverseInstruction": "Enter the 3rd Floor East Passage from Fire Escape Staircase B",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORRCENTRAL_CORRWEST",
+      "fromNode": "3F-CORR-CENTRAL",
+      "toNode": "3F-CORR-WEST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk west along the 2.76m wide 3rd Floor corridor",
+      "reverseInstruction": "Walk east along the corridor to the 3rd Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORRWEST_CLASS301",
+      "fromNode": "3F-CORR-WEST",
+      "toNode": "3F-CLASS-301",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn right into Classroom 301",
+      "reverseInstruction": "Exit Classroom 301 into 3rd Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORRWEST_CLASS302",
+      "fromNode": "3F-CORR-WEST",
+      "toNode": "3F-CLASS-302",
+      "distance": 14,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Classroom 302",
+      "reverseInstruction": "Exit Classroom 302 into 3rd Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORRWEST_TUT301",
+      "fromNode": "3F-CORR-WEST",
+      "toNode": "3F-TUTORIAL-301",
+      "distance": 28,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Proceed down West Corridor to Tutorial Room 301",
+      "reverseInstruction": "Exit Tutorial Room 301 to West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORRWEST_RESTROOM",
+      "fromNode": "3F-CORR-WEST",
+      "toNode": "3F-RESTROOM",
+      "distance": 11,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter 3rd Floor Restrooms & Accessible Toilet",
+      "reverseInstruction": "Exit Restrooms into 3rd Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORRCENTRAL_JURYHALL",
+      "fromNode": "3F-CORR-CENTRAL",
+      "toNode": "3F-JURY-HALL",
+      "distance": 15.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk south into the Architecture Jury & Review Hall",
+      "reverseInstruction": "Exit Jury Hall to 3rd Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORRCENTRAL_EMBEDDED",
+      "fromNode": "3F-CORR-CENTRAL",
+      "toNode": "3F-EMBEDDED-LAB",
+      "distance": 19,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Microprocessor & Robotics Lab",
+      "reverseInstruction": "Exit Robotics Lab to 3rd Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORREAST_HODMECH",
+      "fromNode": "3F-CORR-EAST",
+      "toNode": "3F-HOD-MECH",
+      "distance": 15.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Head of Mechanical Engineering Office",
+      "reverseInstruction": "Exit HOD Mechanical Office into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORREAST_ARCHSTUDIO",
+      "fromNode": "3F-CORR-EAST",
+      "toNode": "3F-ARCH-STUDIO",
+      "distance": 19,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn north into B.Arch Design Studio",
+      "reverseInstruction": "Exit B.Arch Design Studio into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_3F_CORREAST_FACMECH",
+      "fromNode": "3F-CORR-EAST",
+      "toNode": "3F-FACULTY-MECH",
+      "distance": 18.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter 3rd Floor Faculty Room",
+      "reverseInstruction": "Exit 3rd Floor Faculty Room into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_STAIRA_CORRCENTRAL",
+      "fromNode": "4F-STAIR-A",
+      "toNode": "4F-CORR-CENTRAL",
+      "distance": 9,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step off Main Staircase A into the 4th Floor Central Corridor",
+      "reverseInstruction": "Walk from 4th Floor Central Corridor to Main Staircase A landing",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_LIFT1_CORRCENTRAL",
+      "fromNode": "4F-LIFT-1",
+      "toNode": "4F-CORR-CENTRAL",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Exit Lift 1 into the 4th Floor Central Corridor",
+      "reverseInstruction": "Approach Lift 1 on the 4th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRCENTRAL_CORREAST",
+      "fromNode": "4F-CORR-CENTRAL",
+      "toNode": "4F-CORR-EAST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east along the 2.73m passage on the 4th Floor",
+      "reverseInstruction": "Walk west back to the 4th Floor Central Corridor Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORREAST_LIFT2",
+      "fromNode": "4F-CORR-EAST",
+      "toNode": "4F-LIFT-2",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Arrive at Lift 2 landing on the 4th Floor",
+      "reverseInstruction": "Step out of Lift 2 into the 4th Floor East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORREAST_STAIRB",
+      "fromNode": "4F-CORR-EAST",
+      "toNode": "4F-STAIR-B",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east to Fire Escape Staircase B (4th Floor)",
+      "reverseInstruction": "Enter the 4th Floor East Passage from Fire Escape Staircase B",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRCENTRAL_CORRWEST",
+      "fromNode": "4F-CORR-CENTRAL",
+      "toNode": "4F-CORR-WEST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk west along the 2.76m wide 4th Floor corridor",
+      "reverseInstruction": "Walk east along the corridor to the 4th Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRWEST_CLASS401",
+      "fromNode": "4F-CORR-WEST",
+      "toNode": "4F-CLASS-401",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn right into Classroom 401",
+      "reverseInstruction": "Exit Classroom 401 into 4th Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRWEST_CLASS402",
+      "fromNode": "4F-CORR-WEST",
+      "toNode": "4F-CLASS-402",
+      "distance": 14,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Classroom 402",
+      "reverseInstruction": "Exit Classroom 402 into 4th Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRWEST_TUT4A",
+      "fromNode": "4F-CORR-WEST",
+      "toNode": "4F-TUTORIAL-4A",
+      "distance": 28,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk down West Corridor to Tutorial Room 4A",
+      "reverseInstruction": "Exit Tutorial Room 4A to West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRWEST_SICKRM",
+      "fromNode": "4F-CORR-WEST",
+      "toNode": "4F-SICK-ROOM",
+      "distance": 22,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk south along West Corridor to the Sick Room",
+      "reverseInstruction": "Exit Sick Room into 4th Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRWEST_STORERM",
+      "fromNode": "4F-CORR-WEST",
+      "toNode": "4F-STORE-RM",
+      "distance": 14,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Access the 4th Floor Store Room",
+      "reverseInstruction": "Exit Store Room to West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRWEST_RESTROOM",
+      "fromNode": "4F-CORR-WEST",
+      "toNode": "4F-RESTROOM",
+      "distance": 10,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter 4th Floor Restrooms & Disabled Toilet",
+      "reverseInstruction": "Exit Restrooms into West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRCENTRAL_HODCSPG",
+      "fromNode": "4F-CORR-CENTRAL",
+      "toNode": "4F-HOD-CS-PG",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk through the Waiting Area into Head of CS Department (4F)",
+      "reverseInstruction": "Exit HOD CS 4F Chamber to Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRCENTRAL_TUT4B",
+      "fromNode": "4F-CORR-CENTRAL",
+      "toNode": "4F-TUTORIAL-4B",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn south into Tutorial Room 4B",
+      "reverseInstruction": "Exit Tutorial Room 4B to Central Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORRCENTRAL_CLASS403",
+      "fromNode": "4F-CORR-CENTRAL",
+      "toNode": "4F-CLASS-403",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Classroom 403",
+      "reverseInstruction": "Exit Classroom 403 to 4th Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORREAST_TUT4C",
+      "fromNode": "4F-CORR-EAST",
+      "toNode": "4F-TUTORIAL-4C",
+      "distance": 15.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn south into Tutorial Room 4C",
+      "reverseInstruction": "Exit Tutorial Room 4C into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORREAST_DRAWHALL",
+      "fromNode": "4F-CORR-EAST",
+      "toNode": "4F-DRAWING-HALL",
+      "distance": 18.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter the 4th Floor Drawing Hall",
+      "reverseInstruction": "Exit Drawing Hall into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORREAST_FACRM",
+      "fromNode": "4F-CORR-EAST",
+      "toNode": "4F-FACULTY-RM",
+      "distance": 21,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east into the 4th Floor Faculty Room",
+      "reverseInstruction": "Exit 4th Floor Faculty Room into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORREAST_CLASS404",
+      "fromNode": "4F-CORR-EAST",
+      "toNode": "4F-CLASS-404",
+      "distance": 17,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Classroom 404",
+      "reverseInstruction": "Exit Classroom 404 into East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_4F_CORREAST_POWERRM",
+      "fromNode": "4F-CORR-EAST",
+      "toNode": "4F-POWER-RM",
+      "distance": 23,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Reach Power & Electrical Room at the east end",
+      "reverseInstruction": "Walk back from Power Room to East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_STAIRA_CORRCENTRAL",
+      "fromNode": "5F-STAIR-A",
+      "toNode": "5F-CORR-CENTRAL",
+      "distance": 9,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step off Main Staircase A into the 5th Floor Central Corridor",
+      "reverseInstruction": "Walk from 5th Floor Central Corridor to Main Staircase A landing",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_LIFT1_CORRCENTRAL",
+      "fromNode": "5F-LIFT-1",
+      "toNode": "5F-CORR-CENTRAL",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Exit Lift 1 into the 5th Floor Central Corridor",
+      "reverseInstruction": "Approach Lift 1 on the 5th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORRCENTRAL_CORREAST",
+      "fromNode": "5F-CORR-CENTRAL",
+      "toNode": "5F-CORR-EAST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east along the 2.73m passage on the 5th Floor",
+      "reverseInstruction": "Walk west back to the 5th Floor Central Corridor Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORREAST_LIFT2",
+      "fromNode": "5F-CORR-EAST",
+      "toNode": "5F-LIFT-2",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Arrive at Lift 2 landing on the 5th Floor",
+      "reverseInstruction": "Step out of Lift 2 into the 5th Floor East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORREAST_STAIRB",
+      "fromNode": "5F-CORR-EAST",
+      "toNode": "5F-STAIR-B",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east to Fire Escape Staircase B (5th Floor)",
+      "reverseInstruction": "Enter the 5th Floor East Passage from Fire Escape Staircase B",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORRCENTRAL_CORRWEST",
+      "fromNode": "5F-CORR-CENTRAL",
+      "toNode": "5F-CORR-WEST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk west along the 2.76m wide 5th Floor corridor",
+      "reverseInstruction": "Walk east along the corridor to the 5th Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORRWEST_CLASS501",
+      "fromNode": "5F-CORR-WEST",
+      "toNode": "5F-CLASS-501",
+      "distance": 16,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Turn right into Classroom 501",
+      "reverseInstruction": "Exit Classroom 501 into 5th Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORRWEST_CLASS502",
+      "fromNode": "5F-CORR-WEST",
+      "toNode": "5F-CLASS-502",
+      "distance": 14,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter Classroom 502",
+      "reverseInstruction": "Exit Classroom 502 into 5th Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORRWEST_TUT501",
+      "fromNode": "5F-CORR-WEST",
+      "toNode": "5F-TUTORIAL-501",
+      "distance": 28,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk down West Corridor to Tutorial Room 501",
+      "reverseInstruction": "Exit Tutorial Room 501 to West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORRWEST_RESTROOM",
+      "fromNode": "5F-CORR-WEST",
+      "toNode": "5F-RESTROOM",
+      "distance": 11,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter 5th Floor Restrooms & Disabled Toilet",
+      "reverseInstruction": "Exit Restrooms into 5th Floor West Corridor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORRCENTRAL_CLASS503",
+      "fromNode": "5F-CORR-CENTRAL",
+      "toNode": "5F-CLASS-503",
+      "distance": 19,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk north into Classroom 503",
+      "reverseInstruction": "Exit Classroom 503 to 5th Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORRCENTRAL_EEEWAIT",
+      "fromNode": "5F-CORR-CENTRAL",
+      "toNode": "5F-EEE-WAITING",
+      "distance": 10.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step into the Electrical & Electronics HOD Waiting Area",
+      "reverseInstruction": "Return to 5th Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_EEEWAIT_HODEEE",
+      "fromNode": "5F-EEE-WAITING",
+      "toNode": "5F-HOD-EEE",
+      "distance": 11.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter the Head of Electrical & Electronics Department Chamber",
+      "reverseInstruction": "Exit HOD EEE Chamber into the Waiting Area",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_5F_CORREAST_TERRACE",
+      "fromNode": "5F-CORR-EAST",
+      "toNode": "5F-OPEN-TERRACE",
+      "distance": 15.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step through Terrace Door D1 onto the 5th Floor East Open Terrace",
+      "reverseInstruction": "Re-enter 5th Floor East Passage from the Open Terrace",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_STAIRA_CORRCENTRAL",
+      "fromNode": "6F-STAIR-A",
+      "toNode": "6F-CORR-CENTRAL",
+      "distance": 9,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step off Main Staircase A into the 6th Floor Central Corridor",
+      "reverseInstruction": "Walk from 6th Floor Central Corridor to Main Staircase A landing",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_LIFT1_CORRCENTRAL",
+      "fromNode": "6F-LIFT-1",
+      "toNode": "6F-CORR-CENTRAL",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Exit Lift 1 into the 6th Floor Central Corridor",
+      "reverseInstruction": "Approach Lift 1 on the 6th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORRCENTRAL_CORREAST",
+      "fromNode": "6F-CORR-CENTRAL",
+      "toNode": "6F-CORR-EAST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east along the 2.73m passage on the 6th Floor",
+      "reverseInstruction": "Walk west back to the 6th Floor Central Corridor Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORREAST_LIFT2",
+      "fromNode": "6F-CORR-EAST",
+      "toNode": "6F-LIFT-2",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Arrive at Lift 2 landing on the 6th Floor",
+      "reverseInstruction": "Step out of Lift 2 into the 6th Floor East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORREAST_STAIRB",
+      "fromNode": "6F-CORR-EAST",
+      "toNode": "6F-STAIR-B",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east to Fire Escape Staircase B (6th Floor)",
+      "reverseInstruction": "Enter the 6th Floor East Passage from Fire Escape Staircase B",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORRCENTRAL_CORRWEST",
+      "fromNode": "6F-CORR-CENTRAL",
+      "toNode": "6F-CORR-WEST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk west along the 2.76m wide 6th Floor corridor",
+      "reverseInstruction": "Walk east along the corridor to the 6th Floor Central Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORRWEST_SEMINAR",
+      "fromNode": "6F-CORR-WEST",
+      "toNode": "6F-SEMINAR-HALL",
+      "distance": 16.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Enter the Main 6th Floor Seminar Hall through double doors D1",
+      "reverseInstruction": "Exit Main Seminar Hall into 6th Floor West Foyer",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_SEMINAR_STAGE",
+      "fromNode": "6F-SEMINAR-HALL",
+      "toNode": "6F-SEMINAR-STAGE",
+      "distance": 14,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk down the auditorium aisle to the Seminar Hall Stage",
+      "reverseInstruction": "Walk back from the Stage into the Main Seminar Hall",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORRWEST_TUT601",
+      "fromNode": "6F-CORR-WEST",
+      "toNode": "6F-TUTORIAL-601",
+      "distance": 21,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk south along passage to Tutorial Room 601",
+      "reverseInstruction": "Exit Tutorial Room 601 to 6th Floor West Foyer",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORRCENTRAL_CLASS601",
+      "fromNode": "6F-CORR-CENTRAL",
+      "toNode": "6F-CLASS-601",
+      "distance": 18.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk north into Classroom 601",
+      "reverseInstruction": "Exit Classroom 601 to 6th Floor Central Lobby",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORRCENTRAL_RESTROOM",
+      "fromNode": "6F-CORR-CENTRAL",
+      "toNode": "6F-RESTROOM",
+      "distance": 19.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Proceed to the 6th Floor Wash & Restroom Block",
+      "reverseInstruction": "Return from Restroom Block to 6th Floor Central Lobby",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_6F_CORREAST_TERRACE",
+      "fromNode": "6F-CORR-EAST",
+      "toNode": "6F-OPEN-TERRACE",
+      "distance": 14.5,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step outside onto the 6th Floor Open Terrace",
+      "reverseInstruction": "Enter 6th Floor East Passage from the Open Terrace",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_7F_STAIRA_CORRCENTRAL",
+      "fromNode": "7F-STAIR-A",
+      "toNode": "7F-CORR-CENTRAL",
+      "distance": 9,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step off Main Staircase A into the 7th Floor Central Corridor",
+      "reverseInstruction": "Walk from 7th Floor Central Corridor to Main Staircase A landing",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_7F_LIFT1_CORRCENTRAL",
+      "fromNode": "7F-LIFT-1",
+      "toNode": "7F-CORR-CENTRAL",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Exit Lift 1 into the 7th Floor Central Corridor",
+      "reverseInstruction": "Approach Lift 1 on the 7th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_7F_CORRCENTRAL_CORREAST",
+      "fromNode": "7F-CORR-CENTRAL",
+      "toNode": "7F-CORR-EAST",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east along the 2.73m passage on the 7th Floor",
+      "reverseInstruction": "Walk west back to the 7th Floor Central Corridor Junction",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_7F_CORREAST_LIFT2",
+      "fromNode": "7F-CORR-EAST",
+      "toNode": "7F-LIFT-2",
+      "distance": 3,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Arrive at Lift 2 landing on the 7th Floor",
+      "reverseInstruction": "Step out of Lift 2 into the 7th Floor East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_7F_CORREAST_STAIRB",
+      "fromNode": "7F-CORR-EAST",
+      "toNode": "7F-STAIR-B",
+      "distance": 20,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk east to Fire Escape Staircase B (7th Floor)",
+      "reverseInstruction": "Enter the 7th Floor East Passage from Fire Escape Staircase B",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_7F_CORRCENTRAL_TERRWEST",
+      "fromNode": "7F-CORR-CENTRAL",
+      "toNode": "7F-TERRACE-WEST",
+      "distance": 26,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Walk west onto the 7th Floor West Sky Terrace",
+      "reverseInstruction": "Return east to 7th Floor Central Sky Lobby",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_7F_CORRCENTRAL_TERRCENT",
+      "fromNode": "7F-CORR-CENTRAL",
+      "toNode": "7F-TERRACE-CENTRAL",
+      "distance": 17,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step out onto the 7th Floor Central Rooftop Terrace",
+      "reverseInstruction": "Re-enter 7th Floor Central Sky Lobby",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_7F_CORREAST_TERREAST",
+      "fromNode": "7F-CORR-EAST",
+      "toNode": "7F-TERRACE-EAST",
+      "distance": 17,
+      "accessible": true,
+      "type": "walking",
+      "instruction": "Step onto the 7th Floor East Rooftop Deck",
+      "reverseInstruction": "Return to 7th Floor East Passage",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_A_1F_2F",
+      "fromNode": "1F-STAIR-A",
+      "toNode": "2F-STAIR-A",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Main Staircase A from 1st Floor up to 2nd Floor",
+      "reverseInstruction": "Descend Main Staircase A from 2nd Floor down to 1st Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_B_1F_2F",
+      "fromNode": "1F-STAIR-B",
+      "toNode": "2F-STAIR-B",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Fire Escape Staircase B from 1st Floor up to 2nd Floor",
+      "reverseInstruction": "Descend Fire Escape Staircase B from 2nd Floor down to 1st Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_1_1F_2F",
+      "fromNode": "1F-LIFT-1",
+      "toNode": "2F-LIFT-1",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 1 up from 1st Floor to 2nd Floor",
+      "reverseInstruction": "Take Lift 1 down from 2nd Floor to 1st Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_2_1F_2F",
+      "fromNode": "1F-LIFT-2",
+      "toNode": "2F-LIFT-2",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 2 up from 1st Floor to 2nd Floor",
+      "reverseInstruction": "Take Lift 2 down from 2nd Floor to 1st Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_A_2F_3F",
+      "fromNode": "2F-STAIR-A",
+      "toNode": "3F-STAIR-A",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Main Staircase A from 2nd Floor up to 3rd Floor",
+      "reverseInstruction": "Descend Main Staircase A from 3rd Floor down to 2nd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_B_2F_3F",
+      "fromNode": "2F-STAIR-B",
+      "toNode": "3F-STAIR-B",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Fire Escape Staircase B from 2nd Floor up to 3rd Floor",
+      "reverseInstruction": "Descend Fire Escape Staircase B from 3rd Floor down to 2nd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_1_2F_3F",
+      "fromNode": "2F-LIFT-1",
+      "toNode": "3F-LIFT-1",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 1 up from 2nd Floor to 3rd Floor",
+      "reverseInstruction": "Take Lift 1 down from 3rd Floor to 2nd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_2_2F_3F",
+      "fromNode": "2F-LIFT-2",
+      "toNode": "3F-LIFT-2",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 2 up from 2nd Floor to 3rd Floor",
+      "reverseInstruction": "Take Lift 2 down from 3rd Floor to 2nd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_A_3F_4F",
+      "fromNode": "3F-STAIR-A",
+      "toNode": "4F-STAIR-A",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Main Staircase A from 3rd Floor up to 4th Floor",
+      "reverseInstruction": "Descend Main Staircase A from 4th Floor down to 3rd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_B_3F_4F",
+      "fromNode": "3F-STAIR-B",
+      "toNode": "4F-STAIR-B",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Fire Escape Staircase B from 3rd Floor up to 4th Floor",
+      "reverseInstruction": "Descend Fire Escape Staircase B from 4th Floor down to 3rd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_1_3F_4F",
+      "fromNode": "3F-LIFT-1",
+      "toNode": "4F-LIFT-1",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 1 up from 3rd Floor to 4th Floor",
+      "reverseInstruction": "Take Lift 1 down from 4th Floor to 3rd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_2_3F_4F",
+      "fromNode": "3F-LIFT-2",
+      "toNode": "4F-LIFT-2",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 2 up from 3rd Floor to 4th Floor",
+      "reverseInstruction": "Take Lift 2 down from 4th Floor to 3rd Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_A_4F_5F",
+      "fromNode": "4F-STAIR-A",
+      "toNode": "5F-STAIR-A",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Main Staircase A from 4th Floor up to 5th Floor",
+      "reverseInstruction": "Descend Main Staircase A from 5th Floor down to 4th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_B_4F_5F",
+      "fromNode": "4F-STAIR-B",
+      "toNode": "5F-STAIR-B",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Fire Escape Staircase B from 4th Floor up to 5th Floor",
+      "reverseInstruction": "Descend Fire Escape Staircase B from 5th Floor down to 4th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_1_4F_5F",
+      "fromNode": "4F-LIFT-1",
+      "toNode": "5F-LIFT-1",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 1 up from 4th Floor to 5th Floor",
+      "reverseInstruction": "Take Lift 1 down from 5th Floor to 4th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_2_4F_5F",
+      "fromNode": "4F-LIFT-2",
+      "toNode": "5F-LIFT-2",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 2 up from 4th Floor to 5th Floor",
+      "reverseInstruction": "Take Lift 2 down from 5th Floor to 4th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_A_5F_6F",
+      "fromNode": "5F-STAIR-A",
+      "toNode": "6F-STAIR-A",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Main Staircase A from 5th Floor up to 6th Floor",
+      "reverseInstruction": "Descend Main Staircase A from 6th Floor down to 5th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_B_5F_6F",
+      "fromNode": "5F-STAIR-B",
+      "toNode": "6F-STAIR-B",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Fire Escape Staircase B from 5th Floor up to 6th Floor",
+      "reverseInstruction": "Descend Fire Escape Staircase B from 6th Floor down to 5th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_1_5F_6F",
+      "fromNode": "5F-LIFT-1",
+      "toNode": "6F-LIFT-1",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 1 up from 5th Floor to 6th Floor",
+      "reverseInstruction": "Take Lift 1 down from 6th Floor to 5th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_2_5F_6F",
+      "fromNode": "5F-LIFT-2",
+      "toNode": "6F-LIFT-2",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 2 up from 5th Floor to 6th Floor",
+      "reverseInstruction": "Take Lift 2 down from 6th Floor to 5th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_A_6F_7F",
+      "fromNode": "6F-STAIR-A",
+      "toNode": "7F-STAIR-A",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Main Staircase A from 6th Floor up to 7th Floor",
+      "reverseInstruction": "Descend Main Staircase A from 7th Floor down to 6th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_STAIR_B_6F_7F",
+      "fromNode": "6F-STAIR-B",
+      "toNode": "7F-STAIR-B",
+      "distance": 7,
+      "accessible": false,
+      "type": "stairs",
+      "instruction": "Climb Fire Escape Staircase B from 6th Floor up to 7th Floor",
+      "reverseInstruction": "Descend Fire Escape Staircase B from 7th Floor down to 6th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_1_6F_7F",
+      "fromNode": "6F-LIFT-1",
+      "toNode": "7F-LIFT-1",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 1 up from 6th Floor to 7th Floor",
+      "reverseInstruction": "Take Lift 1 down from 7th Floor to 6th Floor",
+      "isBidirectional": true
+    },
+    {
+      "edgeId": "E_INTER_LIFT_2_6F_7F",
+      "fromNode": "6F-LIFT-2",
+      "toNode": "7F-LIFT-2",
+      "distance": 4,
+      "accessible": true,
+      "type": "lift",
+      "instruction": "Take Lift 2 up from 6th Floor to 7th Floor",
+      "reverseInstruction": "Take Lift 2 down from 7th Floor to 6th Floor",
+      "isBidirectional": true
+    }
+  ],
+  "teachers": [
+    {
+      "teacherId": "TCH-001",
+      "name": "Dr. Priya Nair",
+      "email": "priya.nair@bji.ac.in",
+      "department": "Computer Science & Engineering",
+      "designation": "Professor & Head of Department",
+      "cabinNodeId": "1F-HOD-CS",
+      "phone": "+91 94471 23456",
+      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
+      "subjects": [
+        "Advanced Algorithms",
+        "Graph Theory",
+        "Artificial Intelligence"
+      ]
+    },
+    {
+      "teacherId": "TCH-002",
+      "name": "Prof. George Mathew",
+      "email": "george.mathew@bji.ac.in",
+      "department": "Computer Science & Engineering",
+      "designation": "Associate Professor",
+      "cabinNodeId": "1F-FACULTY-ROOM",
+      "phone": "+91 94472 34567",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      "subjects": [
+        "Database Management Systems",
+        "Full Stack Web Development",
+        "Cloud Architecture"
+      ]
+    },
+    {
+      "teacherId": "TCH-003",
+      "name": "Dr. Ananya Sharma",
+      "email": "ananya.sharma@bji.ac.in",
+      "department": "Civil & Architecture",
+      "designation": "Senior Professor",
+      "cabinNodeId": "1F-SR-PROF-1",
+      "phone": "+91 94473 45678",
+      "avatar": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=150&auto=format&fit=crop&q=80",
+      "subjects": [
+        "Structural Engineering",
+        "Building Information Modeling (BIM)"
+      ]
+    },
+    {
+      "teacherId": "TCH-004",
+      "name": "Prof. Rahul Varma",
+      "email": "rahul.varma@bji.ac.in",
+      "department": "Mechanical & Design",
+      "designation": "Assistant Professor",
+      "cabinNodeId": "1F-STAFF-ROOM",
+      "phone": "+91 94474 56789",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+      "subjects": [
+        "CAD & 3D Modeling",
+        "Machine Drawing",
+        "Robotics"
+      ]
+    },
+    {
+      "teacherId": "TCH-005",
+      "name": "Dr. Rajesh Kumar",
+      "email": "rajesh.kumar@bji.ac.in",
+      "department": "Electrical & Electronics Engineering",
+      "designation": "Professor & Head of EEE",
+      "cabinNodeId": "5F-HOD-EEE",
+      "phone": "+91 94475 67890",
+      "avatar": "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80",
+      "subjects": [
+        "Power Systems Engineering",
+        "Control Systems",
+        "Renewable Energy Grids"
+      ]
+    },
+    {
+      "teacherId": "TCH-006",
+      "name": "Ar. Thomas Varghese",
+      "email": "thomas.varghese@bji.ac.in",
+      "department": "Architecture & Civil",
+      "designation": "Associate Professor (B.Arch)",
+      "cabinNodeId": "2F-HOD-CIVIL",
+      "phone": "+91 94476 78901",
+      "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
+      "subjects": [
+        "Architectural Design Studio",
+        "Urban Planning",
+        "Sustainable Structures"
+      ]
+    }
+  ],
+  "timetables": [
+    {
+      "teacherId": "TCH-001",
+      "dayOfWeek": "Monday",
+      "startTime": "09:00",
+      "endTime": "10:30",
+      "roomNodeId": "1F-CLASS-02",
+      "subject": "Advanced Graph Algorithms & Data Structures",
+      "courseCode": "CST301",
+      "semester": "S5 CSE"
+    },
+    {
+      "teacherId": "TCH-001",
+      "dayOfWeek": "Monday",
+      "startTime": "11:00",
+      "endTime": "12:30",
+      "roomNodeId": "1F-CLASS-03",
+      "subject": "Artificial Intelligence & Expert Systems",
+      "courseCode": "CST401",
+      "semester": "S7 CSE"
+    },
+    {
+      "teacherId": "TCH-001",
+      "dayOfWeek": "Tuesday",
+      "startTime": "10:00",
+      "endTime": "11:30",
+      "roomNodeId": "1F-CLASS-02",
+      "subject": "Advanced Graph Algorithms & Data Structures",
+      "courseCode": "CST301",
+      "semester": "S5 CSE"
+    },
+    {
+      "teacherId": "TCH-001",
+      "dayOfWeek": "Wednesday",
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "roomNodeId": "GF-CAD-LAB",
+      "subject": "AI & Vision Systems Lab",
+      "courseCode": "CSL411",
+      "semester": "S7 CSE"
+    },
+    {
+      "teacherId": "TCH-001",
+      "dayOfWeek": "Thursday",
+      "startTime": "09:30",
+      "endTime": "11:00",
+      "roomNodeId": "1F-CLASS-02",
+      "subject": "Research Methodology & Department Seminar",
+      "courseCode": "CSD333",
+      "semester": "S5 CSE"
+    },
+    {
+      "teacherId": "TCH-001",
+      "dayOfWeek": "Friday",
+      "startTime": "10:30",
+      "endTime": "12:00",
+      "roomNodeId": "1F-CLASS-03",
+      "subject": "Machine Learning Foundations",
+      "courseCode": "CST305",
+      "semester": "S5 CSE"
+    },
+    {
+      "teacherId": "TCH-001",
+      "dayOfWeek": "Saturday",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "roomNodeId": "1F-CONF-HALL",
+      "subject": "KTU Academic Council Meeting",
+      "courseCode": "ACM101",
+      "semester": "Faculty"
+    },
+    {
+      "teacherId": "TCH-002",
+      "dayOfWeek": "Monday",
+      "startTime": "10:00",
+      "endTime": "11:30",
+      "roomNodeId": "1F-CLASS-03",
+      "subject": "Database Management Systems",
+      "courseCode": "CST202",
+      "semester": "S3 CSE"
+    },
+    {
+      "teacherId": "TCH-002",
+      "dayOfWeek": "Monday",
+      "startTime": "13:30",
+      "endTime": "16:00",
+      "roomNodeId": "GF-CAD-LAB",
+      "subject": "Full Stack Web Development Lab",
+      "courseCode": "CSL331",
+      "semester": "S5 CSE"
+    },
+    {
+      "teacherId": "TCH-002",
+      "dayOfWeek": "Wednesday",
+      "startTime": "09:00",
+      "endTime": "10:30",
+      "roomNodeId": "1F-CLASS-02",
+      "subject": "Cloud Computing Architecture",
+      "courseCode": "CST412",
+      "semester": "S7 CSE"
+    },
+    {
+      "teacherId": "TCH-002",
+      "dayOfWeek": "Friday",
+      "startTime": "14:00",
+      "endTime": "15:30",
+      "roomNodeId": "1F-CLASS-02",
+      "subject": "Database Query Optimization",
+      "courseCode": "CST202",
+      "semester": "S3 CSE"
+    },
+    {
+      "teacherId": "TCH-003",
+      "dayOfWeek": "Monday",
+      "startTime": "09:30",
+      "endTime": "11:00",
+      "roomNodeId": "GF-DRAWING-HALL",
+      "subject": "Architectural Structural Drafting",
+      "courseCode": "CET203",
+      "semester": "S3 Civil"
+    },
+    {
+      "teacherId": "TCH-003",
+      "dayOfWeek": "Wednesday",
+      "startTime": "11:00",
+      "endTime": "12:30",
+      "roomNodeId": "1F-CONF-HALL",
+      "subject": "BIM Design Review",
+      "courseCode": "ARC402",
+      "semester": "S7 B.Arch"
+    },
+    {
+      "teacherId": "TCH-004",
+      "dayOfWeek": "Monday",
+      "startTime": "11:00",
+      "endTime": "13:00",
+      "roomNodeId": "GF-DRAWING-WS",
+      "subject": "Machine Drawing & 3D Modeling Workshop",
+      "courseCode": "MET204",
+      "semester": "S3 Mech"
+    },
+    {
+      "teacherId": "TCH-004",
+      "dayOfWeek": "Tuesday",
+      "startTime": "14:00",
+      "endTime": "16:30",
+      "roomNodeId": "GF-CAD-LAB",
+      "subject": "AutoCAD & SolidWorks Lab",
+      "courseCode": "MEL202",
+      "semester": "S3 Mech"
+    },
+    {
+      "teacherId": "TCH-005",
+      "dayOfWeek": "Monday",
+      "startTime": "09:00",
+      "endTime": "10:30",
+      "roomNodeId": "5F-CLASS-501",
+      "subject": "Power Systems Analysis",
+      "courseCode": "EET301",
+      "semester": "S5 EEE"
+    },
+    {
+      "teacherId": "TCH-005",
+      "dayOfWeek": "Wednesday",
+      "startTime": "11:00",
+      "endTime": "12:30",
+      "roomNodeId": "5F-CLASS-503",
+      "subject": "Smart Grids & High Voltage Engineering",
+      "courseCode": "EET401",
+      "semester": "S7 EEE"
+    },
+    {
+      "teacherId": "TCH-005",
+      "dayOfWeek": "Friday",
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "roomNodeId": "6F-SEMINAR-HALL",
+      "subject": "IEEE Technical Colloquium & Seminar",
+      "courseCode": "EES499",
+      "semester": "All Branches"
+    },
+    {
+      "teacherId": "TCH-006",
+      "dayOfWeek": "Tuesday",
+      "startTime": "09:30",
+      "endTime": "12:30",
+      "roomNodeId": "3F-ARCH-STUDIO",
+      "subject": "Architectural Design Studio IV",
+      "courseCode": "ARC301",
+      "semester": "S5 B.Arch"
+    },
+    {
+      "teacherId": "TCH-006",
+      "dayOfWeek": "Thursday",
+      "startTime": "13:30",
+      "endTime": "15:30",
+      "roomNodeId": "4F-DRAWING-HALL",
+      "subject": "Structural Working Drawings",
+      "courseCode": "ARC405",
+      "semester": "S7 B.Arch"
+    },
+    {
+      "teacherId": "TCH-006",
+      "dayOfWeek": "Saturday",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "roomNodeId": "3F-JURY-HALL",
+      "subject": "B.Arch Thesis Design Jury",
+      "courseCode": "ARC490",
+      "semester": "S9 B.Arch"
+    }
+  ]
+}
