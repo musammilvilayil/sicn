@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Map, Camera, QrCode, CalendarDays, UserRound, Lock, Compass, Radio, ClipboardCheck } from 'lucide-react';
+import { Map, Camera, QrCode, CalendarDays, UserRound, Lock, Compass, Radio, ClipboardCheck, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useNavigation } from '../context/NavigationContext';
 export default function BottomNav() {
  const location=useLocation(), navigate=useNavigate();
  const {effectiveRole,canAccessTimetableRouting}=useAuth();
+ const canAccessAttendance=['Student','Teacher','Admin'].includes(effectiveRole);
  const canAccessAttendance=['Student','Teacher','Admin'].includes(effectiveRole);
  const {roomCode,roomMembers}=useSocket();
  const {isARMode,launchARLiveView,fallbackTo2DMap}=useNavigation();
