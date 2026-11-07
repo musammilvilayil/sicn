@@ -81,7 +81,7 @@ function cryptoRandomIndex(length) {
 
 const provisionUser = async (req, res) => {
   try {
-    const { name, email, password, role, teacherId, department } = req.body || {};
+    const { name, email, password, role, teacherId, department, semester } = req.body || {};
     const allowedRoles = ['Teacher', 'Student', 'Normal_User'];
     if (!name || !email || !password || !allowedRoles.includes(role)) {
       return res.status(400).json({ message: 'Provide name, email, password and a valid non-admin role.' });
@@ -122,6 +122,7 @@ const provisionUser = async (req, res) => {
       role,
       teacherId: linkedTeacherId,
       department: department || 'General',
+      semester: typeof semester === 'string' ? semester.trim().slice(0, 40) : '',
       avatarColor: '#2563eb',
     });
 
@@ -134,6 +135,7 @@ const provisionUser = async (req, res) => {
         role: user.role,
         teacherId: user.teacherId,
         department: user.department,
+        semester: user.semester,
       },
     });
   } catch (error) {
