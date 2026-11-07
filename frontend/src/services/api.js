@@ -208,6 +208,17 @@ export const api = {
     return data;
   },
 
+  async changePassword(currentPassword, newPassword) {
+    const res = await fetch(`${API_BASE}/auth/password`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Password update failed');
+    return data;
+  },
+
   async getMe(token) {
     const res = await fetch(`${API_BASE}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
