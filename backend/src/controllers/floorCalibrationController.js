@@ -2,7 +2,7 @@ const FloorCalibration = require('../models/FloorCalibration');
 const { solveAffineCalibration } = require('../utils/floorCalibration');
 
 const ALLOWED_PDFS = new Set([
-  'BJI BUILDING PLAN 01 GF MAIN BLOCK_04022026.pdf',
+  'BJI_BUILDING PLAN 01 GF MAIN BLOCK_04022026.pdf',
   'BJI BUILDING PLAN 0000_1ST FLOOR MAIN BLOCK_04022026.pdf',
   'BJI_MAIN_BLOCK_2ND_&_3RD_FLOOR_BUILDING_PLAN_00000_04022026.pdf',
   'BJI_BUILDING_PLAN_0002_4TH_&_5TH_FLOOR_MAIN_BLOCK_04022026.pdf',
@@ -86,6 +86,34 @@ async function saveFloorCalibration(req, res) {
   }
 }
 
+
+async function verifyFloorCalibration(req, res) {
+  try {
+    const floor = Number(req.params.floor);
+    const { confirmation, verificationNote } = req.body || {};
+    if (confirmation !== true || typeof verificationNote !== 'string' || verificationNote.trim().length < 20) {
+      return res.status(400).json({
+        message: 'Confirm the physical walkthrough and provide a verification note of at least 20 characters.',
+      });
+    }
+    const calibration = await FloorCalibration.findOneAndUpdate(
+      { floor },
+      {
+        $set: {
+          fieldVerified: true,
+          fieldVerificationNote: verificationNote.trim(),
+          fieldVerifiedAt: new Date(),
+        },
+      },
+      { new: true, runValidators: true }
+    );
+    if (!calibration) return res.status(404).json({ message: 'Register this floor plan before field verification.' });
+    return res.json({ message: 'Field verification attestation saved.', calibration });
+  } catch (error) {
+    return res.status(500).json({ message: 'Unable to save field verification.' });
+  }
+}
+
 async function deleteFloorCalibration(req, res) {
   try {
     const floor = Number(req.params.floor);
@@ -97,4 +125,4 @@ async function deleteFloorCalibration(req, res) {
   }
 }
 
-module.exports = { getFloorCalibrations, saveFloorCalibration, deleteFloorCalibration };
+module.exports = { getFloorCalibrations, saveFloorCalibration, verifyFloorCalibration, deleteFloorCalibration };
