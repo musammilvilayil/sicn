@@ -1,5 +1,6 @@
 const Node = require('../models/Node');
 const Edge = require('../models/Edge');
+const User = require('../models/User');
 const { findShortestPath } = require('../algorithms/aStar');
 
 // @desc    Calculate shortest route between two nodes across floors using A*
@@ -115,9 +116,44 @@ const deleteEdge = async (req, res) => {
   }
 };
 
+
+const getCrowdSummary = async (req, res) => {
+  try {
+    const minutes = Math.min(60, Math.max(1, Number(req.query.windowMinutes) || 10));
+    const since = new Date(Date.now() - minutes * 60 * 1000);
+    const groups = await User.aggregate([
+      { $match: { role: { $in: ['Student', 'Teacher'] }, locationUpdatedAt: { $gte: since }, currentLocationNodeId: { $type: 'string' } } },
+      { $group: { _id: '$currentLocationNodeId', people: { $sum: 1 } } },
+      { $sort: { people: -1 } },
+      { $limit: 100 },
+    ]);
+    const nodeIds = groups.map((x) => x._id);
+    const nodes = await Node.find({ nodeId: { $in: nodeIds } }).select('nodeId name floor type').lean();
+    const nodeMap = new Map(nodes.map((n) => [n.nodeId, n]));
+    const hotspots = groups.map((g) => ({ nodeId: g._id, people: g.people, ...(nodeMap.get(g._id) || {}) }));
+    const floors = new Map();
+    hotspots.forEach((h) => {
+      const floor = Number.isFinite(h.floor) ? h.floor : -1;
+      floors.set(floor, (floors.get(floor) || 0) + h.people);
+    });
+    return res.json({
+      windowMinutes: minutes,
+      activeCheckpoints: hotspots.length,
+      estimatedPeople: hotspots.reduce((sum, h) => sum + h.people, 0),
+      floors: [...floors.entries()].map(([floor, people]) => ({ floor, people })).sort((a, b) => a.floor - b.floor),
+      hotspots,
+      privacy: 'Aggregated counts only; no individual identities are returned.',
+      source: 'Recent QR checkpoint confirmations only; not a continuous sensor count.',
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Unable to calculate campus occupancy.' });
+  }
+};
+
 module.exports = {
   calculateRoute,
   getEdges,
   createEdge,
   deleteEdge,
+  getCrowdSummary,
 };
