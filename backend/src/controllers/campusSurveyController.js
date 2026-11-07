@@ -96,6 +96,39 @@ exports.uploadVideo = async (req, res) => {
   }
 };
 
+exports.updateMetadata = async (req, res) => {
+  const survey = await Survey.findById(req.params.id);
+  if (!survey) return res.status(404).json({ message: 'Walkthrough not found.' });
+  if (survey.status === 'published') return res.status(409).json({ message: 'Unpublish this walkthrough before editing it.' });
+  const b = req.body || {};
+  if (b.title !== undefined) {
+    const title = String(b.title).trim();
+    if (!title || title.length > 120) return res.status(400).json({ message: 'A title of 1–120 characters is required.' });
+    survey.title = title;
+  }
+  if (b.description !== undefined) survey.description = String(b.description).slice(0, 1000);
+  if (b.startNodeId !== undefined) survey.startNodeId = String(b.startNodeId).slice(0, 100);
+  if (b.endNodeId !== undefined) survey.endNodeId = String(b.endNodeId).slice(0, 100);
+  if (b.durationMs !== undefined) survey.durationMs = Math.max(0, Number(b.durationMs) || 0);
+  if (Array.isArray(b.floors)) {
+    const floors = [...new Set(b.floors.map(Number))];
+    if (floors.some((f) => !Number.isInteger(f) || f < 0 || f > 7)) return res.status(400).json({ message: 'Floor values must be between 0 and 7.' });
+    survey.floors = floors;
+  }
+  if (Array.isArray(b.checkpoints)) {
+    if (b.checkpoints.length > 200 || b.checkpoints.some((x) => !String(x.name || '').trim() || !Number.isInteger(Number(x.floor)) || Number(x.floor) < 0 || Number(x.floor) > 7 || !Number.isFinite(Number(x.elapsedMs)) || Number(x.elapsedMs) < 0)) {
+      return res.status(400).json({ message: 'One or more walkthrough checkpoints are invalid.' });
+    }
+    survey.checkpoints = b.checkpoints;
+  }
+  if (Array.isArray(b.trace)) {
+    if (b.trace.length > 2000) return res.status(400).json({ message: 'Too many sensor samples. Split this walkthrough into shorter recordings.' });
+    survey.trace = b.trace;
+  }
+  await survey.save();
+  res.json(publicSurvey(survey));
+};
+
 exports.publish = async (req, res) => {
   const survey = await Survey.findById(req.params.id);
   if (!survey) return res.status(404).json({ message: 'Walkthrough not found.' });
