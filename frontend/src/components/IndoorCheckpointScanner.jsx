@@ -146,8 +146,8 @@ export default function IndoorCheckpointScanner({ enabled, onClose, onConfirm })
   const confirmCheckpoint = () => {
     if (!candidate) return;
     const accepted = onConfirm(candidate);
-    if (accepted === false) {
-      lastAcceptedRef.current = '';
+    if (accepted === false || accepted === 'continue') {
+      if (accepted === false) lastAcceptedRef.current = '';
       setCandidate(null);
       setStatus('scanning');
       return;
