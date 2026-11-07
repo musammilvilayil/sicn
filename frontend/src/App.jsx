@@ -7,47 +7,10 @@ import ScanPage from './pages/ScanPage';
 import SchedulePage from './pages/SchedulePage';
 import ProfilePage from './pages/ProfilePage';
 import { useNavigation } from './context/NavigationContext';
-
 export default function App() {
-  const { toast } = useNavigation();
-
-  return (
-    <div className="relative min-h-dvh w-full bg-slate-50 text-slate-900 antialiased">
-      {/* Global Mobile-Friendly Floating Toast */}
-      {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] w-[92%] max-w-sm pointer-events-none animate-fade-in">
-          <div
-            className={`px-4 py-2.5 rounded-2xl shadow-2xl border flex items-center gap-2.5 text-xs font-bold backdrop-blur-md ${
-              toast.type === 'error'
-                ? 'bg-rose-600/95 text-white border-rose-500'
-                : toast.type === 'success'
-                ? 'bg-emerald-600/95 text-white border-emerald-500'
-                : 'bg-slate-900/95 text-white border-slate-700'
-            }`}
-          >
-            {toast.type === 'error' ? (
-              <AlertCircle size={16} className="shrink-0" />
-            ) : toast.type === 'success' ? (
-              <CheckCircle2 size={16} className="shrink-0" />
-            ) : (
-              <Info size={16} className="shrink-0" />
-            )}
-            <span className="leading-snug">{toast.message}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Multi-Page Router */}
-      <Routes>
-        <Route path="/" element={<MapPage />} />
-        <Route path="/scan" element={<ScanPage />} />
-        <Route path="/schedule" element={<SchedulePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-
-      {/* Google Maps-like Mobile Bottom Navigation Bar */}
-      <BottomNav />
-    </div>
-  );
+ const {toast}=useNavigation();
+ return <div className="sicn-ui relative min-h-dvh w-full bg-slate-50 text-slate-900 antialiased">
+  {toast&&<div role="status" aria-live="polite" className="sicn-toast fixed left-1/2 top-4 z-[70] w-[min(92%,420px)] -translate-x-1/2 animate-fade-in pointer-events-none"><div className={'flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl '+(toast.type==='error'?'sicn-toast-error':toast.type==='success'?'sicn-toast-success':'sicn-toast-info')}><span className="shrink-0">{toast.type==='error'?<AlertCircle size={18}/>:toast.type==='success'?<CheckCircle2 size={18}/>:<Info size={18}/>}</span><span className="leading-snug">{toast.message}</span></div></div>}
+  <Routes><Route path="/" element={<MapPage/>}/><Route path="/scan" element={<ScanPage/>}/><Route path="/schedule" element={<SchedulePage/>}/><Route path="/profile" element={<ProfilePage/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes><BottomNav/>
+ </div>;
 }
