@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Teacher = require('../models/Teacher');
 
 const generateToken = (user) => {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -77,6 +78,69 @@ function cryptoRandomIndex(length) {
   return require('crypto').randomInt(0, length);
 }
 
+const provisionUser = async (req, res) => {
+  try {
+    const { name, email, password, role, teacherId, department } = req.body || {};
+    const allowedRoles = ['Teacher', 'Student', 'Normal_User'];
+    if (!name || !email || !password || !allowedRoles.includes(role)) {
+      return res.status(400).json({ message: 'Provide name, email, password and a valid non-admin role.' });
+    }
+    if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 80) {
+      return res.status(400).json({ message: 'Name must contain 2 to 80 characters.' });
+    }
+    if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+    if (typeof password !== 'string' || password.length < 12 || password.length > 128) {
+      return res.status(400).json({ message: 'Account password must contain 12 to 128 characters.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    if (await User.findOne({ email: normalizedEmail })) {
+      return res.status(409).json({ message: 'An account already exists with this email.' });
+    }
+
+    let linkedTeacherId = null;
+    if (role === 'Teacher') {
+      const teacher = await Teacher.findOne({
+        $or: [
+          ...(typeof teacherId === 'string' && teacherId.trim() ? [{ teacherId: teacherId.trim().toUpperCase() }] : []),
+          { email: normalizedEmail },
+        ],
+      });
+      if (!teacher) {
+        return res.status(400).json({ message: 'No matching faculty profile. Add the faculty profile first or use its registered email.' });
+      }
+      linkedTeacherId = teacher.teacherId;
+    }
+
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password,
+      role,
+      teacherId: linkedTeacherId,
+      department: department || 'General',
+      avatarColor: '#2563eb',
+    });
+
+    return res.status(201).json({
+      message: 'Account provisioned successfully.',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        teacherId: user.teacherId,
+        department: user.department,
+      },
+    });
+  } catch (error) {
+    console.error('Account provisioning error:', error);
+    return res.status(500).json({ message: 'Unable to provision account.' });
+  }
+};
+
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -143,4 +207,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getUserProfile, updateUserLocation, changePassword };
+module.exports = { registerUser, provisionUser, loginUser, getUserProfile, updateUserLocation, changePassword };
