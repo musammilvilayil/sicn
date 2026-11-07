@@ -399,7 +399,6 @@ export default function FloorMap({
 
               {/* Senior Prof Cabins */}
               <rect x="700" y="80" width="105" height="150" rx="8" className="room-shape room-faculty" />
-              <text x="752" y="145" textAnchor="middle" className="room-dim-text"></text>
               <text x="752" y="145" textAnchor="middle" className="room-label-bold">SR. PROF 1</text>
               <text x="752" y="165" textAnchor="middle" className="room-dim-text">Dr. Ananya</text>
 

@@ -197,6 +197,17 @@ export const api = {
     return data;
   },
 
+  async provisionUser(userData) {
+    const res = await fetch(`${API_BASE}/auth/provision`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(userData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Account provisioning failed');
+    return data;
+  },
+
   async register(userData) {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
@@ -205,6 +216,17 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Registration failed');
+    return data;
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    const res = await fetch(`${API_BASE}/auth/password`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Password update failed');
     return data;
   },
 

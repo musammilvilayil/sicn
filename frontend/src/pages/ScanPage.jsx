@@ -46,12 +46,6 @@ export default function ScanPage() {
   const qrRegionId = 'scanpage-html5qr-region';
   const scannerRef = useRef(null);
 
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
   const stopCamera = async () => {
     if (scannerRef.current) {
       try {
@@ -65,6 +59,12 @@ export default function ScanPage() {
     }
     setCameraActive(false);
   };
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   const startCamera = async () => {
     setErrorMsg('');
@@ -150,7 +150,7 @@ export default function ScanPage() {
     <div className="min-h-dvh bg-slate-50 pb-24">
       {/* Top Mobile App Header */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3.5">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
               <QrCode size={20} />
@@ -174,7 +174,16 @@ export default function ScanPage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+      <main className="max-w-5xl mx-auto px-4 py-4 space-y-4">
+        <section className="sicn-page-hero sicn-scan-hero">
+          <div className="sicn-hero-copy">
+            <span className="sicn-eyebrow"><span className="sicn-eyebrow-dot" /> CAMPUS CHECKPOINTS</span>
+            <h2>Know exactly where you are.</h2>
+            <p>Scan a campus QR checkpoint to calibrate your indoor position and continue your route with confidence.</p>
+          </div>
+          <div className="sicn-hero-art" aria-hidden="true"><div className="sicn-hero-orbit orbit-one" /><div className="sicn-hero-orbit orbit-two" /><div className="sicn-hero-qr"><QrCode size={42} strokeWidth={1.6} /></div><span className="sicn-hero-pin"><MapPin size={15} /></span></div>
+          <div className="sicn-hero-meta"><span>8 connected floors</span><span>Live checkpoint sync</span></div>
+        </section>
         {/* Socket.io Live Broadcast Banner */}
         <div
           onClick={() => setShareOpen(true)}

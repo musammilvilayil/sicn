@@ -45,6 +45,18 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '#2563eb',
     },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+    },
+    bootstrapAdminInitializedAt: {
+      type: Date,
+      default: null,
+    },
+    credentialsRotatedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

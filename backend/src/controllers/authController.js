@@ -1,19 +1,15 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { VALID_ROLES } = require('../models/User');
 const Teacher = require('../models/Teacher');
 
 const generateToken = (user) => {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET.startsWith('replace-')) {
+    throw new Error('JWT_SECRET must be configured with at least 32 characters.');
+  }
   return jwt.sign(
-    {
-      id: user._id,
-      role: user.role,
-      teacherId: user.teacherId || null,
-    },
-    process.env.JWT_SECRET || 'super_secret_jwt_indoor_nav_key_2026',
-    {
-      expiresIn: '30d',
-    }
+    { id: user._id, role: user.role, teacherId: user.teacherId || null },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
 
@@ -26,134 +22,190 @@ const formatAuthResponse = (user) => ({
   department: user.department,
   currentLocationNodeId: user.currentLocationNodeId,
   avatarColor: user.avatarColor,
+  mustChangePassword: Boolean(user.mustChangePassword),
   token: generateToken(user),
 });
 
-// @desc    Register a new user with one of the 4 RBAC roles
-// @route   POST /api/auth/register
+// Public registration is intentionally restricted to ordinary visitor accounts.
+// Staff and administrator accounts must be provisioned through trusted channels.
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, department, teacherId, cabinNodeId } = req.body || {};
-
+    const { name, email, password } = req.body || {};
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide name, email, and password' });
+      return res.status(400).json({ message: 'Please provide name, email, and password.' });
     }
-
-    const selectedRole = role || 'Normal_User';
-    if (!VALID_ROLES.includes(selectedRole)) {
-      return res.status(400).json({
-        message: `Invalid role '${selectedRole}'. Allowed roles: ${VALID_ROLES.join(', ')}`,
+    if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 80) {
+      return res.status(400).json({ message: 'Name must contain 2 to 80 characters.' });
+    }
+    if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+    if (typeof password !== 'string' || password.length < 10 || password.length > 128) {
+      return res.status(400).json({ message: 'Password must contain 10 to 128 characters.' });
+    }
+    if (req.body?.role && req.body.role !== 'Normal_User') {
+      return res.status(403).json({
+        message: 'Public registration is limited to visitor accounts. Contact an administrator for staff access.',
       });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const userExists = await User.findOne({ email: normalizedEmail });
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists with this email' });
-    }
-
-    let resolvedTeacherId = teacherId ? teacherId.toUpperCase().trim() : null;
-
-    // If registering as a Teacher, link to existing Teacher profile or create one
-    if (selectedRole === 'Teacher') {
-      let existingTeacher = await Teacher.findOne({
-        $or: [
-          ...(resolvedTeacherId ? [{ teacherId: resolvedTeacherId }] : []),
-          { email: normalizedEmail },
-        ],
-      });
-
-      if (!existingTeacher) {
-        const count = await Teacher.countDocuments();
-        const newTchId = resolvedTeacherId || `TCH-00${count + 1}`;
-        existingTeacher = await Teacher.create({
-          teacherId: newTchId,
-          name,
-          email: normalizedEmail,
-          department: department || 'Computer Science & Engineering',
-          designation: 'Assistant Professor',
-          cabinNodeId: cabinNodeId || '1F-FACULTY-ROOM',
-          subjects: ['General Studies'],
-        });
-      }
-      resolvedTeacherId = existingTeacher.teacherId;
+    if (await User.findOne({ email: normalizedEmail })) {
+      return res.status(409).json({ message: 'An account already exists with this email.' });
     }
 
     const palette = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2'];
-    const avatarColor = palette[Math.floor(Math.random() * palette.length)];
-
     const user = await User.create({
-      name,
+      name: name.trim(),
       email: normalizedEmail,
       password,
-      role: selectedRole,
-      teacherId: resolvedTeacherId,
-      department: department || 'General',
-      avatarColor,
+      role: 'Normal_User',
+      department: 'Visitor',
+      avatarColor: palette[cryptoRandomIndex(palette.length)],
     });
 
     return res.status(201).json(formatAuthResponse(user));
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'An account already exists with this email.' });
+    }
     console.error('Register error:', error);
-    return res.status(500).json({ message: 'Server error during registration', error: error.message });
+    return res.status(500).json({ message: 'Server error during registration.' });
   }
 };
 
-// @desc    Authenticate user & get token
-// @route   POST /api/auth/login
+function cryptoRandomIndex(length) {
+  return require('crypto').randomInt(0, length);
+}
+
+const provisionUser = async (req, res) => {
+  try {
+    const { name, email, password, role, teacherId, department } = req.body || {};
+    const allowedRoles = ['Teacher', 'Student', 'Normal_User'];
+    if (!name || !email || !password || !allowedRoles.includes(role)) {
+      return res.status(400).json({ message: 'Provide name, email, password and a valid non-admin role.' });
+    }
+    if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 80) {
+      return res.status(400).json({ message: 'Name must contain 2 to 80 characters.' });
+    }
+    if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+    if (typeof password !== 'string' || password.length < 12 || password.length > 128) {
+      return res.status(400).json({ message: 'Account password must contain 12 to 128 characters.' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    if (await User.findOne({ email: normalizedEmail })) {
+      return res.status(409).json({ message: 'An account already exists with this email.' });
+    }
+
+    let linkedTeacherId = null;
+    if (role === 'Teacher') {
+      const teacher = await Teacher.findOne({
+        $or: [
+          ...(typeof teacherId === 'string' && teacherId.trim() ? [{ teacherId: teacherId.trim().toUpperCase() }] : []),
+          { email: normalizedEmail },
+        ],
+      });
+      if (!teacher) {
+        return res.status(400).json({ message: 'No matching faculty profile. Add the faculty profile first or use its registered email.' });
+      }
+      linkedTeacherId = teacher.teacherId;
+    }
+
+    const user = await User.create({
+      name: name.trim(),
+      email: normalizedEmail,
+      password,
+      role,
+      teacherId: linkedTeacherId,
+      department: department || 'General',
+      avatarColor: '#2563eb',
+    });
+
+    return res.status(201).json({
+      message: 'Account provisioned successfully.',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        teacherId: user.teacherId,
+        department: user.department,
+      },
+    });
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ message: 'An account already exists with this email.' });
+    console.error('Account provisioning error:', error);
+    return res.status(500).json({ message: 'Unable to provision account.' });
+  }
+};
+
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body || {};
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Please provide email and password' });
+    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
+      return res.status(400).json({ message: 'Please provide email and password.' });
     }
-
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (user && (await user.matchPassword(password))) {
       return res.json(formatAuthResponse(user));
-    } else {
-      return res.status(401).json({ message: 'Invalid email or password' });
     }
+    return res.status(401).json({ message: 'Invalid email or password.' });
   } catch (error) {
     console.error('Login error:', error);
-    return res.status(500).json({ message: 'Server error during login', error: error.message });
+    return res.status(500).json({ message: 'Server error during login.' });
   }
 };
 
-// @desc    Get user profile
-// @route   GET /api/auth/me
 const getUserProfile = async (req, res) => {
-  if (req.user) {
-    return res.json(req.user);
-  }
-  return res.status(404).json({ message: 'User not found' });
+  if (req.user) return res.json(req.user);
+  return res.status(404).json({ message: 'User not found.' });
 };
 
-// @desc    Update user location checkpoint
-// @route   PUT /api/auth/location
 const updateUserLocation = async (req, res) => {
   try {
-    const { nodeId } = req.body;
-    if (!nodeId) {
-      return res.status(400).json({ message: 'Node ID is required' });
+    const { nodeId } = req.body || {};
+    if (typeof nodeId !== 'string' || !nodeId.trim()) {
+      return res.status(400).json({ message: 'Node ID is required.' });
     }
-
-    req.user.currentLocationNodeId = nodeId.toUpperCase();
+    req.user.currentLocationNodeId = nodeId.trim().toUpperCase();
     await req.user.save();
-
     return res.json({
-      message: 'Location updated successfully',
+      message: 'Location updated successfully.',
       currentLocationNodeId: req.user.currentLocationNodeId,
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.error('Location update error:', error);
+    return res.status(500).json({ message: 'Unable to update location.' });
   }
 };
 
-module.exports = {
-  registerUser,
-  loginUser,
-  getUserProfile,
-  updateUserLocation,
+
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      return res.status(400).json({ message: 'Current and new passwords are required.' });
+    }
+    if (newPassword.length < 12 || newPassword.length > 128) {
+      return res.status(400).json({ message: 'New password must contain 12 to 128 characters.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user || !(await user.matchPassword(currentPassword))) {
+      return res.status(400).json({ message: 'Current password is incorrect.' });
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    await user.save();
+    return res.json({ message: 'Password updated successfully. Please sign in again.' });
+  } catch (error) {
+    console.error('Password change error:', error);
+    return res.status(500).json({ message: 'Unable to update password.' });
+  }
 };
+
+module.exports = { registerUser, provisionUser, loginUser, getUserProfile, updateUserLocation, changePassword };

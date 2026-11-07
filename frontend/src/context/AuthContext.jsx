@@ -42,6 +42,14 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    const result = await api.changePassword(currentPassword, newPassword);
+    localStorage.removeItem('bji_nav_token');
+    setToken(null);
+    setUser(null);
+    return result;
+  };
+
   const logout = () => {
     localStorage.removeItem('bji_nav_token');
     setToken(null);
@@ -66,6 +74,7 @@ export const AuthProvider = ({ children }) => {
         canAccessTimetableRouting,
         login,
         register,
+        changePassword,
         logout,
       }}
     >

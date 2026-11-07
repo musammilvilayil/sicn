@@ -16,31 +16,70 @@ function printCredentials(email, password, action) {
   console.log('======================================================\n');
 }
 
+async function rotateLegacyAccount(user, label) {
+  const now = new Date();
+  const password = createTemporaryPassword();
+  user.password = password;
+  user.mustChangePassword = true;
+  user.credentialsRotatedAt = now;
+  if (user.role === 'Admin') {
+    user.bootstrapAdminInitializedAt = now;
+  }
+  await user.save();
+  printCredentials(user.email, password, label);
+}
+
 /**
- * Creates the first Admin if none exists. Legacy administrator accounts
- * without a bootstrap marker are rotated once so old demo credentials stop
- * working after the upgrade.
+ * Creates the first Admin if none exists and rotates known legacy demo
+ * credentials (Admin, Teacher, Student, Normal_User) once so older default
+ * passwords cannot remain active after upgrading. Rotation timestamps ensure
+ * valid credentials are never reset on subsequent restarts.
  */
 async function ensureBootstrapAdmin() {
   const existingAdmins = await User.find({ role: 'Admin' }).sort({ createdAt: 1 });
 
-  if (existingAdmins.length > 0) {
-    let rotated = 0;
-    for (const admin of existingAdmins) {
-      if (admin.bootstrapAdminInitializedAt) continue;
-      const password = createTemporaryPassword();
-      admin.password = password;
-      admin.mustChangePassword = true;
-      admin.bootstrapAdminInitializedAt = new Date();
-      await admin.save();
-      printCredentials(admin.email, password, 'ADMIN PASSWORD ROTATED');
+  let rotated = 0;
+  for (const admin of existingAdmins) {
+    if (!admin.bootstrapAdminInitializedAt) {
+      await rotateLegacyAccount(admin, 'LEGACY ADMIN PASSWORD ROTATED');
       rotated += 1;
     }
+  }
 
-    if (rotated === 0) {
-      console.log(`Bootstrap administrator(s) already configured: ${existingAdmins.map((admin) => admin.email).join(', ')}`);
+  const legacyDemoEmails = [
+    'priya.nair@bji.ac.in',
+    'student@bji.ac.in',
+    'visitor@bji.ac.in',
+  ];
+  const legacyAccounts = await User.find({
+    email: { $in: legacyDemoEmails },
+    role: { $ne: 'Admin' },
+  });
+
+  let rotatedLegacyUsers = 0;
+  for (const account of legacyAccounts) {
+    if (!account.credentialsRotatedAt) {
+      await rotateLegacyAccount(account, `LEGACY ${account.role.toUpperCase()} PASSWORD ROTATED`);
+      rotatedLegacyUsers += 1;
     }
-    return { created: false, rotated, count: existingAdmins.length };
+  }
+
+  if (existingAdmins.length > 0) {
+    if (rotated === 0) {
+      console.log(
+        `Bootstrap administrator(s) already configured: ${existingAdmins.map((admin) => admin.email).join(', ')}`
+      );
+    } else {
+      console.log(
+        `Bootstrap administrator(s) configured: ${existingAdmins.map((admin) => admin.email).join(', ')}`
+      );
+    }
+    return {
+      created: false,
+      rotated,
+      rotatedLegacyUsers,
+      count: existingAdmins.length,
+    };
   }
 
   const email = String(process.env.BOOTSTRAP_ADMIN_EMAIL || 'admin@bji.ac.in')
@@ -48,6 +87,7 @@ async function ensureBootstrapAdmin() {
     .toLowerCase();
   const name = String(process.env.BOOTSTRAP_ADMIN_NAME || 'Campus Administrator').trim();
   const password = createTemporaryPassword();
+  const now = new Date();
 
   const account = await User.create({
     name,
@@ -57,11 +97,18 @@ async function ensureBootstrapAdmin() {
     department: 'Administration',
     avatarColor: '#1d4ed8',
     mustChangePassword: true,
-    bootstrapAdminInitializedAt: new Date(),
+    bootstrapAdminInitializedAt: now,
+    credentialsRotatedAt: now,
   });
 
   printCredentials(account.email, password, 'FIRST ADMINISTRATOR CREATED');
-  return { created: true, email: account.email };
+  return {
+    created: true,
+    rotated: 0,
+    rotatedLegacyUsers,
+    count: 1,
+    email: account.email,
+  };
 }
 
 module.exports = ensureBootstrapAdmin;

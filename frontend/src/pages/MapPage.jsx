@@ -25,6 +25,17 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 
+const FLOOR_DEFS = [
+  { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
+  { f: 1, shortLabel: '1F', fullLabel: '1st Floor' },
+  { f: 2, shortLabel: '2F', fullLabel: '2nd Floor' },
+  { f: 3, shortLabel: '3F', fullLabel: '3rd Floor' },
+  { f: 4, shortLabel: '4F', fullLabel: '4th Floor' },
+  { f: 5, shortLabel: '5F', fullLabel: '5th Floor' },
+  { f: 6, shortLabel: '6F', fullLabel: '6th Floor' },
+  { f: 7, shortLabel: '7F', fullLabel: '7th Floor' },
+];
+
 export default function MapPage() {
   const navigate = useNavigate();
   const {
@@ -140,17 +151,6 @@ export default function MapPage() {
     computeRoute(prevDest, prevStart, accessibleOnly, nodes);
   };
 
-  const FLOOR_DEFS = [
-    { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
-    { f: 1, shortLabel: '1F', fullLabel: '1st Floor' },
-    { f: 2, shortLabel: '2F', fullLabel: '2nd Floor' },
-    { f: 3, shortLabel: '3F', fullLabel: '3rd Floor' },
-    { f: 4, shortLabel: '4F', fullLabel: '4th Floor' },
-    { f: 5, shortLabel: '5F', fullLabel: '5th Floor' },
-    { f: 6, shortLabel: '6F', fullLabel: '6th Floor' },
-    { f: 7, shortLabel: '7F', fullLabel: '7th Floor' },
-  ];
-
   const groupedFloorNodes = useMemo(() => {
     return FLOOR_DEFS.map((fd) => ({
       ...fd,
@@ -191,7 +191,7 @@ export default function MapPage() {
       {/* FLOATING TOP SEARCH BAR & ROUTE PLANNER (GOOGLE MAPS UI) */}
       {/* ======================================================== */}
       {!showAROverlay && (
-      <header className="fixed top-3 inset-x-3 md:left-4 md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2">
+      <header className="fixed top-3 inset-x-3 md:left-[260px] md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2 sicn-map-search">
         {!showRoutePlanner ? (
           /* Collapsed Google Maps Search Pill */
           <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_8px_28px_rgba(15,23,42,0.14)] border border-slate-200/90 overflow-hidden">
@@ -446,7 +446,7 @@ export default function MapPage() {
       {/* FLOATING RIGHT-SIDE INDOOR FLOOR PICKER & CAMERA DOCK    */}
       {/* ======================================================== */}
       {!showAROverlay && (
-      <aside className="fixed right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2">
+      <aside className="fixed right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 sicn-floor-dock">
         {/* Google Maps Indoor Floor Selector (GF through 7F) */}
         <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1 flex flex-col gap-0.5 max-h-[48dvh] overflow-y-auto no-scrollbar">
           {[...FLOOR_DEFS].reverse().map((item) => {
@@ -521,7 +521,7 @@ export default function MapPage() {
       {!showAROverlay && routeResult && sheetSnap === 'closed' && (
         <button
           onClick={() => setSheetSnap('peek')}
-          className="fixed bottom-20 left-4 z-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-1.5"
+          className="fixed bottom-20 left-4 md:bottom-6 md:left-[260px] z-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-1.5"
         >
           <Sparkles size={14} />
           <span>View Active Route ({routeResult.totalDistance}m)</span>

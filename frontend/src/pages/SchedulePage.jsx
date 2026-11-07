@@ -302,6 +302,15 @@ export default function SchedulePage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-4 space-y-4">
+        <section className="sicn-page-hero sicn-schedule-hero">
+          <div className="sicn-hero-copy">
+            <span className="sicn-eyebrow"><span className="sicn-eyebrow-dot" /> PEOPLE & PLACES</span>
+            <h2>Find the right person. Find the right room.</h2>
+            <p>Check faculty availability, locate active classrooms and navigate to the right place across campus.</p>
+          </div>
+          <div className="sicn-hero-art" aria-hidden="true"><div className="sicn-hero-orbit orbit-one" /><div className="sicn-hero-orbit orbit-two" /><div className="sicn-hero-qr"><Calendar size={39} strokeWidth={1.6} /></div><span className="sicn-hero-pin"><MapPin size={15} /></span></div>
+          <div className="sicn-hero-meta"><span>Faculty locator</span><span>Live timetable data</span></div>
+        </section>
         {/* Sub-Tabs if Teacher or Admin */}
         {canManageTimetable && (
           <div className="grid grid-cols-2 gap-1.5 bg-slate-200/75 p-1 rounded-2xl">
