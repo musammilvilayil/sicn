@@ -57,11 +57,16 @@ const getNodeById = async (req, res) => {
 const getNodeByQR = async (req, res) => {
   try {
     const qrPayload = req.params.qrCode.trim();
+    const normalizedPayload = qrPayload.toUpperCase();
+    const fallbackNodeId = normalizedPayload.startsWith('QR_')
+      ? normalizedPayload.slice(3).replace(/_/g, '-')
+      : normalizedPayload;
     const node = await Node.findOne({
       $or: [
         { qrCode: qrPayload },
-        { nodeId: qrPayload.toUpperCase() },
-        { qrCode: qrPayload.toUpperCase() },
+        { qrCode: normalizedPayload },
+        { nodeId: normalizedPayload },
+        { nodeId: fallbackNodeId },
       ],
     });
 
