@@ -154,7 +154,7 @@ exports.streamVideo = async (req, res) => {
   let end = total - 1;
   const range = req.headers.range;
   if (range) {
-    const match = /^bytes=(\\d*)-(\\d*)$/.exec(range);
+    const match = /^bytes=(\d*)-(\d*)$/.exec(range);
     if (!match || (!match[1] && !match[2])) {
       res.setHeader('Content-Range', `bytes */${total}`);
       return res.status(416).end();
