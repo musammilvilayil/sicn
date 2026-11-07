@@ -140,8 +140,186 @@ export function validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint
   const isOnCurrentFloorRoute = path.some(
     (node) => node.nodeId === checkpoint.nodeId && Number(node.floor) === checkpointFloor
   );
-  if (!isOnCurrentFloorRoute || checkpointFloor !== Number(currentFloor)) {
-    return { valid: false, reason: 'This QR checkpoint is not on the active route and confirmed current floor.' };
+  if (checkpointFloor !== Number(currentFloor)) {
+    return { valid: false, reason: 'This QR checkpoint belongs to a different floor.' };
+  }
+  if (!isOnCurrentFloorRoute) {
+    return {
+      valid: true,
+      floor: checkpointFloor,
+      stage: 'off-route-checkpoint',
+      reason: 'This checkpoint confirms that you left the planned route. A new route will be calculated from here.',
+    };
   }
   return { valid: true, floor: checkpointFloor, stage: 'route-checkpoint' };
+}
+
+
+/** Advance PDR distance along route edges without ever crossing a floor transition. */
+export function advanceAlongRoute(routeResult, segmentIndex, walkedMeters, stepMeters) {
+  const path = routeResult?.path || [];
+  const edges = routeResult?.edges || [];
+  let index = Math.max(0, Math.min(Number(segmentIndex) || 0, Math.max(0, path.length - 1)));
+  let progress = Math.max(0, Number(walkedMeters) || 0);
+  let remaining = Math.max(0, Number(stepMeters) || 0);
+  let blockedByTransition = false;
+
+  while (remaining > 0 && index < path.length - 1) {
+    const from = path[index];
+    const to = path[index + 1];
+    const edge = edges[index];
+    if (!from || !to || from.floor !== to.floor || ['stairs', 'lift'].includes(edge?.type)) {
+      blockedByTransition = true;
+      break;
+    }
+    const distance = getSegmentDistance(routeResult, index);
+    if (distance <= 0) break;
+    const available = Math.max(0, distance - progress);
+    if (remaining < available) {
+      progress += remaining;
+      remaining = 0;
+    } else {
+      remaining -= available;
+      index += 1;
+      progress = 0;
+    }
+  }
+
+  return {
+    segmentIndex: index,
+    walkedMeters: progress,
+    remainingMeters: remaining,
+    blockedByTransition,
+    arrived: index >= path.length - 1,
+  };
+}
+
+/** Project a point onto a finite segment; returns the nearest point and distance. */
+export function projectOntoSegment(point, start, end) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const lengthSquared = dx * dx + dy * dy;
+  const t = lengthSquared > 0
+    ? Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared))
+    : 0;
+  const projected = { x: start.x + t * dx, y: start.y + t * dy };
+  return { ...projected, t, distance: Math.hypot(point.x - projected.x, point.y - projected.y) };
+}
+
+/** Snap a sensor position to the nearest same-floor route segment within a corridor. */
+export function matchPositionToRoute(position, routeResult, options = {}) {
+  const { maxDistance = 12, preferredSegmentIndex = null, heading = null, headingTolerance = 100 } = options;
+  if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return null;
+  const path = routeResult?.path || [];
+  let best = null;
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const from = path[index];
+    const to = path[index + 1];
+    if (Number(from.floor) !== Number(position.floor) || Number(to.floor) !== Number(position.floor)) continue;
+    const a = from.coordinates;
+    const b = to.coordinates;
+    if (!a || !b) continue;
+    const projection = projectOntoSegment(position, a, b);
+    const segmentBearing = getMapBearing(from, to);
+    const headingDifference = Number.isFinite(heading) && segmentBearing !== null
+      ? Math.abs(((segmentBearing - heading + 540) % 360) - 180)
+      : 0;
+    const isPreferred = preferredSegmentIndex === null || index === preferredSegmentIndex;
+    const score = projection.distance + (isPreferred ? 0 : 0.5) + (headingDifference > headingTolerance ? 2 : 0);
+    if (!best || score < best.score) best = { ...projection, segmentIndex: index, floor: from.floor, headingDifference, score };
+  }
+  if (!best || best.distance > maxDistance) return null;
+  return best;
+}
+
+/**
+ * Solve an affine transform from map coordinates to normalized PDF coordinates.
+ * At least three non-collinear control points are required. More points use
+ * least squares so administrators can reduce hand-click noise.
+ */
+export function solveAffineCalibration(controlPoints) {
+  if (!Array.isArray(controlPoints) || controlPoints.length < 3) {
+    throw new Error('At least three control points are required.');
+  }
+  const points = controlPoints.map((point) => ({
+    x: Number(point.mapX), y: Number(point.mapY),
+    u: Number(point.pdfX), v: Number(point.pdfY),
+  }));
+  if (points.some((p) => ![p.x, p.y, p.u, p.v].every(Number.isFinite))) {
+    throw new Error('Every control point must contain finite map and PDF coordinates.');
+  }
+  const solve3 = (matrix, vector) => {
+    const a = matrix.map((row, i) => [...row, vector[i]]);
+    for (let col = 0; col < 3; col += 1) {
+      let pivot = col;
+      for (let row = col + 1; row < 3; row += 1) {
+        if (Math.abs(a[row][col]) > Math.abs(a[pivot][col])) pivot = row;
+      }
+      if (Math.abs(a[pivot][col]) < 1e-10) throw new Error('Control points are collinear; choose points spread across the floor.');
+      [a[col], a[pivot]] = [a[pivot], a[col]];
+      const divisor = a[col][col];
+      for (let j = col; j < 4; j += 1) a[col][j] /= divisor;
+      for (let row = 0; row < 3; row += 1) {
+        if (row === col) continue;
+        const factor = a[row][col];
+        for (let j = col; j < 4; j += 1) a[row][j] -= factor * a[col][j];
+      }
+    }
+    return a.map((row) => row[3]);
+  };
+  const sums = [0, 0, 0, 0, 0, 0];
+  const normal = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  points.forEach(({ x, y, u, v }) => {
+    const row = [x, y, 1];
+    for (let i = 0; i < 3; i += 1) {
+      for (let j = 0; j < 3; j += 1) normal[i][j] += row[i] * row[j];
+      sums[i] += row[i] * u;
+      sums[i + 3] += row[i] * v;
+    }
+  });
+  const xCoefficients = solve3(normal, sums.slice(0, 3));
+  const yCoefficients = solve3(normal, sums.slice(3, 6));
+  const residuals = points.map((p) => {
+    const u = xCoefficients[0] * p.x + xCoefficients[1] * p.y + xCoefficients[2];
+    const v = yCoefficients[0] * p.x + yCoefficients[1] * p.y + yCoefficients[2];
+    return Math.hypot(u - p.u, v - p.v);
+  });
+  return {
+    xCoefficients,
+    yCoefficients,
+    rmsError: Math.sqrt(residuals.reduce((sum, value) => sum + value * value, 0) / residuals.length),
+    maxError: Math.max(...residuals),
+    pointCount: points.length,
+  };
+}
+
+export function transformMapToPlan(point, calibration) {
+  const x = calibration?.xCoefficients;
+  const y = calibration?.yCoefficients;
+  if (!Array.isArray(x) || !Array.isArray(y) || x.length !== 3 || y.length !== 3) return null;
+  return {
+    x: x[0] * point.x + x[1] * point.y + x[2],
+    y: y[0] * point.x + y[1] * point.y + y[2],
+  };
+}
+
+
+/** Describe the next junction turn from route geometry, independent of phone facing. */
+export function getRouteTurnInstruction(routeResult, segmentIndex, straightThreshold = 25) {
+  const path = routeResult?.path || [];
+  const from = path[segmentIndex];
+  const junction = path[segmentIndex + 1];
+  const to = path[segmentIndex + 2];
+  if (!from || !junction || !to || from.floor !== junction.floor || junction.floor !== to.floor) return null;
+  const incoming = getMapBearing(from, junction);
+  const outgoing = getMapBearing(junction, to);
+  if (incoming === null || outgoing === null) return null;
+  const angle = ((outgoing - incoming + 540) % 360) - 180;
+  const magnitude = Math.abs(angle);
+  const type = magnitude >= 150
+    ? 'u-turn'
+    : magnitude < straightThreshold
+      ? 'straight'
+      : angle > 0 ? 'right' : 'left';
+  return { type, angle, atNodeId: junction.nodeId, atNodeName: junction.name };
 }
