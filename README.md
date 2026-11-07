@@ -42,7 +42,7 @@ Requirements: Node.js 22+, MongoDB, and a modern browser.
    npm run server
    ```
 
-   On first startup, the server creates the first Admin account. If a legacy demo Admin exists without a bootstrap marker, its known demo password is rotated once. The username/email and a randomly generated temporary password are printed in the backend terminal. Save them securely and change the password immediately from the Account page. The password is not printed again.
+   On first startup, the server creates the first Admin account. Legacy demo Admin, Teacher, Student and Visitor credentials are rotated once when present. The username/email and a randomly generated temporary password are printed in the backend terminal. Save them securely and change the password immediately from the Account page. The password is not printed again.
 
 5. Start the frontend in another terminal:
 
@@ -93,11 +93,11 @@ npm run build
 # Backend
 npm --prefix backend run seed
 npm --prefix backend run test:route
-npm --prefix backend run test:overhaul
+TEST_ADMIN_EMAIL=admin@bji.ac.in TEST_ADMIN_PASSWORD=your-current-admin-password npm --prefix backend run test:overhaul
 
 # Frontend
 npm --prefix frontend run lint
 npm --prefix frontend run build
 ```
 
-GitHub Actions runs frontend lint/build and backend JavaScript syntax checks. Database-backed integration tests still require a configured MongoDB test database and should be run separately.
+GitHub Actions runs frontend lint/build and backend JavaScript syntax checks. The security smoke test requires a running server and TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD. Database-backed routing tests require a configured MongoDB test database.
