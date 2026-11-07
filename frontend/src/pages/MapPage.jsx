@@ -119,6 +119,7 @@ export default function MapPage() {
   const [showRoutePlanner, setShowRoutePlanner] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [autoScannerOpen, setAutoScannerOpen] = useState(false);
+  const [confirmedTransition, setConfirmedTransition] = useState(null);
 
   // Admin Map Editor state
   const [adminEditMode, setAdminEditMode] = useState(false);
@@ -178,29 +179,40 @@ export default function MapPage() {
   };
 
   const handleConfirmIndoorCheckpoint = (checkpoint) => {
-    const validation = validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint, currentFloor);
+    const validation = validateRouteCheckpoint(
+      routeResult, activeStepIndex, checkpoint, currentFloor, confirmedTransition
+    );
     if (!validation.valid) {
       showToast(validation.reason, 'error');
       return false;
     }
 
     setWalkedMeters(0);
-    setActiveStepIndex(0);
-    setStartNodeId(checkpoint.nodeId);
-    // The floor is derived from the expected route checkpoint. During a
-    // staircase/lift edge only its exact destination landing can change it.
-    setCurrentFloor(validation.floor);
     api.updateMyLocation(checkpoint.nodeId, checkpoint.qrValue).catch(() => {});
     broadcastCheckpoint(checkpoint.nodeId);
-    if (destinationNodeId) {
-      computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
+
+    // Confirming the origin proves the user reached the correct stair/lift
+    // entrance. It must NOT change floors, reset the route, or move the
+    // confirmed location to the destination landing.
+    if (validation.stage === 'transition-origin') {
+      const from = routeResult.path[activeStepIndex];
+      const to = routeResult.path[activeStepIndex + 1];
+      setConfirmedTransition({ originNodeId: from.nodeId, destinationNodeId: to.nodeId });
+      showToast(`Staircase confirmed on Floor ${from.floor}. Continue to Floor ${to.floor} and scan the landing QR.`, 'success');
+      return 'continue';
     }
-    showToast(
-      validation.stage === 'transition-origin'
-        ? `Staircase confirmed. Continue to the Floor ${routeResult.path[activeStepIndex + 1].floor} landing QR.`
-        : `Location confirmed: ${checkpoint.name}`,
-      'success'
-    );
+
+    // Only the expected destination landing QR completes a floor transition.
+    setConfirmedTransition(null);
+    setActiveStepIndex(0);
+    setStartNodeId(checkpoint.nodeId);
+    setCurrentFloor(validation.floor);
+    if (destinationNodeId && checkpoint.nodeId !== destinationNodeId) {
+      computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
+    } else if (checkpoint.nodeId === destinationNodeId) {
+      clearRoute();
+    }
+    showToast(`Location confirmed: ${checkpoint.name}`, 'success');
     return true;
   };
 
