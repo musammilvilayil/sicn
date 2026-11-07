@@ -7,7 +7,7 @@ test('converts explicit centimetre room dimensions to metres and area', () => {
   const result = parseArchitecturalMeasurement('905x1230 cm');
   assert.equal(result.kind, 'footprint');
   assert.deepEqual(result.measurements[0].dimensionsMeters, [9.05, 12.3]);
-  assert.equal(result.measurements[0].areaSquareMeters, 111.315);
+  assert.ok(Math.abs(result.measurements[0].areaSquareMeters - 111.315) < 1e-9);
 });
 
 test('parses linear widths written in metres or centimetres', () => {
