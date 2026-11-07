@@ -8,6 +8,11 @@ import {
   interpolateRoutePosition,
   StepDetector,
   validateRouteCheckpoint,
+  advanceAlongRoute,
+  matchPositionToRoute,
+  solveAffineCalibration,
+  transformMapToPlan,
+  getRouteTurnInstruction,
 } from '../src/utils/indoorNavigation.js';
 
 test('normalizes iOS compass headings', () => {
@@ -158,4 +163,29 @@ test('affine calibration rejects collinear control points', () => {
     { mapX: 1, mapY: 1, pdfX: 0.5, pdfY: 0.5 },
     { mapX: 2, mapY: 2, pdfX: 1, pdfY: 1 },
   ]), /collinear/i);
+});
+
+
+test('recovery QR on the confirmed floor is accepted as an off-route reroute origin', () => {
+  const route = { path: [{ nodeId: 'GF-A', floor: 0 }, { nodeId: 'GF-B', floor: 0 }] };
+  assert.deepEqual(
+    validateRouteCheckpoint(route, 0, { nodeId: 'GF-C', floor: 0 }, 0),
+    {
+      valid: true,
+      floor: 0,
+      stage: 'off-route-checkpoint',
+      reason: 'This checkpoint confirms that you left the planned route. A new route will be calculated from here.',
+    }
+  );
+});
+
+test('route geometry generates left, right and straight junction instructions', () => {
+  const makeRoute = (coords) => ({
+    path: coords.map(([x, y], index) => ({
+      nodeId: String(index), name: `Node ${index}`, floor: 0, coordinates: { x, y },
+    })),
+  });
+  assert.equal(getRouteTurnInstruction(makeRoute([[0, 0], [0, 10], [10, 10]]), 0).type, 'right');
+  assert.equal(getRouteTurnInstruction(makeRoute([[0, 0], [0, 10], [-10, 10]]), 0).type, 'left');
+  assert.equal(getRouteTurnInstruction(makeRoute([[0, 0], [0, 10], [0, 20]]), 0).type, 'straight');
 });
