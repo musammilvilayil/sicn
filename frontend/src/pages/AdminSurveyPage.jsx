@@ -25,6 +25,7 @@ export default function AdminSurveyPage() {
   const [startNodeId, setStartNodeId] = useState('GF-MAIN-ENTRANCE');
   const [endNodeId, setEndNodeId] = useState('');
   const [checkpointName, setCheckpointName] = useState('');
+  const [checkpointNodeId, setCheckpointNodeId] = useState('');
   const [checkpoints, setCheckpoints] = useState([]);
   const [includeGps, setIncludeGps] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -97,7 +98,7 @@ export default function AdminSurveyPage() {
     if (!name) return;
     const item = {
       name,
-      nodeId: '',
+      nodeId: checkpointNodeId,
       floor: Number(floor),
       elapsedMs: recording ? Date.now() - startedAtRef.current : 0,
       note: '',
@@ -105,7 +106,7 @@ export default function AdminSurveyPage() {
     checkpointsRef.current = [...checkpointsRef.current, item];
     setCheckpoints(checkpointsRef.current);
     setCheckpointName('');
-  }, [checkpointName, floor, recording]);
+  }, [checkpointName, checkpointNodeId, floor, recording]);
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -267,7 +268,7 @@ export default function AdminSurveyPage() {
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} disabled={recording || busy} rows={2} maxLength={1000} placeholder="Example: Main entrance to the CSE department and first-floor labs" className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-medium text-slate-900"/>
           </label>
           <label className="space-y-1.5 text-xs font-bold text-slate-600">Current floor
-            <select value={floor} onChange={(e) => setFloor(Number(e.target.value))} disabled={recording || busy} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm">
+            <select value={floor} onChange={(e) => setFloor(Number(e.target.value))} disabled={busy} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm">
               {FLOOR_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
@@ -304,7 +305,13 @@ export default function AdminSurveyPage() {
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-extrabold text-slate-900">Place markers along the route</h2><p className="mt-1 text-xs text-slate-500">Stop at each classroom, office, lab, lift or staircase and add a marker.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{checkpoints.length} checkpoints</span></div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <input value={checkpointName} onChange={(e) => setCheckpointName(e.target.value)} disabled={busy} placeholder="e.g. Main reception, CSE lab, Library" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-3 text-sm"/>
+            <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+              <input value={checkpointName} onChange={(e) => setCheckpointName(e.target.value)} disabled={busy} placeholder="e.g. Main reception, CSE lab, Library" className="min-w-0 rounded-xl border border-slate-200 px-3 py-3 text-sm"/>
+              <select value={checkpointNodeId} onChange={(e) => setCheckpointNodeId(e.target.value)} disabled={busy} className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm">
+                <option value="">Link to map node (optional)</option>
+                {nodes.filter((node) => Number(node.floor) === Number(floor)).map((node) => <option key={node.nodeId} value={node.nodeId}>{node.name}</option>)}
+              </select>
+            </div>
             <button type="button" onClick={addCheckpoint} disabled={!checkpointName.trim() || busy} className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 disabled:opacity-50"><MapPin size={16}/> Add checkpoint</button>
           </div>
           <ol className="mt-4 space-y-2">
