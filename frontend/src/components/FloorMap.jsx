@@ -218,7 +218,7 @@ export default function FloorMap({
 
   return (
     <div
-      className={`relative w-full h-full overflow-hidden bg-[#eef2f6] select-none ${adminEditMode ? 'cursor-crosshair' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
+      className={`sicn-floor-map relative w-full h-full overflow-hidden bg-[#eef2f6] select-none ${adminEditMode ? 'cursor-crosshair' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
       onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
@@ -248,7 +248,7 @@ export default function FloorMap({
         <svg
           ref={svgRef}
           viewBox="0 0 1000 620"
-          className="w-full h-full max-w-[1380px] max-h-[860px] drop-shadow-md"
+          className="sicn-floor-map-svg w-full h-full max-w-[1380px] max-h-[860px] drop-shadow-md"
           onClick={handleSvgBackgroundClick}
         >
           <defs>

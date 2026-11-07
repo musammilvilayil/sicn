@@ -75,18 +75,10 @@ export const NavigationProvider = ({ children }) => {
     [startNodeId, destinationNodeId, accessibleOnly, nodes, showToast]
   );
 
-  // Initial load + default route
+  // Load the campus graph without forcing a demo route onto every new session.
   useEffect(() => {
-    let mounted = true;
-    refreshMapData().then(({ fetchedNodes }) => {
-      if (mounted && fetchedNodes.length > 0) {
-        computeRoute('GF-MAIN-ENTRANCE', '1F-CLASS-02', false, fetchedNodes);
-      }
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    refreshMapData();
+  }, [refreshMapData]);
 
   // Re-run route when accessible mode toggles
   useEffect(() => {

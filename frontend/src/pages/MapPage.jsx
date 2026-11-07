@@ -70,7 +70,7 @@ export default function MapPage() {
   const { roomCode, roomMembers, friendsInRoom, broadcastCheckpoint } = useSocket();
 
   // Map camera state
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 768 ? 1.12 : 1));
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
   // Search & Route Planner UI state
@@ -161,7 +161,7 @@ export default function MapPage() {
   const showAROverlay = Boolean(isARMode && routeResult?.path?.length >= 2);
 
   return (
-    <div className="fixed inset-0 w-screen h-dvh overflow-hidden bg-slate-100">
+    <div className="sicn-map-page fixed inset-0 w-full h-[100dvh] overflow-hidden bg-slate-100">
       {/* ======================================================== */}
       {/* AR CAMERA NAVIGATION MODE OR 2D FLOOR MAP FALLBACK       */}
       {/* ======================================================== */}

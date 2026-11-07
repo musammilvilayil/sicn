@@ -9,6 +9,7 @@ export default function BottomNav() {
  const {effectiveRole,canAccessTimetableRouting}=useAuth();
  const {roomCode,roomMembers}=useSocket();
  const {isARMode,launchARLiveView,fallbackTo2DMap}=useNavigation();
+ if(isARMode) return null;
  const toggleAR=()=>{if(location.pathname!=='/')navigate('/');if(isARMode)fallbackTo2DMap();else launchARLiveView();};
  const items=[
   {to:'/',label:'Explore',caption:'Campus map',icon:Map,end:true,onClick:()=>isARMode&&fallbackTo2DMap(),inactive:isARMode},
