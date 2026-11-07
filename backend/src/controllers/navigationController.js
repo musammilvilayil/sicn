@@ -3,6 +3,7 @@ const Edge = require('../models/Edge');
 const User = require('../models/User');
 const { findShortestPath } = require('../algorithms/aStar');
 const { summarizeRouteDistanceQuality } = require('../utils/routeDistanceQuality');
+const { validateEdgeGeometry } = require('../utils/floorGeometry');
 
 // @desc    Calculate shortest route between two nodes across floors using A*
 // @route   POST /api/navigation/route
@@ -62,7 +63,7 @@ const getEdges = async (req, res) => {
 // @route   POST /api/navigation/edges
 const createEdge = async (req, res) => {
   try {
-    const { fromNode, toNode, distance, distanceEvidence, accessible, type, instruction, reverseInstruction } = req.body;
+    const { fromNode, toNode, distance, distanceEvidence, geometry, accessible, type, instruction, reverseInstruction } = req.body;
 
     if (!fromNode || !toNode) {
       return res.status(400).json({ message: 'fromNode and toNode are required' });
@@ -91,11 +92,25 @@ const createEdge = async (req, res) => {
       });
     }
 
+    if (geometry) {
+      const geometryCheck = validateEdgeGeometry(geometry, {
+        distanceMeters: Number(distance),
+        distanceEvidenceSource: distanceEvidence.source,
+      });
+      if (!geometryCheck.valid) {
+        return res.status(400).json({ message: 'Invalid walkable edge geometry', errors: geometryCheck.errors });
+      }
+      if (Number(geometry.floor) !== Number(nodeU.floor) || Number(nodeU.floor) !== Number(nodeV.floor)) {
+        return res.status(400).json({ message: 'This geometry contract currently requires a same-floor path matching both endpoint nodes.' });
+      }
+    }
+
     const edge = await Edge.create({
       edgeId: `E_${u}_${v}_${Date.now()}`,
       fromNode: u,
       toNode: v,
       distance: Number(distance),
+      ...(geometry ? { geometry } : {}),
       distanceEvidence: {
         source: distanceEvidence.source,
         reference: distanceEvidence.reference || '',
