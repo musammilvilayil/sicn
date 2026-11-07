@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+/* Hide horizontal chip scrollbars while preserving touch scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ======================================================== */
+/* SVG ARCHITECTURAL BLUEPRINT FLOOR PLAN STYLES            */
+/* ======================================================== */
+.room-shape {
+  stroke-width: 2;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+.room-classroom {
+  fill: #eff6ff;
+  stroke: #93c5fd;
+}
+
+.room-lab {
+  fill: #e0f2fe;
+  stroke: #7dd3fc;
+}
+
+.room-workshop {
+  fill: #f0fdf4;
+  stroke: #86efac;
+}
+
+.room-office {
+  fill: #fffbeb;
+  stroke: #fcd34d;
+}
+
+.room-principal {
+  fill: #faf5ff;
+  stroke: #d8b4fe;
+}
+
+.room-hod {
+  fill: #fdf2f8;
+  stroke: #f9a8d4;
+}
+
+.room-library {
+  fill: #f0fdfa;
+  stroke: #5eead4;
+}
+
+.room-hall {
+  fill: #f8fafc;
+  stroke: #cbd5e1;
+}
+
+.room-faculty {
+  fill: #fdf4ff;
+  stroke: #e879f9;
+}
+
+.room-general {
+  fill: #f8fafc;
+  stroke: #cbd5e1;
+}
+
+.room-label-bold {
+  font-size: 11px;
+  font-weight: 800;
+  fill: #1e293b;
+  letter-spacing: 0.03em;
+}
+
+.room-dim-text {
+  font-size: 9px;
+  fill: #64748b;
+  font-weight: 600;
+}
+
+.corridor-text {
+  font-size: 9.5px;
+  font-weight: 700;
+  fill: #94a3b8;
+  letter-spacing: 0.06em;
+}
+
+.stair-housing {
+  fill: #fef3c7;
+  stroke: #f59e0b;
+  stroke-width: 1.8;
+}
+
+.stair-text {
+  font-size: 9px;
+  font-weight: 800;
+  fill: #b45309;
+}
+
+.lift-housing {
+  fill: #cffafe;
+  stroke: #06b6d4;
+  stroke-width: 1.8;
+}
+
+.lift-text {
+  font-size: 9px;
+  font-weight: 800;
+  fill: #0e7490;
+}
+
+.entrance-porch-shape {
+  fill: #dcfce7;
+  stroke: #22c55e;
+  stroke-width: 2;
+}
+
+.entrance-text {
+  font-size: 10px;
+  font-weight: 800;
+  fill: #15803d;
+}
+
+/* ======================================================== */
+/* REAL-TIME ANIMATIONS (ROUTE DASH, BEACON, FRIEND GLIDE)  */
+/* ======================================================== */
+.animated-dash-line {
+  animation: routeDashFlow 1.2s linear infinite;
+}
+
+@keyframes routeDashFlow {
+  from {
+    stroke-dashoffset: 36;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.pulsing-beacon {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mapBeaconPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes mapBeaconPulse {
+
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.95);
+  }
+
+  50% {
+    opacity: 0.12;
+    transform: scale(1.35);
+  }
+}
+
+/* Smooth glide when a friend scans a new QR checkpoint via Socket.io */
+.friend-avatar-glide {
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-fade-in {
+  animation: uiFadeIn 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: uiSlideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes uiFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes uiSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ======================================================== */
+/* EMBEDDED A-FRAME / AR.JS TRANSPARENT CAMERA OVERLAY      */
+/* ======================================================== */
+a-scene[embedded] {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+a-scene[embedded] .a-canvas {
+  background: transparent !important;
+}
+
+.a-enter-vr,
+.a-enter-ar,
+.a-orientation-modal {
+  display: none !important;
+}
+
+/* ======================================================== */
+/* PRINT MEDIA FOR CAMPUS QR PLAQUES                        */
+/* ======================================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-qr-grid,
+  .printable-qr-grid * {
+    visibility: visible;
+  }
+
+  .printable-qr-grid {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2cm;
+  }
+}
