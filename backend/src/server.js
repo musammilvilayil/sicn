@@ -19,13 +19,21 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || '')
 app.use(cors({
   origin(origin, callback) {
     // Native clients and same-origin requests may omit Origin.
-    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (process.env.NODE_ENV !== 'production' && allowedOrigins.length === 0) {
       return callback(null, true);
     }
-    return callback(new Error('Origin is not allowed by CORS'));
+    return callback(null, false);
   },
   credentials: true,
 }));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Permissions-Policy', 'camera=(self), accelerometer=(self), gyroscope=(self), magnetometer=(self)');
+  next();
+});
 app.use(express.json({ limit: '1mb' }));
 if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 
