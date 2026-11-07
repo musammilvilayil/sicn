@@ -324,7 +324,7 @@ export default function ARView() {
           lastQrValueRef.current = rawValue;
           setStartNodeId(checkpoint.nodeId);
           setCurrentFloor(checkpoint.floor);
-          api.updateMyLocation(checkpoint.nodeId).catch(() => {});
+          api.updateMyLocation(checkpoint.nodeId, rawValue).catch(() => {});
           broadcastCheckpoint(checkpoint.nodeId);
           if (destinationNodeId) {
             await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
