@@ -106,6 +106,35 @@ export const api = {
     return data;
   },
 
+  // ================= FLOOR PLAN REGISTRATION =================
+  async getFloorCalibrations() {
+    const res = await fetch(`${API_BASE}/floor-calibrations`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to load floor registrations');
+    return data;
+  },
+
+  async saveFloorCalibration(floor, payload) {
+    const res = await fetch(`${API_BASE}/floor-calibrations/${floor}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to save floor registration');
+    return data.calibration;
+  },
+
+  async deleteFloorCalibration(floor) {
+    const res = await fetch(`${API_BASE}/floor-calibrations/${floor}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to remove floor registration');
+    return data;
+  },
+
   // ================= TEACHERS & TIMETABLES (RBAC Protected) =================
   async getTeachers() {
     const res = await fetch(`${API_BASE}/teachers`, {
