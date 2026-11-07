@@ -371,7 +371,7 @@ export default function ScanPage() {
                 return (
                   <button
                     key={node.nodeId}
-                    onClick={() => handleVerifyQr(node.qrCode || node.nodeId)}
+                    onClick={() => handleVerifyQr(node.qrCode || `QR_${node.nodeId.replace(/-/g, '_')}`)}
                     className={`text-left p-3 rounded-2xl border transition ${
                       isSelected
                         ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500/20'
