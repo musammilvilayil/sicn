@@ -112,23 +112,20 @@ export function validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint
 
   const current = path[activeStepIndex];
   const next = path[activeStepIndex + 1];
-  if (!current || checkpointFloor !== Number(currentFloor)) {
-    // A destination-floor QR cannot be used to skip the origin landing.
-    if (current && next && Number(current.floor) !== Number(next.floor)) {
-      return { valid: false, reason: 'Confirm the origin staircase/lift QR before scanning its destination landing.' };
-    }
-    return { valid: false, reason: 'This QR checkpoint is not on the confirmed current floor.' };
-  }
+  if (!current) return { valid: false, reason: 'The active route position is invalid. Recalculate the route.' };
 
   if (next && Number(current.floor) !== Number(next.floor)) {
+    if (Number(currentFloor) !== Number(current.floor)) {
+      return { valid: false, reason: 'The confirmed floor does not match the active route. Recalculate or confirm your current checkpoint.' };
+    }
     if (checkpoint.nodeId === current.nodeId && checkpointFloor === Number(current.floor)) {
       return { valid: true, floor: Number(current.floor), stage: 'transition-origin' };
     }
-    const expectedOrigin = transitionState?.originNodeId === current.nodeId;
-    const expectedDestination = transitionState?.destinationNodeId === next.nodeId;
+    const originConfirmed = transitionState?.originNodeId === current.nodeId;
+    const destinationMatches = transitionState?.destinationNodeId === next.nodeId;
     if (
-      expectedOrigin &&
-      expectedDestination &&
+      originConfirmed &&
+      destinationMatches &&
       checkpoint.nodeId === next.nodeId &&
       checkpointFloor === Number(next.floor)
     ) {
@@ -136,7 +133,7 @@ export function validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint
     }
     return {
       valid: false,
-      reason: 'This is not the expected landing. Confirm the route origin QR first, then scan the matching destination landing.',
+      reason: 'Confirm the origin staircase/lift QR first, then scan the matching destination landing QR.',
     };
   }
 
