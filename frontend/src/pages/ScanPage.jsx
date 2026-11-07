@@ -175,6 +175,15 @@ export default function ScanPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-4 space-y-4 md:pl-24">
+        <section className="sicn-page-hero sicn-scan-hero">
+          <div className="sicn-hero-copy">
+            <span className="sicn-eyebrow"><span className="sicn-eyebrow-dot" /> CAMPUS CHECKPOINTS</span>
+            <h2>Know exactly where you are.</h2>
+            <p>Scan a campus QR checkpoint to calibrate your indoor position and continue your route with confidence.</p>
+          </div>
+          <div className="sicn-hero-art" aria-hidden="true"><div className="sicn-hero-orbit orbit-one" /><div className="sicn-hero-orbit orbit-two" /><div className="sicn-hero-qr"><QrCode size={42} strokeWidth={1.6} /></div><span className="sicn-hero-pin"><MapPin size={15} /></span></div>
+          <div className="sicn-hero-meta"><span>8 connected floors</span><span>Live checkpoint sync</span></div>
+        </section>
         {/* Socket.io Live Broadcast Banner */}
         <div
           onClick={() => setShareOpen(true)}
