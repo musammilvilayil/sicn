@@ -26,6 +26,9 @@ jobs:
       - name: Lint frontend
         run: npm run lint
         working-directory: frontend
+      - name: Run frontend indoor navigation unit tests
+        run: npm run test:unit
+        working-directory: frontend
       - name: Build frontend
         run: npm run build
         working-directory: frontend
