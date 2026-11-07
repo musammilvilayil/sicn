@@ -128,6 +128,8 @@ export default function MapPage() {
   const [confirmedTransition, setConfirmedTransition] = useState(null);
   const [headingUp, setHeadingUp] = useState(false);
   const [autoFollow, setAutoFollow] = useState(true);
+  const [routeDeviation, setRouteDeviation] = useState(false);
+  const headingDeviationCountRef = useRef(0);
 
   // Admin Map Editor state
   const [adminEditMode, setAdminEditMode] = useState(false);
@@ -196,6 +198,8 @@ export default function MapPage() {
     }
 
     setWalkedMeters(0);
+    setRouteDeviation(false);
+    headingDeviationCountRef.current = 0;
     transitionPromptRef.current = null;
     api.updateMyLocation(checkpoint.nodeId, checkpoint.qrValue).catch(() => {});
     broadcastCheckpoint(checkpoint.nodeId);
@@ -281,6 +285,22 @@ export default function MapPage() {
   const relativeTurn = heading !== null && targetBearing !== null
     ? getRelativeBearing(targetBearing, heading, mapNorthHeading ?? 0)
     : null;
+
+  // A sustained heading mismatch is a deviation warning, not a false location fix.
+  // The user confirms their actual position with a QR checkpoint before rerouting.
+  useEffect(() => {
+    if (!routeResult || sensorStatus !== 'active' || relativeTurn === null || isVerticalTransition) {
+      headingDeviationCountRef.current = 0;
+      return;
+    }
+    if (Math.abs(relativeTurn) >= 65) {
+      headingDeviationCountRef.current += 1;
+      if (headingDeviationCountRef.current >= 3) setRouteDeviation(true);
+    } else {
+      headingDeviationCountRef.current = 0;
+      setRouteDeviation(false);
+    }
+  }, [stepCount, routeResult, sensorStatus, relativeTurn, isVerticalTransition]);
   const segmentDistance = routeResult ? getSegmentDistance(routeResult, activeStepIndex) : 0;
   const remainingDistance = Math.max(0, segmentDistance - walkedMeters);
   const isVerticalTransition = activeRouteSegment && activeRouteSegment.from.floor !== activeRouteSegment.to.floor;
@@ -682,6 +702,18 @@ export default function MapPage() {
                   {' · '}{sensorStatus === 'active' ? `${remainingDistance.toFixed(1)} m to next point` : 'Step tracking inactive'}
                 </div>
                 {sensorError && <div className="text-[10px] text-amber-200 mt-0.5">{sensorError}</div>}
+                {routeDeviation && (
+                  <div className="mt-2 flex items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 p-2">
+                    <span className="flex-1 text-[10px] text-amber-100">Heading differs from the route. Confirm your position at the nearest QR checkpoint to recalculate safely.</span>
+                    <button
+                      type="button"
+                      onClick={() => setAutoScannerOpen(true)}
+                      className="shrink-0 rounded-lg bg-amber-300 px-2 py-1 text-[10px] font-extrabold text-slate-950"
+                    >
+                      Confirm QR
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
