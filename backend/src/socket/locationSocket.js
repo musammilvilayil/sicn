@@ -10,20 +10,23 @@ const ROOM_TTL_MS = 60 * 60 * 1000;
 const MAX_ROOM_MEMBERS = 12;
 const LOCATION_UPDATE_INTERVAL_MS = 1200;
 
-function pruneExpiredRooms() {
+function pruneExpiredRooms(io) {
   const now = Date.now();
   for (const [code, room] of rooms.entries()) {
     if (room.expiresAt <= now) {
       rooms.delete(code);
       for (const [socketId, activeCode] of socketToRoom.entries()) {
-        if (activeCode === code) socketToRoom.delete(socketId);
+        if (activeCode === code) {
+          socketToRoom.delete(socketId);
+          io?.sockets?.sockets?.get(socketId)?.leave(code);
+        }
       }
     }
   }
 }
 
-function generateSixDigitCode() {
-  pruneExpiredRooms();
+function generateSixDigitCode(io) {
+  pruneExpiredRooms(io);
   let code;
   do {
     code = String(crypto.randomInt(100000, 1000000));
@@ -124,7 +127,7 @@ function initLocationSocket(httpServer) {
     socket.on('create_room', async (payload = {}, ack) => {
       try {
         removeSocketFromCurrentRoom(io, socket);
-        const roomCode = generateSixDigitCode();
+        const roomCode = generateSixDigitCode(io);
         const nodeDetails = await resolveNodeDetails(payload.nodeId);
         if (!nodeDetails) {
           if (typeof ack === 'function') ack({ success: false, message: 'Unknown campus checkpoint.' });
@@ -165,7 +168,7 @@ function initLocationSocket(httpServer) {
           return;
         }
 
-        pruneExpiredRooms();
+        pruneExpiredRooms(io);
         const roomObj = rooms.get(cleanCode);
         if (!roomObj || roomObj.expiresAt <= Date.now()) {
           if (typeof ack === 'function') ack({ success: false, message: 'Room not found or expired.' });
