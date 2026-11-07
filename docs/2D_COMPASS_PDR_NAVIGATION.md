@@ -8,8 +8,11 @@
 - A measured 10-metre walking calibration to estimate the user's step length and store it locally.
 - Step-based pedestrian dead reckoning along same-floor route edges, using the graph edge distance in metres.
 - A live 2D user marker with phone-heading arrow and turn guidance.
+- North-up / heading-up map orientation modes; heading-up rotates the map while keeping the phone's direction at the top.
+- Live auto-follow centres the estimated position; manual map dragging disables auto-follow, and recentering re-enables it.
 - Route auto-framing when a route or floor changes.
 - Separate route polylines for each contiguous floor segment, preventing false cross-floor line connections.
+- Shared ordered two-stage QR validation in both 2D and AR: origin landing first, destination landing second, with no floor change before the destination scan.
 - Unit tests for compass normalization, bearings, route interpolation, distance selection and step detection.
 
 ## Safety and accuracy rules
