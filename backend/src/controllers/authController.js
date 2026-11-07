@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Teacher = require('../models/Teacher');
+const Node = require('../models/Node');
 
 const generateToken = (user) => {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET.startsWith('replace-')) {
@@ -170,7 +171,11 @@ const updateUserLocation = async (req, res) => {
     if (typeof nodeId !== 'string' || !nodeId.trim()) {
       return res.status(400).json({ message: 'Node ID is required.' });
     }
-    req.user.currentLocationNodeId = nodeId.trim().toUpperCase();
+    const normalizedNodeId = nodeId.trim().toUpperCase();
+    const checkpoint = await Node.findOne({ nodeId: normalizedNodeId }).select('nodeId');
+    if (!checkpoint) return res.status(404).json({ message: 'Campus checkpoint not found.' });
+    req.user.currentLocationNodeId = normalizedNodeId;
+    req.user.locationUpdatedAt = new Date();
     await req.user.save();
     return res.json({
       message: 'Location updated successfully.',
