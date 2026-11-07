@@ -382,47 +382,6 @@ export default function ARView() {
     };
   }, [sessionState, cameraReady, destinationNodeId, accessibleOnly, nodes, computeRoute, setStartNodeId, setCurrentFloor, showToast, broadcastCheckpoint]);
 
-  // Estimate walking progress from motion peaks. This is a short-range estimate only;
-  // QR checkpoints remain the authoritative indoor position and floor confirmation.
-  useEffect(() => {
-    if (sessionState !== 'active') return undefined;
-    let aboveThreshold = false;
-    let lastStepAt = 0;
-    const handleMotion = (event) => {
-      const acceleration = event.acceleration;
-      const withGravity = event.accelerationIncludingGravity;
-      const magnitude = acceleration && [acceleration.x, acceleration.y, acceleration.z].every(Number.isFinite)
-        ? Math.hypot(acceleration.x, acceleration.y, acceleration.z)
-        : withGravity && [withGravity.x, withGravity.y, withGravity.z].every(Number.isFinite)
-          ? Math.abs(Math.hypot(withGravity.x, withGravity.y, withGravity.z) - 9.81)
-          : 0;
-      const peak = magnitude > 1.25;
-      const now = Date.now();
-      if (peak && !aboveThreshold && now - lastStepAt > 360) {
-        lastStepAt = now;
-        setMotionAvailable(true);
-        const nextWalked = walkedMetersRef.current + 0.7;
-        const remaining = Number(navMetrics?.stepDirection?.distance || 0);
-        walkedMetersRef.current = nextWalked;
-        setWalkedMeters(nextWalked);
-        // Never auto-advance a stair/lift transition: confirm the new floor with its QR plaque.
-        if (navMetrics && !navMetrics.isFloorChange && remaining > 0 && nextWalked >= remaining * 0.85) {
-          setActiveStepIndex((current) => Math.min(current + 1, Math.max(0, (routeResult?.path?.length || 1) - 2)));
-          walkedMetersRef.current = 0;
-          setWalkedMeters(0);
-        }
-      }
-      aboveThreshold = peak;
-    };
-    window.addEventListener('devicemotion', handleMotion, true);
-    return () => window.removeEventListener('devicemotion', handleMotion, true);
-  }, [sessionState, navMetrics, routeResult, setActiveStepIndex]);
-
-  useEffect(() => {
-    walkedMetersRef.current = 0;
-    setWalkedMeters(0);
-  }, [activeStepIndex, routeResult]);
-
   // Derive current & next A* path nodes, target bearing, and 3D arrow orientation
   const navMetrics = useMemo(() => {
     const path = routeResult?.path || [];
@@ -488,6 +447,47 @@ export default function ARView() {
       stepDirection,
     };
   }, [routeResult, activeStepIndex, userHeading]);
+
+  // Estimate walking progress from motion peaks. This is a short-range estimate only;
+  // QR checkpoints remain the authoritative indoor position and floor confirmation.
+  useEffect(() => {
+    if (sessionState !== 'active') return undefined;
+    let aboveThreshold = false;
+    let lastStepAt = 0;
+    const handleMotion = (event) => {
+      const acceleration = event.acceleration;
+      const withGravity = event.accelerationIncludingGravity;
+      const magnitude = acceleration && [acceleration.x, acceleration.y, acceleration.z].every(Number.isFinite)
+        ? Math.hypot(acceleration.x, acceleration.y, acceleration.z)
+        : withGravity && [withGravity.x, withGravity.y, withGravity.z].every(Number.isFinite)
+          ? Math.abs(Math.hypot(withGravity.x, withGravity.y, withGravity.z) - 9.81)
+          : 0;
+      const peak = magnitude > 1.25;
+      const now = Date.now();
+      if (peak && !aboveThreshold && now - lastStepAt > 360) {
+        lastStepAt = now;
+        setMotionAvailable(true);
+        const nextWalked = walkedMetersRef.current + 0.7;
+        const remaining = Number(navMetrics?.stepDirection?.distance || 0);
+        walkedMetersRef.current = nextWalked;
+        setWalkedMeters(nextWalked);
+        // Never auto-advance a stair/lift transition: confirm the new floor with its QR plaque.
+        if (navMetrics && !navMetrics.isFloorChange && remaining > 0 && nextWalked >= remaining * 0.85) {
+          setActiveStepIndex((current) => Math.min(current + 1, Math.max(0, (routeResult?.path?.length || 1) - 2)));
+          walkedMetersRef.current = 0;
+          setWalkedMeters(0);
+        }
+      }
+      aboveThreshold = peak;
+    };
+    window.addEventListener('devicemotion', handleMotion, true);
+    return () => window.removeEventListener('devicemotion', handleMotion, true);
+  }, [sessionState, navMetrics, routeResult, setActiveStepIndex]);
+
+  useEffect(() => {
+    walkedMetersRef.current = 0;
+    setWalkedMeters(0);
+  }, [activeStepIndex, routeResult]);
 
   if (!navMetrics) return null;
 
