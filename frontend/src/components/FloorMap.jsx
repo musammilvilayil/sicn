@@ -20,6 +20,9 @@ export default function FloorMap({
   userHeading = null,
   mapNorthHeading = 0,
   navigationActive = false,
+  headingUp = false,
+  autoFollow = false,
+  onUserPan,
 }) {
   const svgRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -138,6 +141,19 @@ export default function FloorMap({
     });
   }, [routeResult, floor, setZoom, setPan]);
 
+  // Keep the estimated position near the centre while auto-follow is enabled.
+  useEffect(() => {
+    if (!autoFollow || !navigationActive || !userPosition || Number(userPosition.floor) !== Number(floor) || !setPan || typeof window === 'undefined') return;
+    const pxPerSvgX = Math.min(window.innerWidth, 1380) / 1000;
+    const pxPerSvgY = Math.min(window.innerHeight, 860) / 620;
+    const x = scaleX(userPosition.x);
+    const y = scaleY(userPosition.y);
+    setPan({
+      x: Math.max(-420, Math.min(420, (500 - x) * pxPerSvgX * zoom)),
+      y: Math.max(-320, Math.min(320, (310 - y) * pxPerSvgY * zoom)),
+    });
+  }, [autoFollow, navigationActive, userPosition, floor, setPan, zoom]);
+
   // Subtle network edges on current floor (visible in Admin Edit Mode or light guide lines)
   const floorEdges = useMemo(() => {
     const nodeMap = new Map(floorNodes.map((n) => [n.nodeId, n]));
@@ -167,6 +183,7 @@ export default function FloorMap({
     const dx = clientX - dragStartRef.current.x;
     const dy = clientY - dragStartRef.current.y;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      if (!dragStartRef.current.moved) onUserPan?.();
       dragStartRef.current.moved = true;
     }
     setPan?.({
@@ -303,6 +320,13 @@ export default function FloorMap({
           ref={svgRef}
           viewBox="0 0 1000 620"
           className="sicn-floor-map-svg w-full h-full max-w-[1380px] max-h-[860px] drop-shadow-md"
+          style={{
+            transform: headingUp && navigationActive && userHeading !== null
+              ? `rotate(${mapNorthHeading - userHeading}deg)`
+              : undefined,
+            transformOrigin: 'center center',
+            transition: 'transform 180ms ease-out',
+          }}
           onClick={handleSvgBackgroundClick}
         >
           <defs>
