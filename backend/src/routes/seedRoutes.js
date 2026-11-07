@@ -1,14 +1,15 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const router = express.Router();
-const Node = require('../models/Node');
-const Edge = require('../models/Edge');
-const Teacher = require('../models/Teacher');
-const Timetable = require('../models/Timetable');
-const seedData = require('../data/seedData.json');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+const { upsertCampusGraph } = require('../scripts/seedDb');
 
-// Deliberately disabled by default. This endpoint is only for a disposable
-// development database and never deletes users or administrator accounts.
+const SEED_DATA_PATH = path.join(__dirname, '../data/seedData.json');
+
+// Deliberately disabled by default and always blocked in production.
+// Synchronizes campus graph/faculty/timetable collections for disposable
+// development environments and never deletes or alters User / Admin accounts.
 router.post('/', protect, authorizeRoles('Admin'), async (req, res) => {
   if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DESTRUCTIVE_SEED !== 'true') {
     return res.status(403).json({
@@ -17,26 +18,15 @@ router.post('/', protect, authorizeRoles('Admin'), async (req, res) => {
   }
 
   try {
-    await Promise.all([
-      Node.deleteMany({}),
-      Edge.deleteMany({}),
-      Teacher.deleteMany({}),
-      Timetable.deleteMany({}),
-    ]);
-
-    const [nodes, edges, teachers, timetables] = await Promise.all([
-      Node.insertMany(seedData.nodes),
-      Edge.insertMany(seedData.edges),
-      Teacher.insertMany(seedData.teachers),
-      Timetable.insertMany(seedData.timetables),
-    ]);
+    const seedData = JSON.parse(fs.readFileSync(SEED_DATA_PATH, 'utf8'));
+    const summary = await upsertCampusGraph(seedData, { pruneStale: true });
 
     return res.json({
       message: 'Development campus data reseeded. User and administrator accounts were preserved.',
-      nodesCount: nodes.length,
-      edgesCount: edges.length,
-      teachersCount: teachers.length,
-      timetablesCount: timetables.length,
+      nodesCount: summary.nodesCount,
+      edgesCount: summary.edgesCount,
+      teachersCount: summary.teachersCount,
+      timetablesCount: summary.timetablesCount,
     });
   } catch (error) {
     console.error('Development seed error:', error);

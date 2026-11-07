@@ -28,9 +28,11 @@ function heuristic(nodeA, nodeB) {
   if (!nodeA || !nodeB) return 0;
   const dx = (nodeA.coordinates?.x ?? 0) - (nodeB.coordinates?.x ?? 0);
   const dy = (nodeA.coordinates?.y ?? 0) - (nodeB.coordinates?.y ?? 0);
-  const dz = (nodeA.coordinates?.z ?? 0) - (nodeB.coordinates?.z ?? 0);
-  // Vertical floor transitions carry a vertical distance multiplier
-  return Math.sqrt(dx * dx + dy * dy + (dz * 2.5) * (dz * 2.5));
+  const zA = nodeA.coordinates?.z ?? (nodeA.floor ?? 0) * 3.9;
+  const zB = nodeB.coordinates?.z ?? (nodeB.floor ?? 0) * 3.9;
+  const dz = zA - zB;
+  // Admissible 3D Euclidean heuristic (3.9m floor height <= 4.0m lift / 7.0m stair cost)
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
 /**

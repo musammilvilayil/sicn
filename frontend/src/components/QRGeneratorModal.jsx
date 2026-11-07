@@ -58,9 +58,15 @@ export default function QRGeneratorModal({ isOpen, onClose, nodes = [] }) {
             onChange={(e) => setSelectedFloor(e.target.value)}
             className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white font-medium"
           >
-            <option value="all">All Floors</option>
-            <option value="0">Ground Floor</option>
-            <option value="1">1st Floor</option>
+            <option value="all">All Floors (GF–7F)</option>
+            <option value="0">Ground Floor (GF)</option>
+            <option value="1">1st Floor (1F)</option>
+            <option value="2">2nd Floor (2F)</option>
+            <option value="3">3rd Floor (3F)</option>
+            <option value="4">4th Floor (4F)</option>
+            <option value="5">5th Floor (5F)</option>
+            <option value="6">6th Floor (6F)</option>
+            <option value="7">7th Floor (7F)</option>
           </select>
 
           <select
@@ -75,7 +81,9 @@ export default function QRGeneratorModal({ isOpen, onClose, nodes = [] }) {
             <option value="lift">Lifts</option>
             <option value="room">Classrooms</option>
             <option value="lab">Labs</option>
+            <option value="hall">Halls &amp; Terraces</option>
             <option value="office">Offices</option>
+            <option value="restroom">Restrooms</option>
           </select>
 
           <span className="ml-auto text-slate-500 font-semibold">

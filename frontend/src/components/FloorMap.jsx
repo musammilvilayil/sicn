@@ -45,10 +45,12 @@ export default function FloorMap({
     return { x, y };
   };
 
-  // Floor transition badge info
+  // Floor transition badge info (prioritize outbound transition on pass-through transit floors)
   const floorTransitionInfo = useMemo(() => {
     if (!routeResult?.path) return null;
     const path = routeResult.path;
+    let inboundMatch = null;
+
     for (let i = 0; i < path.length - 1; i++) {
       const u = path[i];
       const v = path[i + 1];
@@ -60,8 +62,8 @@ export default function FloorMap({
             targetFloor: v.floor,
             transitType: u.type === 'lift' ? 'Elevator' : 'Stairs',
           };
-        } else if (v.floor === floor) {
-          return {
+        } else if (v.floor === floor && !inboundMatch) {
+          inboundMatch = {
             type: 'entry',
             node: v,
             sourceFloor: u.floor,
@@ -70,7 +72,7 @@ export default function FloorMap({
         }
       }
     }
-    return null;
+    return inboundMatch;
   }, [routeResult, floor]);
 
   // Polyline points for active floor route segments
@@ -146,6 +148,43 @@ export default function FloorMap({
     setSelectedPopupNode(null);
   };
 
+  const UPPER_FLOOR_HEADERS = {
+    2: '2ND FLOOR PLAN • CIVIL ENGINEERING & COMPUTING LABS (Z = +7.8 M)',
+    3: '3RD FLOOR PLAN • MECHANICAL ENGINEERING & B.ARCH STUDIOS (Z = +11.7 M)',
+    4: '4TH FLOOR PLAN • CSE WING, DRAWING HALL & SICK ROOM (Z = +15.6 M)',
+    5: '5TH FLOOR PLAN • EEE DEPARTMENT & EAST OPEN TERRACE (Z = +19.5 M)',
+    6: '6TH FLOOR PLAN • MAIN SEMINAR AUDITORIUM & OPEN TERRACE (Z = +23.4 M)',
+    7: '7TH FLOOR PLAN • SKY TRANSIT LOBBY & OPEN ROOFTOP TERRACES (Z = +27.3 M)',
+  };
+
+  const getUpperRoomClass = (node) => {
+    const id = node.nodeId || '';
+    if (id.includes('TERRACE')) return 'room-shape room-terrace';
+    if (id.includes('HOD')) return 'room-shape room-hod';
+    if (id.includes('FACULTY')) return 'room-shape room-faculty';
+    switch (node.type) {
+      case 'lab':
+        return 'room-shape room-lab';
+      case 'office':
+        return 'room-shape room-office';
+      case 'hall':
+        return 'room-shape room-hall';
+      case 'restroom':
+        return 'room-shape room-general';
+      default:
+        return 'room-shape room-classroom';
+    }
+  };
+
+  const getShortBlueprintTitle = (node) => {
+    const raw = node.name
+      .replace(/\s*\([^)]*\)/g, '')
+      .replace(/^Head of\s+/i, 'HOD ')
+      .replace(/\s+Department$/i, '')
+      .toUpperCase();
+    return raw.length > 19 ? `${raw.slice(0, 18)}…` : raw;
+  };
+
   const getNodeColor = (node) => {
     const isStart = startNode?.nodeId === node.nodeId;
     const isDest = destinationNode?.nodeId === node.nodeId;
@@ -179,9 +218,8 @@ export default function FloorMap({
 
   return (
     <div
-      className={`relative w-full h-full overflow-hidden bg-[#eef2f6] select-none ${
-        adminEditMode ? 'cursor-crosshair' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
-      }`}
+      className={`relative w-full h-full overflow-hidden bg-[#eef2f6] select-none ${adminEditMode ? 'cursor-crosshair' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
       onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
       onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
       onMouseUp={handlePointerUp}
@@ -314,10 +352,10 @@ export default function FloorMap({
               <rect x="690" y="200" width="44" height="40" className="lift-housing" rx="5" />
               <text x="712" y="224" textAnchor="middle" className="lift-text">LIFT 2</text>
 
-              <rect x="840" y="400" width="70" height="45" className="stair-housing" rx="5" />
-              <text x="875" y="427" textAnchor="middle" className="stair-text">STAIR B</text>
+              <rect x="840" y="405" width="70" height="45" className="stair-housing" rx="5" />
+              <text x="875" y="432" textAnchor="middle" className="stair-text">STAIR B</text>
             </g>
-          ) : (
+          ) : floor === 1 ? (
             <g className="architectural-rooms">
               <rect
                 x="80"
@@ -394,6 +432,124 @@ export default function FloorMap({
 
               <rect x="690" y="200" width="44" height="40" className="lift-housing" rx="5" />
               <text x="712" y="224" textAnchor="middle" className="lift-text">LIFT 2</text>
+
+              <rect x="825" y="415" width="78" height="42" className="stair-housing" rx="5" />
+              <text x="864" y="440" textAnchor="middle" className="stair-text">STAIR B</text>
+            </g>
+          ) : (
+            /* Architectural Floor Plans for Floors 2 through 7 (Parsed from BJI Plans 00000, 0002 & 003) */
+            <g className="architectural-rooms">
+              {/* Outer Building Slab */}
+              <rect
+                x="80"
+                y="50"
+                width="840"
+                height="520"
+                rx="10"
+                fill={floor === 7 ? '#f8fafc' : '#ffffff'}
+                stroke="#cbd5e1"
+                strokeWidth="2.5"
+              />
+
+              {/* Blueprint Sheet Header */}
+              <text x="500" y="76" textAnchor="middle" className="corridor-text">
+                {UPPER_FLOOR_HEADERS[floor] || `FLOOR ${floor} ARCHITECTURAL PLAN`}
+              </text>
+
+              {/* Step-back Open Terrace Deck Outlines on 5F, 6F, and 7F */}
+              {(floor === 5 || floor === 6) && (
+                <rect
+                  x="685"
+                  y="92"
+                  width="215"
+                  height="150"
+                  rx="10"
+                  className="room-shape room-terrace"
+                />
+              )}
+              {floor === 7 && (
+                <rect
+                  x="110"
+                  y="92"
+                  width="790"
+                  height="210"
+                  rx="12"
+                  className="room-shape room-terrace"
+                />
+              )}
+
+              {/* Walkable 2.76m / 2.73m Main Corridor Passages */}
+              <rect
+                x={floor === 7 ? '400' : '295'}
+                y="222"
+                width={floor === 7 ? '475' : '580'}
+                height="66"
+                fill="url(#corridorFill)"
+                stroke="#e2e8f0"
+                strokeWidth="1.5"
+                rx="6"
+              />
+              <text x="565" y="280" textAnchor="middle" className="corridor-text">
+                {floor === 7
+                  ? '7TH FLOOR SKY TRANSIT PASSAGE'
+                  : `2.76 M / 2.73 M MAIN CORRIDOR (FLOOR ${floor})`}
+              </text>
+
+              {/* Continuous Vertical Transit Shafts (Section A-A & Section B-B) */}
+              <rect x="394" y="206" width="68" height="36" className="stair-housing" rx="5" />
+              <text x="428" y="220" textAnchor="middle" className="stair-text">STAIR A</text>
+
+              <rect x="462" y="232" width="44" height="36" className="lift-housing" rx="5" />
+              <text x="484" y="246" textAnchor="middle" className="lift-text">LIFT 1</text>
+
+              <rect x="672" y="232" width="46" height="36" className="lift-housing" rx="5" />
+              <text x="695" y="246" textAnchor="middle" className="lift-text">LIFT 2</text>
+
+              <rect x="818" y="232" width="72" height="38" className="stair-housing" rx="5" />
+              <text x="854" y="247" textAnchor="middle" className="stair-text">STAIR B</text>
+
+              {/* Architectural Room, Lab, Seminar Hall & Terrace Blocks */}
+              {floorNodes
+                .filter((n) => !['corridor', 'stair', 'lift'].includes(n.type))
+                .map((roomNode) => {
+                  const cx = scaleX(roomNode.coordinates.x);
+                  const cy = scaleY(roomNode.coordinates.y);
+                  const isLargeHall =
+                    roomNode.nodeId.includes('SEMINAR') || roomNode.nodeId.includes('TERRACE');
+                  const boxW = isLargeHall ? 156 : 108;
+                  const boxH = isLargeHall ? 92 : 68;
+
+                  return (
+                    <g key={`arch-${roomNode.nodeId}`}>
+                      <rect
+                        x={cx - boxW / 2}
+                        y={cy - boxH / 2}
+                        width={boxW}
+                        height={boxH}
+                        rx="8"
+                        className={getUpperRoomClass(roomNode)}
+                      />
+                      <text
+                        x={cx}
+                        y={cy - 14}
+                        textAnchor="middle"
+                        className="room-label-bold"
+                      >
+                        {getShortBlueprintTitle(roomNode)}
+                      </text>
+                      {roomNode.metadata?.dimensions && (
+                        <text
+                          x={cx}
+                          y={cy + 23}
+                          textAnchor="middle"
+                          className="room-dim-text"
+                        >
+                          {roomNode.metadata.dimensions}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
             </g>
           )}
 
@@ -475,8 +631,14 @@ export default function FloorMap({
                 fontWeight="700"
               >
                 {floorTransitionInfo.type === 'exit'
-                  ? `↗ ${floorTransitionInfo.transitType} to Floor ${floorTransitionInfo.targetFloor}`
-                  : `↘ From Floor ${floorTransitionInfo.sourceFloor === 0 ? 'GF' : floorTransitionInfo.sourceFloor}`}
+                  ? `↗ ${floorTransitionInfo.transitType} to ${floorTransitionInfo.targetFloor === 0
+                    ? 'GF'
+                    : `Floor ${floorTransitionInfo.targetFloor}`
+                  }`
+                  : `↘ From ${floorTransitionInfo.sourceFloor === 0
+                    ? 'GF'
+                    : `Floor ${floorTransitionInfo.sourceFloor}`
+                  }`}
               </text>
             </g>
           )}

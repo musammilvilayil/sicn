@@ -34,6 +34,7 @@ export default function ScanPage() {
   const { roomCode, roomMembers, broadcastCheckpoint } = useSocket();
 
   const [activeTab, setActiveTab] = useState('simulate'); // 'camera' | 'simulate' | 'upload'
+  const [simFloorFilter, setSimFloorFilter] = useState('all');
   const [cameraActive, setCameraActive] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [detectedNode, setDetectedNode] = useState(null);
@@ -44,12 +45,6 @@ export default function ScanPage() {
 
   const qrRegionId = 'scanpage-html5qr-region';
   const scannerRef = useRef(null);
-
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
 
   const stopCamera = async () => {
     if (scannerRef.current) {
@@ -64,6 +59,12 @@ export default function ScanPage() {
     }
     setCameraActive(false);
   };
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   const startCamera = async () => {
     setErrorMsg('');
@@ -140,9 +141,10 @@ export default function ScanPage() {
     navigate('/');
   };
 
-  const checkpointNodes = nodes.filter(
-    (n) => n.qrCode || n.type === 'checkpoint' || n.type === 'entrance' || n.type === 'room'
-  );
+  const checkpointNodes = nodes.filter((n) => {
+    if (simFloorFilter !== 'all' && n.floor !== Number(simFloorFilter)) return false;
+    return Boolean(n.qrCode || n.type === 'checkpoint' || n.type === 'entrance' || n.type === 'room');
+  });
 
   return (
     <div className="min-h-dvh bg-slate-50 pb-24">
@@ -323,8 +325,36 @@ export default function ScanPage() {
               </p>
             </div>
 
+            {/* Floor Filter Pills across GF through 7F */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {[
+                { val: 'all', label: 'All Floors' },
+                { val: '0', label: 'GF' },
+                { val: '1', label: '1F' },
+                { val: '2', label: '2F' },
+                { val: '3', label: '3F' },
+                { val: '4', label: '4F' },
+                { val: '5', label: '5F' },
+                { val: '6', label: '6F' },
+                { val: '7', label: '7F' },
+              ].map((fl) => (
+                <button
+                  key={fl.val}
+                  type="button"
+                  onClick={() => setSimFloorFilter(fl.val)}
+                  className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-extrabold border transition ${
+                    simFloorFilter === fl.val
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  {fl.label}
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[380px] overflow-y-auto pr-1">
-              {checkpointNodes.slice(0, 16).map((node) => {
+              {checkpointNodes.map((node) => {
                 const isSelected = detectedNode?.nodeId === node.nodeId;
                 return (
                   <button

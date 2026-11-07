@@ -25,6 +25,17 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 
+const FLOOR_DEFS = [
+  { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
+  { f: 1, shortLabel: '1F', fullLabel: '1st Floor' },
+  { f: 2, shortLabel: '2F', fullLabel: '2nd Floor' },
+  { f: 3, shortLabel: '3F', fullLabel: '3rd Floor' },
+  { f: 4, shortLabel: '4F', fullLabel: '4th Floor' },
+  { f: 5, shortLabel: '5F', fullLabel: '5th Floor' },
+  { f: 6, shortLabel: '6F', fullLabel: '6th Floor' },
+  { f: 7, shortLabel: '7F', fullLabel: '7th Floor' },
+];
+
 export default function MapPage() {
   const navigate = useNavigate();
   const {
@@ -140,8 +151,13 @@ export default function MapPage() {
     computeRoute(prevDest, prevStart, accessibleOnly, nodes);
   };
 
-  const groundNodes = nodes.filter((n) => n.floor === 0);
-  const firstNodes = nodes.filter((n) => n.floor === 1);
+  const groupedFloorNodes = useMemo(() => {
+    return FLOOR_DEFS.map((fd) => ({
+      ...fd,
+      items: nodes.filter((n) => n.floor === fd.f),
+    })).filter((g) => g.items.length > 0);
+  }, [nodes]);
+
   const showAROverlay = Boolean(isARMode && routeResult?.path?.length >= 2);
 
   return (
@@ -186,7 +202,7 @@ export default function MapPage() {
                 value={searchText}
                 onFocus={() => setSearchFocused(true)}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search rooms, Class 02, CAD Lab..."
+                placeholder="Search rooms, Seminar Hall, Class 501, CAD Lab..."
                 className="flex-1 bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none min-w-0"
               />
 
@@ -276,20 +292,15 @@ export default function MapPage() {
                     }}
                     className="flex-1 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 truncate focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <optgroup label="Ground Floor">
-                      {groundNodes.map((n) => (
-                        <option key={n.nodeId} value={n.nodeId}>
-                          {n.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="1st Floor">
-                      {firstNodes.map((n) => (
-                        <option key={n.nodeId} value={n.nodeId}>
-                          {n.name}
-                        </option>
-                      ))}
-                    </optgroup>
+                    {groupedFloorNodes.map((group) => (
+                      <optgroup key={group.f} label={group.fullLabel}>
+                        {group.items.map((n) => (
+                          <option key={n.nodeId} value={n.nodeId}>
+                            {n.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                   <button
                     onClick={() => navigate('/scan')}
@@ -316,20 +327,15 @@ export default function MapPage() {
                     className="flex-1 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 truncate focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select destination...</option>
-                    <optgroup label="1st Floor">
-                      {firstNodes.map((n) => (
-                        <option key={n.nodeId} value={n.nodeId}>
-                          {n.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Ground Floor">
-                      {groundNodes.map((n) => (
-                        <option key={n.nodeId} value={n.nodeId}>
-                          {n.name}
-                        </option>
-                      ))}
-                    </optgroup>
+                    {[...groupedFloorNodes].reverse().map((group) => (
+                      <optgroup key={group.f} label={group.fullLabel}>
+                        {group.items.map((n) => (
+                          <option key={n.nodeId} value={n.nodeId}>
+                            {n.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -413,6 +419,7 @@ export default function MapPage() {
           {[
             { label: 'Classrooms', type: 'room' },
             { label: 'Labs', type: 'lab' },
+            { label: 'Halls & Terraces', type: 'hall' },
             { label: 'Offices', type: 'office' },
             { label: 'Restrooms', type: 'restroom' },
           ].map((cat) => (
@@ -439,26 +446,24 @@ export default function MapPage() {
       {/* FLOATING RIGHT-SIDE INDOOR FLOOR PICKER & CAMERA DOCK    */}
       {/* ======================================================== */}
       {!showAROverlay && (
-      <aside className="fixed right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2.5">
-        {/* Google Maps Indoor Floor Selector */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1 flex flex-col gap-1">
-          {[
-            { f: 1, label: '1F' },
-            { f: 0, label: 'GF' },
-          ].map((item) => {
+      <aside className="fixed right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2">
+        {/* Google Maps Indoor Floor Selector (GF through 7F) */}
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1 flex flex-col gap-0.5 max-h-[48dvh] overflow-y-auto no-scrollbar">
+          {[...FLOOR_DEFS].reverse().map((item) => {
             const active = currentFloor === item.f;
             const hasRouteOnFloor = routeResult?.floorsCovered?.includes(item.f);
             return (
               <button
                 key={item.f}
                 onClick={() => setCurrentFloor(item.f)}
-                className={`relative w-10 h-10 rounded-xl text-xs font-extrabold transition flex items-center justify-center ${
+                title={item.fullLabel}
+                className={`relative w-9 h-8 rounded-xl text-[11px] font-extrabold transition flex items-center justify-center shrink-0 ${
                   active
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                {item.label}
+                {item.shortLabel}
                 {hasRouteOnFloor && !active && (
                   <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500" />
                 )}
@@ -516,7 +521,7 @@ export default function MapPage() {
       {!showAROverlay && routeResult && sheetSnap === 'closed' && (
         <button
           onClick={() => setSheetSnap('peek')}
-          className="fixed bottom-20 left-4 z-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-1.5"
+          className="fixed bottom-20 left-4 md:bottom-6 md:left-28 z-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-1.5"
         >
           <Sparkles size={14} />
           <span>View Active Route ({routeResult.totalDistance}m)</span>

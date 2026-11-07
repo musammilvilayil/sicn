@@ -68,6 +68,12 @@
   stroke: #cbd5e1;
 }
 
+.room-terrace {
+  fill: #ecfdf5;
+  stroke: #34d399;
+  stroke-dasharray: 6 4;
+}
+
 .room-label-bold {
   font-size: 11px;
   font-weight: 800;

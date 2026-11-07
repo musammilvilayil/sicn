@@ -11,6 +11,7 @@ import {
   Calendar,
   Map,
   Mail,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/NavigationContext';
@@ -59,7 +60,7 @@ export default function ProfilePage() {
         const logged = await login(email, password);
         showToast(`Welcome back, ${logged.name} (${logged.role})`, 'success');
       } else {
-        const created = await register({ name, email, password });
+        await register({ name, email, password });
         showToast(`Visitor account created successfully`, 'success');
       }
       setEmail('');

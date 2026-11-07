@@ -231,6 +231,12 @@ export default function AdminNodeModal({
               >
                 <option value={0}>Ground (0)</option>
                 <option value={1}>1st Floor (1)</option>
+                <option value={2}>2nd Floor (2)</option>
+                <option value={3}>3rd Floor (3)</option>
+                <option value={4}>4th Floor (4)</option>
+                <option value={5}>5th Floor (5)</option>
+                <option value={6}>6th Floor (6)</option>
+                <option value={7}>7th Floor (7)</option>
               </select>
             </div>
             <div>

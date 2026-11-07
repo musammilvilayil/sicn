@@ -1,103 +1,129 @@
 # Smart Indoor College Navigation (SICN)
 ### Bishop Jerome Institute, Kollam
 
-SICN is a full-stack campus navigation and assistance application built with React, Vite, Tailwind CSS, Node.js, Express, MongoDB, Socket.IO, QR checkpoints and an optional camera-based navigation view.
+SICN is a full-stack indoor campus navigation and faculty assistance system built with React, Vite, Tailwind CSS, Node.js, Express, MongoDB, Socket.IO, QR checkpoints, and an optional browser-based AR camera guidance view.
 
-## Main modules
+## Main modules & routes
 
-- **Explore:** multi-floor SVG floor map, room search, accessible route selection and A* turn-by-turn directions.
-- **QR checkpoints:** scan a physical QR plaque, upload a QR image, or use the development simulator to set a known indoor position.
-- **Faculty and timetable:** resolve a teacher's current classroom or cabin using timetable data.
-- **Live sharing:** share checkpoint updates with a short-lived six-digit room code.
-- **Camera guidance:** camera preview with a compass-aligned directional overlay when the browser exposes the required sensors; otherwise, step-by-step guidance remains available.
-- **Role-based access:** Admin, Teacher, Student and Normal_User permissions.
+- **`/` — Explore & Multi-Floor Map:** Full-screen pan-and-zoom SVG campus map across all **8 floors (`GF` through `7F`)**, floating top search bar with room/category filters, vertical indoor floor selector (`7F` down to `GF`), accessible route toggle, Admin graph editor, and a swipe-up bottom sheet (`peek` / `half` / `full`) for turn-by-turn A* directions.
+- **`/scan` — QR Checkpoint Scanner:** Live mobile camera QR scanner (`html5-qrcode`), QR image upload, floor-filtered checkpoint simulator (`GF`–`7F`), and printable campus QR plaques.
+- **`/schedule` — Faculty & Timetable Assistance:** Resolves a faculty member's active classroom or default cabin from live schedule entries, with role-gated timetable management for Teachers and Admins.
+- **`/profile` — Account, Security & RBAC:** JWT session management, mandatory first-login password rotation, role permission overview (`Admin`, `Teacher`, `Student`, `Normal_User`), and Admin-only account provisioning.
+- **Live Location Sharing (Socket.IO):** Short-lived 6-digit sharing rooms that broadcast scanned QR checkpoints to room members in real time.
+- **Camera / AR Guidance:** WebRTC camera preview with a compass-aligned directional overlay when supported sensors and permissions are available, with automatic fallback to 2D floor guidance.
 
-## Local setup
+## Eight-floor campus architecture & 3D A* routing
 
-Requirements: Node.js 22+, MongoDB, and a modern browser.
+The Bishop Jerome Institute Main Block spatial graph spans **8 levels — Ground Floor (`0` / `GF`) through 7th Floor (`7` / `7F`)**:
 
-1. Install dependencies:
+- **Blueprint-derived spatial dataset:** `133` nodes and `154` bidirectional/vertical edges generated and validated by `backend/src/scripts/buildCampusGraph.js` and persisted in `backend/src/data/seedData.json`.
+- **Floor-by-floor coverage (`3.9m` floor-to-floor elevation, `0m` to `27.3m`):**
+  - **Ground Floor (`GF`) & 1st Floor (`1F`):** Main Entrance, Central Foyer, CAD/Computer Labs, Classrooms, Staff Room, KTU Exam Cell, Dept. Library, Principal Office, Admin Office, Conference Hall, and HOD/Senior Professor Cabins.
+  - **2nd, 3rd & 4th Floors (`2F`–`4F`):** Multi-wing Lecture Classrooms (`201`–`406`), Faculty Cabins, Drawing Halls, Tutorial Rooms, and Restrooms.
+  - **5th Floor (`5F`):** Classrooms (`501`–`504`), Project/Research Labs, and the **5th Floor East Open Terrace**.
+  - **6th Floor (`6F`):** **Main Block Seminar Hall**, Faculty/Coordinator Cabins, Classrooms, and **6th Floor Open Terrace**.
+  - **7th Floor (`7F`):** Rooftop **Central, West, and East Open Terraces** and service lobbies.
+- **Four continuous vertical transport cores (`28` vertical shaft links):**
+  - `STAIR-A` (Main West Staircase, `GF ↔ 7F`, `7.0m` vertical edge cost, `accessible: false`)
+  - `STAIR-B` (East Wing Staircase, `GF ↔ 7F`, `7.0m` vertical edge cost, `accessible: false`)
+  - `LIFT-1` (Main Passenger Lift 1, `GF ↔ 7F`, `4.0m` vertical edge cost, `accessible: true`)
+  - `LIFT-2` (East Passenger Lift 2, `GF ↔ 7F`, `4.0m` vertical edge cost, `accessible: true`)
+- **3D-aware A* pathfinding (`backend/src/algorithms/aStar.js`):** Uses an admissible 3D Euclidean heuristic ($\sqrt{\Delta x^2 + \Delta y^2 + \Delta z^2}$ with $z = \text{floor} \times 3.9\text{ m} \le 4.0\text{ m}$ minimum vertical edge cost) and supports `accessibleOnly: true` to exclude staircases and route strictly through `LIFT-1` / `LIFT-2` and accessible corridors.
+
+## Installation and local setup
+
+Requirements: **Node.js 22+**, **MongoDB**, and a modern browser.
+
+1. **Install dependencies:**
 
    ```bash
    cd backend && npm ci
    cd ../frontend && npm ci
    ```
 
-2. Create `backend/.env` using `backend/.env.example`. Set:
-   - `MONGODB_URI`
-   - `JWT_SECRET` (generate a unique value with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`)
-   - `CLIENT_ORIGIN=http://localhost:3000`
+2. **Configure environment variables (`backend/.env`):**
 
-3. For a new database only, seed campus map, faculty and timetable data:
+   Copy `backend/.env.example` to `backend/.env` and set:
+   - `MONGODB_URI` — MongoDB connection string (e.g., `mongodb://localhost:27017/indoor_navigation`).
+   - `JWT_SECRET` — Unique secret of **at least 32 characters** (do not use placeholder `replace-...` values). Generate one with:
+     ```bash
+     node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+     ```
+   - `CLIENT_ORIGIN=http://localhost:3000` — Allowed frontend origin for Express CORS and Socket.IO.
+   - `PORT=5000` — Backend HTTP/WebSocket port.
+   - Optional bootstrap overrides: `BOOTSTRAP_ADMIN_EMAIL` (default `admin@bji.ac.in`), `BOOTSTRAP_ADMIN_NAME` (default `Campus Administrator`).
+   - Optional disposable-dev flag: `ALLOW_DESTRUCTIVE_SEED=false` (keep `false` unless explicitly resetting campus collections in a disposable dev DB).
+
+3. **Seed / synchronize the 8-floor campus database:**
 
    ```bash
-   cd backend && npm run seed
+   npm --prefix backend run seed
    ```
 
-   Seeding stops if campus collections already contain data. It never deletes user or administrator accounts.
+   `seedDb.js` regenerates and validates `seedData.json` via `buildCampusGraph.js`, idempotently upserts all `133` nodes, `154` edges, `6` faculty profiles, and `21` timetable slots across `GF`–`7F`, and verifies multi-floor A* routing. Re-running `npm --prefix backend run seed` is safe: it never creates duplicate campus records and never deletes or overwrites `User` or `Admin` accounts.
 
-4. Start the backend:
+4. **Start the backend server:**
 
    ```bash
    npm run server
    ```
 
-   On first startup, the server creates the first Admin account. Legacy demo Admin, Teacher, Student and Visitor credentials are rotated once when present. The username/email and a randomly generated temporary password are printed in the backend terminal. Save them securely and change the password immediately from the Account page. The password is not printed again.
-
-5. Start the frontend in another terminal:
+5. **Start the frontend dev server (in a second terminal):**
 
    ```bash
    cd frontend && npm run dev -- --host 0.0.0.0
    ```
 
-   Open the Vite URL (default port 3000).
+   Open `http://localhost:3000`.
 
-## Account provisioning
+## Bootstrap admin & first-login password rotation
 
-- Public registration creates **Normal_User** accounts only.
-- The bootstrap Admin can create Teacher, Student and visitor accounts from the Account page.
-- A Teacher account must be linked to an existing faculty profile.
-- Admin accounts are not available through public registration or the account-provisioning form.
-- Never commit `.env`, passwords, JWT secrets or production credentials.
+- On startup, `ensureBootstrapAdmin.js` checks whether an `Admin` user exists:
+  - If none exists, it creates the single bootstrap administrator (`BOOTSTRAP_ADMIN_EMAIL`) with a cryptographically random temporary password and sets `mustChangePassword: true`.
+  - If legacy unrotated accounts from older seeds exist (Admin lacking `bootstrapAdminInitializedAt` or known legacy demo emails lacking `credentialsRotatedAt`), their passwords are rotated **once** to random temporary credentials with `mustChangePassword: true`. Subsequent server restarts never reset initialized accounts or create duplicate admins.
+- The temporary password is printed **once** in the backend console. Sign in and change it immediately on `/profile`.
+- While `mustChangePassword` is `true`, API middleware and Socket.IO block normal privileged operations (`403 PASSWORD_CHANGE_REQUIRED`) until `PUT /api/auth/password` completes.
+- **Account provisioning & RBAC:**
+  - Public `/api/auth/register` creates **`Normal_User`** accounts only.
+  - Authenticated **Admins** can provision `Teacher`, `Student`, and `Normal_User` accounts via `/profile` (`/api/auth/provision`). `Teacher` accounts must link to a valid `Teacher` profile (`teacherId`).
+  - `Admin` role assignment is blocked on both public registration and the provisioning endpoint.
 
-## Camera and AR support
+## Camera and AR limitations & HTTPS requirements
 
-The camera view requires a secure context (**HTTPS**, except localhost) and explicit camera permission. Compass-aligned arrows additionally require a supported device-orientation sensor and permission.
+- Live camera QR scanning and AR camera navigation require a **secure context (`HTTPS`, or `localhost`)** and explicit user-gesture permission prompts.
+- Compass-aligned 3D arrows require device orientation sensors:
+  - **iOS 13+ Safari** requires an explicit tap on **"Start AR Session"** to invoke `DeviceOrientationEvent.requestPermission()`. Ensure *Motion & Orientation Access* is enabled in Safari settings.
+  - **Android Chrome** generally provides `deviceorientationabsolute` / `deviceorientation` over HTTPS when camera and motion permissions are granted.
+  - **Desktops / devices without magnetometers** automatically fall back to step-by-step guidance or the 2D SVG floor map.
+- SICN anchors indoor position via physical QR checkpoints; it is **not** continuous SLAM, visual-inertial odometry, or UWB indoor positioning, and indoor steel/concrete structures can affect compass headings.
 
-Browser/device behavior varies:
-- Recent Android phones generally provide camera and orientation APIs, subject to browser and manufacturer permissions.
-- iPhone/iPad Safari requires a user gesture to request motion permission. Enable Motion & Orientation Access in Safari website settings if prompted.
-- Laptops and devices without a compass can still show camera guidance and route-step instructions, but cannot provide a reliable compass-aligned 3D arrow.
-- If camera access is unavailable or denied, use the standard floor map and QR checkpoint flow.
+## Security requirements & deployment notes
 
-SICN uses QR checkpoints to establish known indoor positions. The current browser implementation is **not** continuous SLAM, visual-inertial odometry, UWB positioning or a certified indoor positioning system. Compass direction can be affected by magnetic interference; verify routes against the actual building before operational use.
+- Never commit `.env` files, JWT secrets, temporary bootstrap passwords, or database credentials.
+- `server.js` refuses to start if `JWT_SECRET` is missing, shorter than 32 characters, or starts with `replace-`, and requires `CLIENT_ORIGIN` in production (`NODE_ENV=production`).
+- Rate limiting protects login, registration, password changes, and account provisioning endpoints.
+- Socket.IO authenticates JWT tokens when provided, blocks `mustChangePassword` tokens, treats unauthenticated sockets strictly as `Normal_User`, enforces room member caps, and expires sharing rooms after 1 hour.
+- `POST /api/seed` requires `Admin` authentication and returns `403` in production or whenever `ALLOW_DESTRUCTIVE_SEED !== 'true'`.
 
-## Security and deployment notes
-
-- Configure a unique `JWT_SECRET` with at least 32 characters. The backend refuses to start without it.
-- Configure `CLIENT_ORIGIN` with the exact production frontend origin.
-- Admin passwords are generated once at bootstrap and stored as bcrypt hashes.
-- Public registration cannot assign privileged roles.
-- Socket.IO uses signed JWT identity when available; guest sockets are always treated as Normal_User. Sharing rooms expire after one hour and have a member limit.
-- Database reseeding is disabled in production and by default in development. Do not enable destructive seed operations against real data.
-- Use HTTPS, database backups, monitoring and a tested restore procedure before production launch.
-
-## Commands
+## Verification & test commands
 
 ```bash
-# Root commands
+# Root development & build scripts
 npm run server
 npm run client
 npm run build
 
-# Backend
+# Backend seeding & routing verification
 npm --prefix backend run seed
 npm --prefix backend run test:route
+npm --prefix backend run test:multifloor
+
+# Backend RBAC, security & Socket.IO smoke suite (requires running backend + rotated admin password)
 TEST_ADMIN_EMAIL=admin@bji.ac.in TEST_ADMIN_PASSWORD=your-current-admin-password npm --prefix backend run test:overhaul
 
-# Frontend
+# Frontend lint & production bundle
 npm --prefix frontend run lint
 npm --prefix frontend run build
 ```
 
-GitHub Actions runs frontend lint/build and backend JavaScript syntax checks. The security smoke test requires a running server and TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD. Database-backed routing tests require a configured MongoDB test database.
+GitHub Actions (`.github/workflows/ci.yml`) runs `oxlint`, `vite build`, and `node --check` syntax verification across all backend modules.
