@@ -37,3 +37,10 @@ The JSON report includes:
 A trustworthy automatic conversion from PDF drawings to graph coordinates needs a drawing parser that can inspect the actual PDF vector/text content, identify dimension-line endpoints and associate each dimension with the correct wall/room/corridor. The PDF binaries are present in the repository, but their geometry must be inspected and validated per sheet/page before coordinates can be generated. A dimension string alone cannot establish where a node lies on a floor plan.
 
 After the drawing parser produces candidate geometry, it should emit a reviewable per-floor coordinate proposal with source page, dimension references, confidence and residual checks. Only accepted proposals should update the navigation graph. Physical walkthrough verification remains a separate release gate.
+
+
+## Automatic PDF text-anchor suggestions
+
+The PDF calibration viewer extracts selectable text from the chosen page and matches exact room numbers plus common stair/lift/corridor labels against nodes on the selected floor. Administrators can apply the matched labels as a batch of proposed control points, then inspect and correct them before saving. If a PDF is scanned/image-only or labels are not extractable, the manual point workflow remains available.
+
+Text-label anchors reduce repetitive clicking but do not prove the physical location of a doorway, corridor centreline or QR sticker. The generated affine fit must still be reviewed, and on-site verification remains a separate requirement.
