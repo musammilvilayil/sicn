@@ -1,4 +1,5 @@
 const { parseArchitecturalMeasurement } = require('./architecturalMeasurements');
+const { validateEdgeGeometry } = require('./floorGeometry');
 
 const VALID_EDGE_TYPES = new Set(['walking', 'stairs', 'lift', 'ramp']);
 
@@ -10,6 +11,7 @@ function auditCampusGraph(graph, options = {}) {
   const edges = Array.isArray(graph?.edges) ? graph.edges : [];
   const nodeMap = new Map();
   const edgeIds = new Set();
+  const geometrySummary = { edgesWithGeometry: 0, reviewedGeometry: 0, fieldVerifiedGeometry: 0, edgesWithoutGeometry: 0, invalidGeometry: 0, geometryLengthMismatches: 0 };
   const floorCounts = {};
   const measurementSummary = {
     parsed: 0,
@@ -96,6 +98,26 @@ function auditCampusGraph(graph, options = {}) {
     }
     if (floorDelta === 0 && ['stairs', 'lift'].includes(edge.type)) {
       warnings.push({ code: 'SAME_FLOOR_VERTICAL_EDGE', edgeId: edge.edgeId, type: edge.type });
+    }
+    if (!edge.geometry) {
+      geometrySummary.edgesWithoutGeometry += 1;
+      warnings.push({ code: 'MISSING_WALKABLE_GEOMETRY', edgeId: edge.edgeId });
+    } else {
+      geometrySummary.edgesWithGeometry += 1;
+      const geometryCheck = validateEdgeGeometry(edge.geometry, {
+        distanceMeters: edge.distance,
+        distanceEvidenceSource: edge.distanceEvidence?.source,
+      });
+      if (!geometryCheck.valid) {
+        geometrySummary.invalidGeometry += 1;
+        if (geometryCheck.errors.some((message) => message.includes('Polyline length'))) geometrySummary.geometryLengthMismatches += 1;
+        warnings.push({ code: 'INVALID_EDGE_GEOMETRY', edgeId: edge.edgeId, errors: geometryCheck.errors });
+      }
+      if (edge.geometry.verification?.status === 'reviewed') geometrySummary.reviewedGeometry += 1;
+      if (edge.geometry.verification?.status === 'field_verified' && geometryCheck.valid) geometrySummary.fieldVerifiedGeometry += 1;
+      if (Number.isInteger(from.floor) && edge.geometry.floor !== from.floor) {
+        warnings.push({ code: 'EDGE_GEOMETRY_FLOOR_MISMATCH', edgeId: edge.edgeId, geometryFloor: edge.geometry.floor, fromFloor: from.floor });
+      }
     }
     if (!edge.distanceEvidence) {
       warnings.push({ code: 'UNVERIFIED_EDGE_DISTANCE', edgeId: edge.edgeId, distance: edge.distance });

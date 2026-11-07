@@ -34,6 +34,20 @@ const edgeSchema = new mongoose.Schema(
       measuredAt: { type: Date },
       notes: { type: String, trim: true },
     },
+    geometry: {
+      kind: { type: String, enum: ['corridor_centerline', 'door_connector', 'room_entry_connector', 'stair_path', 'lift_path'] },
+      coordinateSystem: { type: String, enum: ['local_metric_m'] },
+      coordinateFrameId: { type: String, trim: true },
+      floor: { type: Number, min: 0, max: 7 },
+      sourceRef: { type: String, trim: true },
+      points: [{ x: { type: Number, required: true }, y: { type: Number, required: true } }],
+      verification: {
+        status: { type: String, enum: ['candidate', 'reviewed', 'field_verified'] },
+        verifiedAt: { type: Date },
+        verifiedBy: { type: String, trim: true },
+        notes: { type: String, trim: true },
+      },
+    },
     accessible: {
       type: Boolean,
       default: true,
