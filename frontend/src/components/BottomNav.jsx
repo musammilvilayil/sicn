@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Map, Camera, QrCode, Calendar, User, Lock } from 'lucide-react';
+import { Map, Camera, QrCode, CalendarDays, UserRound, Lock, Compass } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useNavigation } from '../context/NavigationContext';
@@ -12,147 +12,97 @@ export default function BottomNav() {
   const { roomCode, roomMembers } = useSocket();
   const { isARMode, launchARLiveView, fallbackTo2DMap } = useNavigation();
 
-  const handleToggleAR = async () => {
-    if (location.pathname !== '/') {
-      navigate('/');
-    }
-    if (isARMode) {
-      fallbackTo2DMap();
-    } else {
-      await launchARLiveView();
-    }
+  const toggleAR = () => {
+    if (location.pathname !== '/') navigate('/');
+    if (isARMode) fallbackTo2DMap();
+    else launchARLiveView();
   };
 
-  const navItems = [
-    {
-      to: '/',
-      label: 'Explore',
-      icon: Map,
-      end: true,
-      onClick: () => {
-        if (isARMode) fallbackTo2DMap();
-      },
-      forceInactive: isARMode,
-    },
-    {
-      action: handleToggleAR,
-      label: 'AR Live View',
-      icon: Camera,
-      isActiveCustom: location.pathname === '/' && isARMode,
-    },
-    {
-      to: '/scan',
-      label: 'Scan QR',
-      icon: QrCode,
-      badge: roomCode ? `${roomMembers.length}` : null,
-      onClick: () => {
-        if (isARMode) fallbackTo2DMap();
-      },
-    },
-    {
-      to: '/schedule',
-      label: 'Schedule',
-      icon: Calendar,
-      locked: !canAccessTimetableRouting,
-      onClick: () => {
-        if (isARMode) fallbackTo2DMap();
-      },
-    },
-    {
-      to: '/profile',
-      label: 'Profile',
-      icon: User,
-      roleBadge: effectiveRole,
-      onClick: () => {
-        if (isARMode) fallbackTo2DMap();
-      },
-    },
+  const items = [
+    { to: '/', label: 'Explore', icon: Map, end: true, onClick: () => isARMode && fallbackTo2DMap(), inactive: isARMode },
+    { action: toggleAR, label: 'AR View', icon: Camera, active: location.pathname === '/' && isARMode },
+    { to: '/scan', label: 'Scan QR', icon: QrCode, badge: roomCode ? String(roomMembers.length) : null, onClick: () => isARMode && fallbackTo2DMap() },
+    { to: '/schedule', label: 'Schedule', icon: CalendarDays, locked: !canAccessTimetableRouting, onClick: () => isARMode && fallbackTo2DMap() },
+    { to: '/profile', label: 'Account', icon: UserRound, role: effectiveRole, onClick: () => isARMode && fallbackTo2DMap() },
   ];
 
-  return (
-    <nav
-      aria-label="Primary Bottom Navigation"
-      className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] md:bottom-4 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[500px] md:rounded-2xl md:border md:shadow-2xl pb-[env(safe-area-inset-bottom)]"
-    >
-      <div className="grid grid-cols-5 h-16 px-1.5 items-center">
-        {navItems.map((item) => {
-          const IconComponent = item.icon;
+  const renderItem = (item, desktop = false) => {
+    const Icon = item.icon;
+    const common = desktop
+      ? 'group relative flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-3 text-[11px] font-semibold transition duration-200'
+      : 'relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-semibold transition duration-200';
 
-          if (item.action) {
-            const active = Boolean(item.isActiveCustom);
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={item.action}
-                className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all duration-200 select-none ${
-                  active
-                    ? 'text-indigo-600 font-semibold'
-                    : 'text-slate-500 hover:text-slate-800 font-medium'
-                }`}
-              >
-                <div
-                  className={`relative flex items-center justify-center px-3.5 py-1 rounded-full transition-colors duration-200 ${
-                    active ? 'bg-indigo-100 text-indigo-700' : ''
-                  }`}
-                >
-                  <IconComponent size={20} strokeWidth={active ? 2.4 : 2} />
-                </div>
-                <span className="text-[10px] sm:text-[11px] tracking-tight leading-none mt-0.5 truncate max-w-full px-0.5">
-                  {item.label}
-                </span>
-              </button>
-            );
-          }
+    if (item.action) {
+      return (
+        <button
+          key={item.label}
+          type="button"
+          onClick={item.action}
+          title={item.label}
+          aria-label={item.label}
+          className={`${common} ${item.active ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950'}`}
+        >
+          <Icon size={desktop ? 21 : 20} strokeWidth={item.active ? 2.5 : 2} />
+          <span className="max-w-full truncate">{item.label}</span>
+          {item.active && <span className="absolute -right-1 top-2 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-white" />}
+        </button>
+      );
+    }
 
+    return (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        end={item.end}
+        onClick={item.onClick}
+        title={item.label}
+        aria-label={item.label}
+        className={({ isActive }) => {
+          const active = isActive && !item.inactive;
+          return `${common} ${active ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950'}`;
+        }}
+      >
+        {({ isActive }) => {
+          const active = isActive && !item.inactive;
           return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={item.onClick}
-              className={({ isActive }) => {
-                const effectiveActive = isActive && !item.forceInactive;
-                return `relative flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all duration-200 select-none ${
-                  effectiveActive
-                    ? 'text-blue-600 font-semibold'
-                    : 'text-slate-500 hover:text-slate-800 font-medium'
-                }`;
-              }}
-            >
-              {({ isActive }) => {
-                const effectiveActive = isActive && !item.forceInactive;
-                return (
-                  <>
-                    <div
-                      className={`relative flex items-center justify-center px-3.5 py-1 rounded-full transition-colors duration-200 ${
-                        effectiveActive ? 'bg-blue-100/90 text-blue-700' : ''
-                      }`}
-                    >
-                      <IconComponent size={20} strokeWidth={effectiveActive ? 2.4 : 2} />
-
-                      {item.badge && (
-                        <span className="absolute -top-1 right-0.5 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full ring-2 ring-white">
-                          {item.badge}
-                        </span>
-                      )}
-
-                      {item.locked && (
-                        <span className="absolute -top-1 right-0.5 bg-amber-100 text-amber-700 p-0.5 rounded-full ring-1 ring-amber-300">
-                          <Lock size={9} />
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] sm:text-[11px] tracking-tight leading-none mt-0.5 truncate max-w-full px-0.5">
-                      {item.label}
-                    </span>
-                  </>
-                );
-              }}
-            </NavLink>
+            <>
+              <span className="relative">
+                <Icon size={desktop ? 21 : 20} strokeWidth={active ? 2.5 : 2} />
+                {item.badge && <span className="absolute -right-2 -top-2 min-w-4 rounded-full bg-emerald-500 px-1 text-center text-[9px] font-bold text-white">{item.badge}</span>}
+                {item.locked && <span className="absolute -right-2 -top-2 rounded-full bg-amber-100 p-0.5 text-amber-700"><Lock size={9} /></span>}
+              </span>
+              <span className="max-w-full truncate">{item.label}</span>
+              {desktop && item.role && <span className="max-w-full truncate text-[9px] font-medium text-slate-400">{item.role.replace('_', ' ')}</span>}
+            </>
           );
-        })}
-      </div>
-    </nav>
+        }}
+      </NavLink>
+    );
+  };
+
+  return (
+    <>
+      {/* Mobile: thumb-friendly bottom tab bar with safe-area spacing */}
+      <nav
+        aria-label="Primary navigation"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200/80 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden"
+      >
+        <div className="mx-auto grid h-[62px] max-w-xl grid-cols-5 items-center">
+          {items.map((item) => renderItem(item, false))}
+        </div>
+      </nav>
+
+      {/* Desktop: compact floating campus navigation rail */}
+      <aside className="fixed left-5 top-1/2 z-50 hidden -translate-y-1/2 flex-col items-center gap-3 rounded-[28px] border border-white/70 bg-white/90 p-2.5 shadow-[0_20px_70px_rgba(15,23,42,0.16)] backdrop-blur-2xl md:flex">
+        <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg">
+          <Compass size={22} />
+        </div>
+        <div className="h-px w-9 bg-slate-200" />
+        <nav aria-label="Desktop navigation" className="flex w-full flex-col gap-1.5">
+          {items.map((item) => renderItem(item, true))}
+        </nav>
+        <div className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500" title="SICN" />
+      </aside>
+    </>
   );
 }
