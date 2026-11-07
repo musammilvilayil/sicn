@@ -181,7 +181,7 @@ export default function MapPage() {
     const validation = validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint, currentFloor);
     if (!validation.valid) {
       showToast(validation.reason, 'error');
-      return;
+      return false;
     }
 
     setWalkedMeters(0);
@@ -201,6 +201,7 @@ export default function MapPage() {
         : `Location confirmed: ${checkpoint.name}`,
       'success'
     );
+    return true;
   };
 
   const handleEnableCompass = async () => {
