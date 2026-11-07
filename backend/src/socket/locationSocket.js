@@ -114,8 +114,9 @@ function initLocationSocket(httpServer) {
         return next(new Error('Authentication service is not configured.'));
       }
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select('_id name email role avatarColor');
+      const user = await User.findById(decoded.id).select('_id name email role avatarColor mustChangePassword');
       if (!user) return next(new Error('Session is no longer valid.'));
+      if (user.mustChangePassword) return next(new Error('Change your temporary password before using live sharing.'));
       socket.data.user = user;
       return next();
     } catch {
