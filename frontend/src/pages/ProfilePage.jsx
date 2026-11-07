@@ -7,53 +7,15 @@ import {
   CheckCircle2,
   Lock,
   Share2,
-  RefreshCw,
   Wrench,
   Calendar,
   Map,
   Mail,
-  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/NavigationContext';
 import { useSocket } from '../context/SocketContext';
-import { api } from '../services/api';
 import ShareLocationSheet from '../components/ShareLocationSheet';
-
-const DEMO_ACCOUNTS = [
-  {
-    role: 'Admin',
-    label: 'Admin',
-    sub: 'Edit map & nodes',
-    email: 'admin@bji.ac.in',
-    pass: 'AdminPassword@123',
-    badgeClass: 'bg-rose-100 text-rose-700 border-rose-200',
-  },
-  {
-    role: 'Teacher',
-    label: 'Teacher',
-    sub: 'Update timetable',
-    email: 'priya.nair@bji.ac.in',
-    pass: 'Teacher@123',
-    badgeClass: 'bg-violet-100 text-violet-700 border-violet-200',
-  },
-  {
-    role: 'Student',
-    label: 'Student',
-    sub: 'Timetable routing',
-    email: 'student@bji.ac.in',
-    pass: 'Password@123',
-    badgeClass: 'bg-blue-100 text-blue-700 border-blue-200',
-  },
-  {
-    role: 'Normal_User',
-    label: 'Normal_User',
-    sub: 'Visitor basic map',
-    email: 'visitor@bji.ac.in',
-    pass: 'Visitor@123',
-    badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  },
-];
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -75,23 +37,8 @@ export default function ProfilePage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Student');
-  const [department, setDepartment] = useState('Computer Science & Engineering');
   const [busy, setBusy] = useState(false);
-  const [reseedBusy, setReseedBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-
-  const handleQuickRoleSwitch = async (acct) => {
-    setBusy(true);
-    try {
-      await login(acct.email, acct.pass);
-      showToast(`Signed in as ${acct.role}`, 'success');
-    } catch (err) {
-      showToast(err.message || 'Demo login failed', 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -101,8 +48,8 @@ export default function ProfilePage() {
         const logged = await login(email, password);
         showToast(`Welcome back, ${logged.name} (${logged.role})`, 'success');
       } else {
-        const created = await register({ name, email, password, role, department });
-        showToast(`Account created with role ${created.role}`, 'success');
+        const created = await register({ name, email, password });
+        showToast(`Visitor account created successfully`, 'success');
       }
       setEmail('');
       setPassword('');
@@ -110,19 +57,6 @@ export default function ProfilePage() {
       showToast(err.message || 'Authentication error', 'error');
     } finally {
       setBusy(false);
-    }
-  };
-
-  const handleAdminReseed = async () => {
-    setReseedBusy(true);
-    try {
-      await api.reseed();
-      await refreshMapData();
-      showToast('Campus graph & RBAC users reset to blueprint defaults!', 'success');
-    } catch (err) {
-      showToast(err.message || 'Reset failed', 'error');
-    } finally {
-      setReseedBusy(false);
     }
   };
 
@@ -165,10 +99,10 @@ export default function ProfilePage() {
             </div>
             <div>
               <h1 className="text-base font-extrabold text-slate-900 leading-tight">
-                User Profile & RBAC Roles
+                Account & Access
               </h1>
               <p className="text-xs text-slate-500">
-                JWT Session, Permissions & Live Room Settings
+                Manage your campus navigation account
               </p>
             </div>
           </div>
@@ -254,47 +188,6 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* Instant 4-Role Demo Switcher */}
-        <section className="bg-white border border-slate-200 rounded-3xl p-4 shadow-xs space-y-3">
-          <div>
-            <h3 className="text-sm font-extrabold text-slate-900">
-              Instant RBAC Role Switcher (Demo Accounts)
-            </h3>
-            <p className="text-xs text-slate-500">
-              Tap any of the 4 system roles to sign in via JWT and test role-specific capabilities:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            {DEMO_ACCOUNTS.map((acct) => {
-              const isCurrent = user?.role === acct.role;
-              return (
-                <button
-                  key={acct.role}
-                  disabled={busy}
-                  onClick={() => handleQuickRoleSwitch(acct)}
-                  className={`text-left p-3 rounded-2xl border transition ${
-                    isCurrent
-                      ? 'ring-2 ring-blue-600 border-blue-600 bg-blue-50/40'
-                      : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border ${acct.badgeClass}`}>
-                      {acct.label}
-                    </span>
-                    {isCurrent && (
-                      <span className="text-[10px] font-bold text-blue-600">Active</span>
-                    )}
-                  </div>
-                  <p className="text-xs font-semibold text-slate-800 mt-1.5">{acct.sub}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{acct.email}</p>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
         {/* RBAC Access Matrix */}
         <section className="bg-white border border-slate-200 rounded-3xl p-4 shadow-xs space-y-2.5">
           <h3 className="text-sm font-extrabold text-slate-900">
@@ -324,18 +217,6 @@ export default function ProfilePage() {
             ))}
           </div>
 
-          {canEditMap && (
-            <div className="pt-2 border-t border-slate-100">
-              <button
-                onClick={handleAdminReseed}
-                disabled={reseedBusy}
-                className="w-full inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 rounded-2xl transition disabled:opacity-50"
-              >
-                <RefreshCw size={14} className={reseedBusy ? 'animate-spin' : ''} />
-                <span>{reseedBusy ? 'Resetting Database...' : 'Reset Map & Seed Data (Admin)'}</span>
-              </button>
-            </div>
-          )}
         </section>
 
         {/* Custom Sign In / Register Form */}
@@ -408,31 +289,10 @@ export default function ProfilePage() {
             </div>
 
             {authMode === 'register' && (
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Select Role</label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs font-semibold border border-slate-200 rounded-xl bg-white"
-                  >
-                    <option value="Student">Student</option>
-                    <option value="Teacher">Teacher</option>
-                    <option value="Normal_User">Normal_User (Visitor)</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Department</label>
-                  <input
-                    type="text"
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl"
-                  />
-                </div>
-              </div>
-            )}
+              <p className="text-xs text-slate-500">
+                New public accounts are created with visitor permissions. Staff and administrator accounts are provisioned separately by the system owner.
+              </p>
+            )}}
 
             <button
               type="submit"
@@ -443,7 +303,7 @@ export default function ProfilePage() {
                 ? 'Processing...'
                 : authMode === 'login'
                 ? 'Sign In with JWT'
-                : `Create ${role} Account`}
+                : 'Create Visitor Account'}
             </button>
           </form>
         </section>
