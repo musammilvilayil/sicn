@@ -29,7 +29,7 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import usePhoneSensors from '../hooks/usePhoneSensors';
-import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition } from '../utils/indoorNavigation';
+import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint } from '../utils/indoorNavigation';
 
 const FLOOR_DEFS = [
   { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
@@ -103,7 +103,7 @@ export default function MapPage() {
     if (distance <= 0) return;
     const nextDistance = walkedMeters + strideLengthMeters;
     if (nextDistance >= distance) {
-      setActiveStepIndex((index) => Math.min(index + 1, routeResult.path.length - 2));
+      setActiveStepIndex((index) => Math.min(index + 1, routeResult.path.length - 1));
       setWalkedMeters(0);
     } else {
       setWalkedMeters(nextDistance);
@@ -178,16 +178,29 @@ export default function MapPage() {
   };
 
   const handleConfirmIndoorCheckpoint = (checkpoint) => {
+    const validation = validateRouteCheckpoint(routeResult, activeStepIndex, checkpoint, currentFloor);
+    if (!validation.valid) {
+      showToast(validation.reason, 'error');
+      return;
+    }
+
     setWalkedMeters(0);
     setActiveStepIndex(0);
     setStartNodeId(checkpoint.nodeId);
-    setCurrentFloor(Number(checkpoint.floor));
+    // The floor is derived from the expected route checkpoint. During a
+    // staircase/lift edge only its exact destination landing can change it.
+    setCurrentFloor(validation.floor);
     api.updateMyLocation(checkpoint.nodeId, checkpoint.qrValue).catch(() => {});
     broadcastCheckpoint(checkpoint.nodeId);
     if (destinationNodeId) {
       computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
     }
-    showToast(`Location confirmed: ${checkpoint.name}`, 'success');
+    showToast(
+      validation.stage === 'transition-origin'
+        ? `Staircase confirmed. Continue to the Floor ${routeResult.path[activeStepIndex + 1].floor} landing QR.`
+        : `Location confirmed: ${checkpoint.name}`,
+      'success'
+    );
   };
 
   const handleEnableCompass = async () => {
@@ -244,6 +257,7 @@ export default function MapPage() {
   const segmentDistance = routeResult ? getSegmentDistance(routeResult, activeStepIndex) : 0;
   const remainingDistance = Math.max(0, segmentDistance - walkedMeters);
   const isVerticalTransition = activeRouteSegment && activeRouteSegment.from.floor !== activeRouteSegment.to.floor;
+  const isRouteComplete = Boolean(routeResult?.path?.length && activeStepIndex >= routeResult.path.length - 1);
 
   const handleAdminMapClick = (coords) => {
     if (!canEditMap) return;
@@ -591,7 +605,9 @@ export default function MapPage() {
               <Navigation size={16} className="text-blue-300 shrink-0" />
               <div className="min-w-0">
                 <div className="text-xs font-extrabold">
-                  {isVerticalTransition
+                  {isRouteComplete
+                    ? 'You have arrived at your destination'
+                    : isVerticalTransition
                     ? `Reach ${activeRouteSegment.to.name}, then scan the destination QR`
                     : relativeTurn === null
                       ? 'Enable compass for live turn guidance'
