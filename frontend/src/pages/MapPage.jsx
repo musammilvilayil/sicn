@@ -243,6 +243,8 @@ export default function MapPage() {
   const estimatedPosition = useMemo(() => {
     const interpolated = interpolateRoutePosition(routeResult, activeStepIndex, walkedMeters);
     if (interpolated) return interpolated;
+    const routeNode = routeResult?.path?.[Math.min(activeStepIndex, (routeResult.path.length || 1) - 1)];
+    if (routeNode?.coordinates) return { floor: routeNode.floor, ...routeNode.coordinates, progress: 1 };
     if (startNodeObj?.coordinates) return { floor: startNodeObj.floor, ...startNodeObj.coordinates, progress: 0 };
     return null;
   }, [routeResult, activeStepIndex, walkedMeters, startNodeObj]);
