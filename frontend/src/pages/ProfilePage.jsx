@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '../context/NavigationContext';
 import { useSocket } from '../context/SocketContext';
 import ShareLocationSheet from '../components/ShareLocationSheet';
+import { api } from '../services/api';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -41,6 +42,12 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [passwordBusy, setPasswordBusy] = useState(false);
+  const [provisionName, setProvisionName] = useState('');
+  const [provisionEmail, setProvisionEmail] = useState('');
+  const [provisionPassword, setProvisionPassword] = useState('');
+  const [provisionRole, setProvisionRole] = useState('Student');
+  const [provisionTeacherId, setProvisionTeacherId] = useState('');
+  const [provisionBusy, setProvisionBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -77,6 +84,30 @@ export default function ProfilePage() {
       showToast(err.message || 'Password update failed', 'error');
     } finally {
       setPasswordBusy(false);
+    }
+  };
+
+
+  const handleProvisionUser = async (e) => {
+    e.preventDefault();
+    setProvisionBusy(true);
+    try {
+      const result = await api.provisionUser({
+        name: provisionName,
+        email: provisionEmail,
+        password: provisionPassword,
+        role: provisionRole,
+        teacherId: provisionRole === 'Teacher' ? provisionTeacherId : undefined,
+      });
+      showToast(`${result.user.name} account created as ${result.user.role}`, 'success');
+      setProvisionName('');
+      setProvisionEmail('');
+      setProvisionPassword('');
+      setProvisionTeacherId('');
+    } catch (err) {
+      showToast(err.message || 'Could not create account', 'error');
+    } finally {
+      setProvisionBusy(false);
     }
   };
 
@@ -279,6 +310,31 @@ export default function ProfilePage() {
           </div>
 
         </section>
+
+        {canEditMap && (
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-950">Create campus account</h3>
+              <p className="mt-1 text-xs text-slate-500">Provision verified Teacher or Student accounts. Administrator access is only bootstrapped at server startup.</p>
+            </div>
+            <form onSubmit={handleProvisionUser} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <input required minLength={2} maxLength={80} value={provisionName} onChange={(e) => setProvisionName(e.target.value)} placeholder="Full name" className="rounded-xl border border-slate-200 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              <input required type="email" value={provisionEmail} onChange={(e) => setProvisionEmail(e.target.value)} placeholder="Email address" className="rounded-xl border border-slate-200 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              <input required type="password" minLength={12} maxLength={128} value={provisionPassword} onChange={(e) => setProvisionPassword(e.target.value)} placeholder="Temporary password (12+ characters)" className="rounded-xl border border-slate-200 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              <select value={provisionRole} onChange={(e) => setProvisionRole(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="Student">Student</option>
+                <option value="Teacher">Teacher</option>
+                <option value="Normal_User">Visitor</option>
+              </select>
+              {provisionRole === 'Teacher' && (
+                <input required value={provisionTeacherId} onChange={(e) => setProvisionTeacherId(e.target.value)} placeholder="Existing faculty ID (e.g. TCH-001)" className="rounded-xl border border-slate-200 px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:col-span-2" />
+              )}
+              <button type="submit" disabled={provisionBusy || provisionPassword.length < 12} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-50 sm:col-span-2">
+                {provisionBusy ? 'Creating account…' : 'Create account'}
+              </button>
+            </form>
+          </section>
+        )}
 
         {/* Custom Sign In / Register Form */}
         <section className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xs space-y-4">
