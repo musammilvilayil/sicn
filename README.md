@@ -39,7 +39,7 @@ Requirements: Node.js 22+, MongoDB, and a modern browser.
 4. Start the backend:
 
    ```bash
-   npm start
+   npm run server
    ```
 
    On first startup, the server creates the first Admin account. If a legacy demo Admin exists without a bootstrap marker, its known demo password is rotated once. The username/email and a randomly generated temporary password are printed in the backend terminal. Save them securely and change the password immediately from the Account page. The password is not printed again.
