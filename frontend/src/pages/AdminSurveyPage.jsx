@@ -17,6 +17,9 @@ export default function AdminSurveyPage() {
   const startedAtRef = useRef(0);
   const headingRef = useRef(null);
   const traceRef = useRef([]);
+  const lastTraceAtRef = useRef(0);
+  const stepsRef = useRef(0);
+  const lastStepAtRef = useRef(0);
   const checkpointsRef = useRef([]);
   const draftIdRef = useRef('');
   const [title, setTitle] = useState('Main Entrance Campus Walkthrough');
@@ -38,6 +41,7 @@ export default function AdminSurveyPage() {
   const [notice, setNotice] = useState('');
   const [savedSize, setSavedSize] = useState(0);
   const [lastBlob, setLastBlob] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   useEffect(() => {
     if (previewRef.current && streamRef.current) previewRef.current.srcObject = streamRef.current;
@@ -52,14 +56,15 @@ export default function AdminSurveyPage() {
         recorderRef.current.stop();
         setNotice('Four-minute segment limit reached. Save this segment, then start another one if needed.');
       }
-      if (duration - (traceRef.current.at(-1)?.elapsedMs || 0) >= 5000) {
+      if (duration - lastTraceAtRef.current >= 5000) {
+        lastTraceAtRef.current = duration;
         const sample = {
           elapsedMs: duration,
           heading: headingRef.current,
           latitude: null,
           longitude: null,
           floor,
-          steps: 0,
+          steps: stepsRef.current,
         };
         if (includeGps && navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
@@ -87,6 +92,31 @@ export default function AdminSurveyPage() {
     window.addEventListener('deviceorientation', onOrientation, true);
     return () => window.removeEventListener('deviceorientation', onOrientation, true);
   }, []);
+
+  useEffect(() => {
+    const onMotion = (event) => {
+      const a = event.accelerationIncludingGravity;
+      if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.y) || !Number.isFinite(a.z)) return;
+      const magnitude = Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+      const now = Date.now();
+      if (Math.abs(magnitude - 9.81) > 1.35 && now - lastStepAtRef.current > 350) {
+        stepsRef.current += 1;
+        lastStepAtRef.current = now;
+      }
+    };
+    window.addEventListener('devicemotion', onMotion, true);
+    return () => window.removeEventListener('devicemotion', onMotion, true);
+  }, []);
+
+  useEffect(() => {
+    if (!lastBlob) {
+      setPreviewUrl('');
+      return undefined;
+    }
+    const url = URL.createObjectURL(lastBlob);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [lastBlob]);
 
   useEffect(() => () => {
     if (recorderRef.current?.state === 'recording') recorderRef.current.stop();
@@ -123,6 +153,9 @@ export default function AdminSurveyPage() {
     setLastBlob(null);
     chunksRef.current = [];
     traceRef.current = [];
+    lastTraceAtRef.current = 0;
+    stepsRef.current = 0;
+    lastStepAtRef.current = 0;
     const initial = checkpointsRef.current.length
       ? checkpointsRef.current
       : [{ name: 'College Entrance', nodeId: startNodeId, floor: Number(floor), elapsedMs: 0, note: 'Survey start point' }];
@@ -141,8 +174,12 @@ export default function AdminSurveyPage() {
       if (previewRef.current) previewRef.current.srcObject = stream;
 
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const permission = await DeviceOrientationEvent.requestPermission();
-        if (permission !== 'granted') setNotice('Camera is active. Compass permission was not granted; video recording will still work.');
+        try {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission !== 'granted') setNotice('Camera is active. Compass permission was not granted; video recording will still work.');
+        } catch {
+          setNotice('Camera is active. Compass permission is unavailable; video recording will still work.');
+        }
       }
 
       const survey = await api.createCampusSurvey({
@@ -320,6 +357,8 @@ export default function AdminSurveyPage() {
         </section>
 
         {(error || notice) && <div role="status" className={`rounded-2xl border px-4 py-3 text-sm font-medium ${error ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>{error || notice}</div>}
+
+        {previewUrl && <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm"><div className="mb-2 text-sm font-bold text-slate-800">Review saved segment</div><video controls playsInline src={previewUrl} className="aspect-video w-full rounded-2xl bg-slate-950"/></section>}
 
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <div><div className="text-sm font-extrabold text-slate-900">Review & publish</div><div className="mt-1 text-xs text-slate-500">{draftId ? `Draft ${draftId.slice(-8)} · ${savedSize ? (savedSize / 1024 / 1024).toFixed(1) + ' MB saved' : 'Not uploaded'}` : 'Record and save a video before publishing.'}</div></div>
