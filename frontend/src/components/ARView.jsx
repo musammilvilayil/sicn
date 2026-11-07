@@ -130,11 +130,8 @@ export default function ARView() {
       setErrorMessage(displayMsg);
       setSessionState('denied');
 
-      fallbackTimerRef.current = setTimeout(() => {
-        if (mountedRef.current) {
-          fallbackTo2DMap(displayMsg, 'error');
-        }
-      }, 3200);
+      // Keep the diagnostic visible until the user chooses Retry or the 2D map.
+      // Do not auto-dismiss: users need time to change Safari site permissions.
     },
     [cleanupMediaAndSensors, fallbackTo2DMap]
   );
@@ -194,6 +191,14 @@ export default function ARView() {
     setSessionState('requesting');
 
     try {
+      // Secure-context checks must happen before any permission request. LAN HTTP
+      // addresses (for example, http://192.168.x.x) cannot access camera/sensors on iOS.
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        throw new Error(
+          `This page is not a secure HTTPS connection (${window.location.origin}). Open SICN using its HTTPS testing URL, then allow Camera and Motion & Orientation access in Safari.`
+        );
+      }
+
       let orientationPermissionGranted = true;
       // 1. Crucial for iOS 13+: Trigger DeviceOrientationEvent.requestPermission()
       // directly from this exact button click BEFORE any prior async await expires
@@ -222,13 +227,8 @@ export default function ARView() {
         setMotionAvailable(permissionResults[motionRequestIndex] === 'granted');
       }
 
-      // 2. Sequentially request Rear Camera via WebRTC (navigator.mediaDevices.getUserMedia)
-      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-        throw new Error(
-          'Camera or Motion blocked. Use the secure HTTPS URL and enable permissions in browser settings.'
-        );
-      }
-
+      // 2. Request the rear camera via WebRTC after the sensor permission calls
+      // have been invoked synchronously from this button gesture.
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -246,13 +246,23 @@ export default function ARView() {
           camErr?.name === 'PermissionDeniedError' ||
           camErr?.name === 'SecurityError'
         ) {
-          throw new Error('Camera or Motion blocked. Enable them in browser settings.');
+          throw new Error('Safari blocked camera access. Open Website Settings for this site, set Camera to Allow, then retry SICN.');
         }
         // Fallback to generic camera constraint (e.g. single-lens device)
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        } catch (fallbackCameraError) {
+          if (fallbackCameraError?.name === 'NotFoundError') {
+            throw new Error('No camera was found on this device.');
+          }
+          if (fallbackCameraError?.name === 'NotReadableError') {
+            throw new Error('The camera is busy in another app or browser tab. Close it and retry.');
+          }
+          throw new Error('Safari could not open the camera. Check this site’s Camera permission and retry.');
+        }
       }
 
       if (!mountedRef.current) {
@@ -651,25 +661,43 @@ export default function ARView() {
               {errorMessage || 'Camera or Motion blocked. Enable them in browser settings.'}
             </div>
 
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              Check your browser site permissions (Camera &amp; Motion/Orientation) and reload if
-              needed. Returning smoothly to the 2D Floor Map...
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              {!secureContextAvailable
+                ? 'You opened SICN over local-network HTTP. iPhone Safari blocks camera and motion sensors on this address. Open the HTTPS tunnel URL from the same computer instead.'
+                : 'If you previously denied access, open Safari Website Settings for this site and set Camera and Motion & Orientation to Allow. Then retry without leaving the route.'}
             </p>
 
-            <button
-              type="button"
-              onClick={() => {
-                cleanupMediaAndSensors();
-                fallbackTo2DMap(
-                  errorMessage || 'Camera or Motion blocked. Enable them in browser settings.',
-                  'error'
-                );
-              }}
-              className="w-full inline-flex items-center justify-center gap-2 bg-white text-slate-900 hover:bg-slate-100 text-xs font-extrabold py-3 px-4 rounded-2xl shadow transition"
-            >
-              <MapIcon size={15} />
-              <span>Return to 2D Map Now</span>
-            </button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                disabled={!secureContextAvailable || !cameraApiAvailable}
+                onClick={() => {
+                  cleanupMediaAndSensors();
+                  setCameraReady(false);
+                  setUserHeading(null);
+                  setOrientationAvailable(false);
+                  setMotionAvailable(false);
+                  setErrorMessage('');
+                  setSessionState('prompt');
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-extrabold py-3 px-4 rounded-2xl shadow transition"
+              >
+                <Play size={14} fill="currentColor" />
+                <span>Retry AR Permissions</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  cleanupMediaAndSensors();
+                  fallbackTo2DMap();
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 bg-white text-slate-900 hover:bg-slate-100 text-xs font-extrabold py-3 px-4 rounded-2xl shadow transition"
+              >
+                <MapIcon size={15} />
+                <span>Return to 2D Map</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

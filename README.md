@@ -97,6 +97,28 @@ Requirements: **Node.js 22+**, **MongoDB**, and a modern browser.
   - **Desktops / devices without magnetometers** automatically fall back to step-by-step guidance or the 2D SVG floor map.
 - SICN anchors indoor position via physical QR checkpoints; it is **not** continuous SLAM, visual-inertial odometry, or UWB indoor positioning, and indoor steel/concrete structures can affect compass headings.
 
+### Test AR on an iPhone over HTTPS (local development)
+
+A LAN address such as `http://192.168.1.57:3000` is **not a secure context**. iOS Safari blocks camera access and motion/orientation sensors on that URL. Do not try to solve this by changing browser permission code; open the development server through HTTPS instead.
+
+For a quick temporary test tunnel:
+
+1. Start MongoDB, the backend, and the Vite frontend as described above.
+2. Install Cloudflare Tunnel on the development computer (Windows: `winget install --id Cloudflare.cloudflared`; other platforms: install `cloudflared` using Cloudflare's official installation guide).
+3. In a new terminal, run:
+   ```bash
+   cloudflared tunnel --url http://localhost:3000
+   ```
+4. Copy the generated `https://….trycloudflare.com` URL and open that exact HTTPS URL in **Safari on the iPhone**. Keep the tunnel terminal running while testing.
+5. Add the generated origin to `CLIENT_ORIGIN` in `backend/.env` (keep localhost too), for example:
+   ```env
+   CLIENT_ORIGIN=http://localhost:3000,https://YOUR-TUNNEL.trycloudflare.com
+   ```
+   Restart the backend after changing the environment variable. The backend uses this allow-list for both Express CORS and Socket.IO.
+6. In iPhone Settings, enable Safari's **Motion & Orientation Access** (where available). In Safari, open the site's page settings and allow **Camera**. Reload the HTTPS page, choose a route, tap **AR Live View**, then tap **Start AR Session** and accept the permission prompts.
+
+The free quick-tunnel hostname changes when a new tunnel is started; update `CLIENT_ORIGIN` to match the new origin each time. A quick tunnel is publicly reachable while running: use test accounts and non-sensitive data only, do not expose production credentials, and stop the tunnel when finished. This is a development testing path, not a production deployment recommendation.
+
 ## Security requirements & deployment notes
 
 - Never commit `.env` files, JWT secrets, temporary bootstrap passwords, or database credentials.
