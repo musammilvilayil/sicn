@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { Html5Qrcode } from 'html5-qrcode';
 import { useSocket } from '../context/SocketContext';
 import {
   Compass,
@@ -273,54 +274,86 @@ export default function ARView() {
     }
   };
 
-  // Automatically recognize valid campus QR checkpoints from the live camera where supported.
+  // Scan the same rear-camera frames for QR checkpoints. BarcodeDetector is used when
+  // available; html5-qrcode frame decoding provides a Safari/iOS fallback without opening
+  // a second camera stream.
   useEffect(() => {
-    if (sessionState !== 'active' || !cameraReady || !('BarcodeDetector' in window)) return undefined;
+    if (sessionState !== 'active' || !cameraReady) return undefined;
     let cancelled = false;
     let timerId;
     let lastAttemptAt = 0;
-    let detector;
-    try {
-      detector = new window.BarcodeDetector({ formats: ['qr_code'] });
-    } catch {
-      setQrDetectionAvailable(false);
-      return undefined;
+    let detector = null;
+    let frameScanner = null;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+
+    if ('BarcodeDetector' in window) {
+      try {
+        detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        setQrDetectionAvailable(true);
+      } catch {
+        detector = null;
+      }
     }
+    if (!detector) {
+      try {
+        frameScanner = new Html5Qrcode('sicn-ar-qr-reader', { verbose: false });
+        setQrDetectionAvailable(true);
+      } catch {
+        setQrDetectionAvailable(false);
+      }
+    }
+
+    const verifyValue = async (rawValue) => {
+      if (!rawValue || qrDetectionLockRef.current || rawValue === lastQrValueRef.current) return;
+      qrDetectionLockRef.current = true;
+      try {
+        const checkpoint = await api.getNodeByQR(rawValue);
+        if (!cancelled && checkpoint?.nodeId) {
+          lastQrValueRef.current = rawValue;
+          setStartNodeId(checkpoint.nodeId);
+          setCurrentFloor(checkpoint.floor);
+          api.updateMyLocation(checkpoint.nodeId).catch(() => {});
+          broadcastCheckpoint(checkpoint.nodeId);
+          if (destinationNodeId) {
+            await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
+          }
+          showToast(`Location confirmed: ${checkpoint.name}`, 'success');
+        }
+      } catch {
+        // Ignore unrelated QR codes in posters, notices or personal devices.
+      } finally {
+        qrDetectionLockRef.current = false;
+      }
+    };
 
     const scanFrame = async () => {
       if (cancelled) return;
       const video = videoRef.current;
-      if (video && video.readyState >= 2 && !qrDetectionLockRef.current && Date.now() - lastAttemptAt > 650) {
+      if (video && video.readyState >= 2 && !qrDetectionLockRef.current && Date.now() - lastAttemptAt > 900) {
         lastAttemptAt = Date.now();
         try {
-          const codes = await detector.detect(video);
-          const rawValue = codes?.[0]?.rawValue;
-          if (rawValue && rawValue !== lastQrValueRef.current) {
-            qrDetectionLockRef.current = true;
-            try {
-              const checkpoint = await api.getNodeByQR(rawValue);
-              if (!cancelled && checkpoint?.nodeId) {
-                lastQrValueRef.current = rawValue;
-                setStartNodeId(checkpoint.nodeId);
-                setCurrentFloor(checkpoint.floor);
-                api.updateMyLocation(checkpoint.nodeId).catch(() => {});
-                broadcastCheckpoint(checkpoint.nodeId);
-                if (destinationNodeId) {
-                  await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
-                }
-                showToast(`Location confirmed: ${checkpoint.name}`, 'success');
-              }
-            } catch {
-              // Ignore unrelated QR codes in posters, notices and personal devices.
-            } finally {
-              qrDetectionLockRef.current = false;
+          if (detector) {
+            const codes = await detector.detect(video);
+            await verifyValue(codes?.[0]?.rawValue);
+          } else if (frameScanner && context) {
+            const width = Math.min(video.videoWidth || 640, 640);
+            const height = Math.max(1, Math.round(width * (video.videoHeight || 480) / (video.videoWidth || 640)));
+            canvas.width = width;
+            canvas.height = height;
+            context.drawImage(video, 0, 0, width, height);
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.62));
+            if (blob && !cancelled) {
+              const frameFile = new File([blob], 'sicn-camera-frame.jpg', { type: 'image/jpeg' });
+              const value = await frameScanner.scanFile(frameFile, false);
+              await verifyValue(value);
             }
           }
         } catch {
-          // A camera frame can be temporarily unavailable while Safari adjusts exposure.
+          // No QR in this frame is expected; keep scanning without interrupting navigation.
         }
       }
-      timerId = window.setTimeout(scanFrame, 700);
+      timerId = window.setTimeout(scanFrame, 1000);
     };
 
     scanFrame();
@@ -328,6 +361,13 @@ export default function ARView() {
       cancelled = true;
       window.clearTimeout(timerId);
       qrDetectionLockRef.current = false;
+      try {
+        frameScanner?.clear();
+      } catch {
+        // Ignore scanner cleanup races during route changes.
+      }
+      canvas.width = 0;
+      canvas.height = 0;
     };
   }, [sessionState, cameraReady, destinationNodeId, accessibleOnly, nodes, computeRoute, setStartNodeId, setCurrentFloor, showToast, broadcastCheckpoint]);
 
@@ -422,6 +462,7 @@ export default function ARView() {
 
   return (
     <div className="fixed inset-0 z-20 bg-slate-950 overflow-hidden select-none">
+      <div id="sicn-ar-qr-reader" className="hidden" aria-hidden="true" />
       {/* Live WebRTC Rear Camera Video Element (kept mounted so iOS Safari play() inherits user gesture) */}
       <video
         ref={videoRef}
@@ -608,11 +649,11 @@ export default function ARView() {
           </div>
 
           {/* Initializing Compass Sensor Calibration Indicator */}
-          {!orientationAvailable && (
+          {(!orientationAvailable || !qrDetectionAvailable) && (
             <div className="absolute top-28 inset-x-4 z-20 flex justify-center pointer-events-none">
               <div className="max-w-md bg-slate-950/80 backdrop-blur-md text-white px-4 py-3 rounded-2xl border border-amber-300/30 shadow-xl text-center">
                 <div className="text-xs font-bold text-amber-200">Camera guidance mode</div>
-                <p className="text-[10px] text-slate-300 mt-1">QR auto-detection: {qrDetectionAvailable ? 'Available' : 'Use the Scan QR button below'}</p>
+                <p className="text-[10px] text-slate-300 mt-1">QR auto-detection: {qrDetectionAvailable ? 'Active' : 'Unavailable on this browser — use Scan QR below'}</p>
                 <p className="text-[11px] text-slate-200 mt-1">
                   Compass is not available on this device. Follow the step instructions below and scan a QR checkpoint to recalibrate.
                 </p>
