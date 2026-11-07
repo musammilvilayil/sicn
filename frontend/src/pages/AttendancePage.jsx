@@ -1,7 +1,7 @@
 import React,{useCallback,useEffect,useRef,useState} from 'react';
 import {QRCodeSVG} from 'qrcode.react';
 import {Html5Qrcode} from 'html5-qrcode';
-import {CalendarCheck,Camera,CheckCircle2,Lock,Play,RefreshCw,Settings,ShieldCheck,StopCircle,Users} from 'lucide-react';
+import {CalendarCheck,Camera,Lock,Play,RefreshCw,Settings,ShieldCheck,StopCircle,Users} from 'lucide-react';
 import {api} from '../services/api';
 import {useAuth} from '../context/AuthContext';
 import {useNavigation} from '../context/NavigationContext';
@@ -22,7 +22,7 @@ export default function AttendancePage(){
  const scan=async()=>{setError('');try{if(!scanner.current)scanner.current=new Html5Qrcode(region);await scanner.current.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},async text=>{await stop();try{const r=await api.checkInAttendance(text);showToast(r.message,'success');setMine(await api.getMyAttendance());}catch(e){setError(e.message);}},()=>{});setScanning(true);}catch(e){setError(e.message||'Camera unavailable. Allow camera access and use HTTPS.');}};
  const start=async e=>{e.preventDefault();setBusy(true);try{const r=await api.createAttendanceSession(form);setSelected(r.session);setQr(r.qrToken);await load();await loadRoster(r.session._id);showToast('Attendance session started','success');}catch(e){showToast(e.message,'error');}finally{setBusy(false);}};
  const refresh=async()=>{if(!selected)return;try{const r=await api.refreshAttendanceQr(selected._id);setQr(r.qrToken);}catch(e){showToast(e.message,'error');}};
- useEffect(()=>{if(!selected||selected.status!=='open')return;refresh();const t=setInterval(refresh,30000);return()=>clearInterval(t);},[selected?._id,selected?.status]);
+ useEffect(()=>{if(!selected||selected.status!=='open')return;refresh();const refreshEvery=Math.max(5000,Math.floor((settings?.qrExpirySeconds||45)*500));const t=setInterval(refresh,refreshEvery);return()=>clearInterval(t);},[selected?._id,selected?.status,settings?.qrExpirySeconds]);
  const close=async()=>{try{await api.closeAttendanceSession(selected._id);setQr('');await load();await loadRoster(selected._id);showToast('Session closed','success');}catch(e){showToast(e.message,'error');}};
  const saveSettings=async e=>{e.preventDefault();try{setSettings(await api.updateAttendanceSettings(settings));showToast('Attendance settings saved','success');}catch(e){showToast(e.message,'error');}};
  const mark=async(id,status)=>{try{await api.markAttendance(selected._id,{studentId:id,status});await loadRoster(selected._id);}catch(e){showToast(e.message,'error');}};
