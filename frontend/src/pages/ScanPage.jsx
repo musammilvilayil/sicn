@@ -110,7 +110,7 @@ export default function ScanPage() {
       // Immediately calibrate start location & broadcast to Socket.io room!
       setStartNodeId(node.nodeId);
       setCurrentFloor(node.floor);
-      await api.updateMyLocation(node.nodeId);
+      await api.updateMyLocation(node.nodeId, qrPayload);
       broadcastCheckpoint(node.nodeId);
       showToast(`Checked in at ${node.name}!`, 'success');
     } catch (err) {
