@@ -116,4 +116,30 @@ const updateUserLocation = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getUserProfile, updateUserLocation };
+
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      return res.status(400).json({ message: 'Current and new passwords are required.' });
+    }
+    if (newPassword.length < 12 || newPassword.length > 128) {
+      return res.status(400).json({ message: 'New password must contain 12 to 128 characters.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user || !(await user.matchPassword(currentPassword))) {
+      return res.status(400).json({ message: 'Current password is incorrect.' });
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    await user.save();
+    return res.json({ message: 'Password updated successfully. Please sign in again.' });
+  } catch (error) {
+    console.error('Password change error:', error);
+    return res.status(500).json({ message: 'Unable to update password.' });
+  }
+};
+
+module.exports = { registerUser, loginUser, getUserProfile, updateUserLocation, changePassword };
