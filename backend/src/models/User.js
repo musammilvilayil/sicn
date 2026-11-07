@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: 'General',
     },
+    semester: { type: String, trim: true, default: '' },
     currentLocationNodeId: {
       type: String,
       default: 'GF-MAIN-ENTRANCE',
