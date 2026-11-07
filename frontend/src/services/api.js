@@ -238,13 +238,13 @@ export const api = {
     return res.json();
   },
 
-  async updateMyLocation(nodeId) {
+  async updateMyLocation(nodeId, qrPayload) {
     const token = localStorage.getItem('bji_nav_token');
     if (!token) return null;
     const res = await fetch(`${API_BASE}/auth/location`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ nodeId }),
+      body: JSON.stringify({ nodeId, qrPayload }),
     });
     if (!res.ok) return null;
     return res.json();
