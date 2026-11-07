@@ -3,6 +3,7 @@ import { X, ExternalLink, Crosshair, Save, Trash2, AlertTriangle, CheckCircle2, 
 import { api } from '../services/api';
 import { FLOOR_PLANS } from '../config/floorPlans';
 import { solveAffineCalibration, transformMapToPlan } from '../utils/indoorNavigation';
+import { findPdfNodeAnchors } from '../utils/pdfNodeAnchors';
 
 const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
 const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
@@ -31,6 +32,7 @@ export default function FloorPlanCalibrationViewer({
   const [message, setMessage] = useState('');
   const [verificationNote, setVerificationNote] = useState('');
   const [error, setError] = useState('');
+  const [detectedAnchors, setDetectedAnchors] = useState([]);
 
   const floorNodes = useMemo(
     () => nodes.filter((node) => Number(node.floor) === Number(floor)),
@@ -92,6 +94,16 @@ export default function FloorPlanCalibrationViewer({
         if (safePage !== pageNumber) setPageNumber(safePage);
         const page = await document.getPage(safePage);
         const baseViewport = page.getViewport({ scale: 1 });
+        if (adminEnabled) {
+          try {
+            const textContent = await page.getTextContent();
+            if (!cancelled) setDetectedAnchors(findPdfNodeAnchors(textContent.items, baseViewport, floorNodes));
+          } catch {
+            if (!cancelled) setDetectedAnchors([]);
+          }
+        } else {
+          setDetectedAnchors([]);
+        }
         const availableWidth = Math.max(320, pageContainerRef.current.clientWidth - 24);
         const scale = Math.min(2.2, availableWidth / baseViewport.width);
         const viewport = page.getViewport({ scale });
@@ -125,7 +137,7 @@ export default function FloorPlanCalibrationViewer({
     }
     renderPdf();
     return () => { cancelled = true; };
-  }, [plan?.url, pageNumber]);
+  }, [plan?.url, pageNumber, floorNodes, adminEnabled]);
 
   useEffect(() => {
     if (calibration &&
@@ -174,6 +186,13 @@ export default function FloorPlanCalibrationViewer({
       },
     ]);
     setMessage(`Added control point for ${node.name}. Choose another well-separated node.`);
+    setError('');
+  };
+
+  const handleUseDetectedAnchors = () => {
+    if (detectedAnchors.length < 3) return;
+    setControlPoints(detectedAnchors.map(({ nodeId, mapX, mapY, pdfX, pdfY }) => ({ nodeId, mapX, mapY, pdfX, pdfY })));
+    setMessage(`Added ${detectedAnchors.length} PDF text-matched control points. Review their positions before saving.`);
     setError('');
   };
 
@@ -282,6 +301,23 @@ export default function FloorPlanCalibrationViewer({
               </select>
               <div className="mt-2 flex items-center gap-2 text-[11px] text-cyan-200">
                 <Crosshair size={14} /> Select a node, then click its matching point on the drawing.
+              </div>
+              <div className="mt-3 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3">
+                <div className="text-[11px] font-bold text-cyan-100">PDF text detection</div>
+                <p className="mt-1 text-[10px] leading-4 text-slate-400">
+                  Exact room numbers and common stair/lift labels are matched from the selected PDF page. These are suggested anchors, not verified door or QR positions.
+                </p>
+                <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-300">
+                  <span>{detectedAnchors.length} matching labels found</span>
+                  <button
+                    type="button"
+                    onClick={handleUseDetectedAnchors}
+                    disabled={detectedAnchors.length < 3 || saving}
+                    className="rounded-lg bg-cyan-500/15 px-2.5 py-1.5 font-bold text-cyan-100 disabled:opacity-40"
+                  >
+                    Use detected points
+                  </button>
+                </div>
               </div>
             </>
           )}
