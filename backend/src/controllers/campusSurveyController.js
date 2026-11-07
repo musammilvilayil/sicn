@@ -3,7 +3,6 @@ const { GridFSBucket, ObjectId } = require('mongodb');
 const { Transform } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const Survey = require('../models/CampusSurvey');
-const Node = require('../models/Node');
 
 const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
 const bucket = () => new GridFSBucket(mongoose.connection.db, { bucketName: 'sicnWalkthroughVideos' });
@@ -15,7 +14,6 @@ const publicSurvey = (s) => ({
   endNodeId: s.endNodeId,
   floors: s.floors,
   checkpoints: s.checkpoints,
-  trace: s.trace,
   videoContentType: s.videoContentType,
   videoSize: s.videoSize,
   durationMs: s.durationMs,
@@ -147,11 +145,36 @@ exports.streamVideo = async (req, res) => {
   }
   if (!survey.videoFileId) return res.status(404).json({ message: 'No video is attached to this walkthrough.' });
   const fileId = new ObjectId(String(survey.videoFileId));
+  const total = Number(survey.videoSize);
   res.setHeader('Content-Type', survey.videoContentType || 'video/webm');
-  res.setHeader('Content-Length', survey.videoSize);
-  res.setHeader('Accept-Ranges', 'none');
+  res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Cache-Control', 'private, max-age=300');
-  const stream = bucket().openDownloadStream(fileId);
+
+  let start = 0;
+  let end = total - 1;
+  const range = req.headers.range;
+  if (range) {
+    const match = /^bytes=(\\d*)-(\\d*)$/.exec(range);
+    if (!match || (!match[1] && !match[2])) {
+      res.setHeader('Content-Range', `bytes */${total}`);
+      return res.status(416).end();
+    }
+    if (!match[1]) {
+      const suffixLength = Number(match[2]);
+      start = Math.max(0, total - suffixLength);
+    } else {
+      start = Number(match[1]);
+      if (match[2]) end = Math.min(total - 1, Number(match[2]));
+    }
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= total || end < start) {
+      res.setHeader('Content-Range', `bytes */${total}`);
+      return res.status(416).end();
+    }
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+  }
+  res.setHeader('Content-Length', end - start + 1);
+  const stream = bucket().openDownloadStream(fileId, range ? { start, end: end + 1 } : {});
   stream.on('error', () => {
     if (!res.headersSent) res.status(404).json({ message: 'Video file is unavailable.' });
     else res.destroy();
