@@ -61,8 +61,16 @@ test('requires the exact origin and destination landing for a floor transition',
     validateRouteCheckpoint(route, 0, { nodeId: 'GF-STAIR-A', floor: 0 }, 0),
     { valid: true, floor: 0, stage: 'transition-origin' }
   );
+  assert.equal(
+    validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-A', floor: 1 }, 0).valid,
+    false,
+    'destination landing must not be accepted before origin confirmation'
+  );
   assert.deepEqual(
-    validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-A', floor: 1 }, 0),
+    validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-A', floor: 1 }, 0, {
+      originNodeId: 'GF-STAIR-A',
+      destinationNodeId: '1F-STAIR-A',
+    }),
     { valid: true, floor: 1, stage: 'transition-destination' }
   );
   assert.equal(validateRouteCheckpoint(route, 0, { nodeId: '1F-STAIR-B', floor: 1 }, 0).valid, false);
