@@ -173,7 +173,7 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-4 space-y-4 md:pl-24">
+      <main className="max-w-5xl mx-auto px-4 py-4 space-y-4">
         <section className="sicn-page-hero sicn-account-hero">
           <div className="sicn-hero-copy">
             <span className="sicn-eyebrow"><span className="sicn-eyebrow-dot" /> YOUR CAMPUS IDENTITY</span>
