@@ -28,7 +28,7 @@ const edgeSchema = new mongoose.Schema(
       required: true, // distance in meters
       min: 0,
     },
-    accessible: {
+    distanceEvidence: {\n      source: { type: String, enum: ['architectural_plan', 'field_measured', 'admin_estimate'] },\n      reference: { type: String, trim: true },\n      measuredAt: { type: Date },\n      notes: { type: String, trim: true },\n    },\n    accessible: {
       type: Boolean,
       default: true,
     },

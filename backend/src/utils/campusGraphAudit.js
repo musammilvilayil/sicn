@@ -11,7 +11,15 @@ function auditCampusGraph(graph, options = {}) {
   const nodeMap = new Map();
   const edgeIds = new Set();
   const floorCounts = {};
-  const measurementSummary = { parsed: 0, unparsed: 0, missing: 0, records: [] };
+  const measurementSummary = {
+    nodesWithMeasurements: 0,
+    nodesWithoutMeasurements: 0,
+    parsedAnnotations: 0,
+    roomFootprints: 0,
+    totalMeasuredRoomAreaSquareMeters: 0,
+    stairSpecifications: [],
+    records: [],
+  };
 
   for (const node of nodes) {
     if (!node?.nodeId || nodeMap.has(node.nodeId)) {
@@ -29,22 +37,31 @@ function auditCampusGraph(graph, options = {}) {
     }
     floorCounts[node.floor] = (floorCounts[node.floor] || 0) + 1;
 
-    const rawDimension = node.metadata?.dimensions;
-    if (!rawDimension) {
-      measurementSummary.missing += 1;
+    const raw = node.metadata?.dimensions || node.metadata?.description || '';
+    const parsed = parseArchitecturalMeasurement(raw);
+    if (!parsed.measurements.length) {
+      measurementSummary.nodesWithoutMeasurements += 1;
     } else {
-      const parsed = parseArchitecturalMeasurement(rawDimension);
-      if (parsed.measurements.length) {
-        measurementSummary.parsed += 1;
-        measurementSummary.records.push({
-          nodeId: node.nodeId,
-          raw: rawDimension,
-          kind: parsed.kind,
-          measurements: parsed.measurements,
-          totalAreaSquareMeters: parsed.totalAreaSquareMeters,
-        });
-      } else {
-        measurementSummary.unparsed += 1;
+      measurementSummary.nodesWithMeasurements += 1;
+      measurementSummary.parsedAnnotations += parsed.measurements.length;
+      const rectangles = parsed.measurements.filter((item) => item.kind === 'rectangle');
+      measurementSummary.roomFootprints += rectangles.length;
+      measurementSummary.totalMeasuredRoomAreaSquareMeters += rectangles.reduce(
+        (sum, item) => sum + item.areaSquareMeters, 0
+      );
+      const record = {
+        nodeId: node.nodeId,
+        floor: node.floor,
+        sourceField: node.metadata?.dimensions ? 'dimensions' : 'description',
+        sourceText: raw,
+        measurements: parsed.measurements,
+      };
+      measurementSummary.records.push(record);
+      if (node.type === 'stair') {
+        const linear = parsed.linearDimensions || {};
+        if (linear.width || linear.riser || linear.tread) {
+          measurementSummary.stairSpecifications.push({ nodeId: node.nodeId, ...linear });
+        }
       }
     }
   }
@@ -76,6 +93,8 @@ function auditCampusGraph(graph, options = {}) {
     }
     if (!edge.distanceEvidence) {
       warnings.push({ code: 'UNVERIFIED_EDGE_DISTANCE', edgeId: edge.edgeId, distance: edge.distance });
+    } else if (!['architectural_plan', 'field_measured', 'admin_estimate'].includes(edge.distanceEvidence.source)) {
+      warnings.push({ code: 'UNKNOWN_DISTANCE_EVIDENCE_SOURCE', edgeId: edge.edgeId });
     }
   }
 
@@ -108,11 +127,8 @@ function auditCampusGraph(graph, options = {}) {
     warnings.push({ code: 'DISCONNECTED_GRAPH', componentSizes: components.map((component) => component.length) });
   }
 
-  // The current graph stores x/y as schematic coordinates, not metres.
-  // z is separately generated from floor elevation. Never use x/y to infer edge length.
-  const coordinateSpace = 'schematic_xy_with_metric_floor_elevation';
   const unverifiedDistanceCount = edges.filter((edge) => !edge.distanceEvidence).length;
-
+  const verifiedDistanceCount = edges.length - unverifiedDistanceCount;
   return {
     valid: errors.length === 0,
     summary: {
@@ -120,8 +136,9 @@ function auditCampusGraph(graph, options = {}) {
       edgeCount: edges.length,
       floorCounts,
       connectedComponents: components.length,
+      verifiedDistanceCount,
       unverifiedDistanceCount,
-      coordinateSpace,
+      coordinateSpace: 'schematic_xy_with_metric_floor_elevation',
       floorHeightMeters,
     },
     measurementSummary,

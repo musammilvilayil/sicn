@@ -60,7 +60,7 @@ const getEdges = async (req, res) => {
 // @route   POST /api/navigation/edges
 const createEdge = async (req, res) => {
   try {
-    const { fromNode, toNode, distance, accessible, type, instruction, reverseInstruction } = req.body;
+    const { fromNode, toNode, distance, distanceEvidence, accessible, type, instruction, reverseInstruction } = req.body;
 
     if (!fromNode || !toNode) {
       return res.status(400).json({ message: 'fromNode and toNode are required' });
@@ -88,7 +88,7 @@ const createEdge = async (req, res) => {
       edgeId: `E_${u}_${v}_${Date.now()}`,
       fromNode: u,
       toNode: v,
-      distance: computedDist,
+      distance: Number(distance),\n      distanceEvidence: {\n        source: distanceEvidence.source,\n        reference: distanceEvidence.reference || '',\n        measuredAt: distanceEvidence.measuredAt || undefined,\n        notes: distanceEvidence.notes || '',\n      },
       accessible: accessible !== undefined ? Boolean(accessible) : nodeU.accessible && nodeV.accessible,
       type: type || (nodeU.floor !== nodeV.floor ? 'stairs' : 'walking'),
       instruction: instruction || `Walk towards ${nodeV.name}`,
