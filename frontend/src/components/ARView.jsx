@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { useSocket } from '../context/SocketContext';
 import {
   Compass,
   Map as MapIcon,
@@ -67,6 +68,7 @@ function formatCardinal(deg) {
 
 export default function ARView() {
   const navigate = useNavigate();
+  const { broadcastCheckpoint } = useSocket();
   const {
     routeResult,
     activeStepIndex,
@@ -301,6 +303,8 @@ export default function ARView() {
                 lastQrValueRef.current = rawValue;
                 setStartNodeId(checkpoint.nodeId);
                 setCurrentFloor(checkpoint.floor);
+                api.updateMyLocation(checkpoint.nodeId).catch(() => {});
+                broadcastCheckpoint(checkpoint.nodeId);
                 if (destinationNodeId) {
                   await computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
                 }
@@ -325,7 +329,7 @@ export default function ARView() {
       window.clearTimeout(timerId);
       qrDetectionLockRef.current = false;
     };
-  }, [sessionState, cameraReady, destinationNodeId, accessibleOnly, nodes, computeRoute, setStartNodeId, setCurrentFloor, showToast]);
+  }, [sessionState, cameraReady, destinationNodeId, accessibleOnly, nodes, computeRoute, setStartNodeId, setCurrentFloor, showToast, broadcastCheckpoint]);
 
   // Derive current & next A* path nodes, target bearing, and 3D arrow orientation
   const navMetrics = useMemo(() => {
