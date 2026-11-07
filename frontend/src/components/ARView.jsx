@@ -236,9 +236,9 @@ export default function ARView() {
 
     const sensorWatchdog = setTimeout(() => {
       if (!receivedValidReading && mountedRef.current) {
-        showDeniedAndFallback(
-          'Camera or Motion blocked, or compass sensor unavailable. Enable them in browser settings.'
-        );
+        // Camera guidance is still useful on devices without a browser compass.
+        setOrientationAvailable(false);
+        setErrorMessage('Compass sensor is unavailable. Follow the step instructions and scan QR checkpoints to recalibrate.');
       }
     }, 2600);
 
