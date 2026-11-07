@@ -16,27 +16,26 @@ function printCredentials(email, password, action) {
   console.log('======================================================\n');
 }
 
-/**
- * Provision one administrator on first startup. If a legacy seeded Admin
- * exists without a bootstrap marker, rotate its potentially-known demo
- * password once instead of leaving public demo credentials active.
- */
 async function ensureBootstrapAdmin() {
-  const existingAdmin = await User.findOne({ role: 'Admin' }).sort({ createdAt: 1 });
+  const existingAdmins = await User.find({ role: 'Admin' }).sort({ createdAt: 1 });
 
-  if (existingAdmin) {
-    if (existingAdmin.bootstrapAdminInitializedAt) {
-      console.log(`Bootstrap admin already configured: ${existingAdmin.email}`);
-      return { created: false, email: existingAdmin.email };
+  if (existingAdmins.length > 0) {
+    let rotated = 0;
+    for (const admin of existingAdmins) {
+      if (admin.bootstrapAdminInitializedAt) continue;
+      const password = createTemporaryPassword();
+      admin.password = password;
+      admin.mustChangePassword = true;
+      admin.bootstrapAdminInitializedAt = new Date();
+      await admin.save();
+      printCredentials(admin.email, password, 'ADMIN PASSWORD ROTATED');
+      rotated += 1;
     }
 
-    const password = createTemporaryPassword();
-    existingAdmin.password = password;
-    existingAdmin.mustChangePassword = true;
-    existingAdmin.bootstrapAdminInitializedAt = new Date();
-    await existingAdmin.save();
-    printCredentials(existingAdmin.email, password, 'EXISTING ADMIN PASSWORD ROTATED');
-    return { created: false, rotated: true, email: existingAdmin.email };
+    if (rotated === 0) {
+      console.log(`Bootstrap administrator(s) already configured: ${existingAdmins.map((admin) => admin.email).join(', ')}`);
+    }
+    return { created: false, rotated, count: existingAdmins.length };
   }
 
   const email = String(process.env.BOOTSTRAP_ADMIN_EMAIL || 'admin@bji.ac.in')
