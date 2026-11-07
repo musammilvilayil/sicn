@@ -5,12 +5,14 @@ const {
   getEdges,
   createEdge,
   deleteEdge,
+  getCrowdSummary,
 } = require('../controllers/navigationController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
 // Public point-to-point map routing (Available to all roles including Normal_User)
 router.post('/route', calculateRoute);
 router.get('/edges', getEdges);
+router.get('/crowd', protect, authorizeRoles('Teacher', 'Admin'), getCrowdSummary);
 
 // Admin RBAC only for modifying map edges
 router.post('/edges', protect, authorizeRoles('Admin'), createEdge);
