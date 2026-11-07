@@ -166,29 +166,31 @@ export default function AdminSurveyPage() {
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
         throw new Error('This browser does not support camera video recording. Use an updated Chrome or Safari over HTTPS.');
       }
+      // Request sensor permissions directly from the Start Recording gesture,
+      // before awaiting camera acquisition (required by some iOS browsers).
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission !== 'granted') setNotice('Compass permission was not granted; video recording will still work.');
+        } catch {
+          setNotice('Compass permission is unavailable; video recording will still work.');
+        }
+      }
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+          const permission = await DeviceMotionEvent.requestPermission();
+          if (permission !== 'granted') setNotice('Motion permission was not granted; step samples may be unavailable.');
+        } catch {
+          setNotice('Motion permission is unavailable; step samples may be unavailable.');
+        }
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       streamRef.current = stream;
       if (previewRef.current) previewRef.current.srcObject = stream;
-
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        try {
-          const permission = await DeviceOrientationEvent.requestPermission();
-          if (permission !== 'granted') setNotice('Camera is active. Compass permission was not granted; video recording will still work.');
-        } catch {
-          setNotice('Camera is active. Compass permission is unavailable; video recording will still work.');
-        }
-      }
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        try {
-          const permission = await DeviceMotionEvent.requestPermission();
-          if (permission !== 'granted') setNotice('Camera is active. Motion permission was not granted; step samples may be unavailable.');
-        } catch {
-          setNotice('Camera is active. Motion permission is unavailable; step samples may be unavailable.');
-        }
-      }
 
       const survey = await api.createCampusSurvey({
         title,
