@@ -128,8 +128,9 @@ export default function FloorPlanCalibrationViewer({
   }, [plan?.url, pageNumber]);
 
   useEffect(() => {
-    if (!calibration) return;
-    if (Number(calibration.pageNumber) === Number(pageNumber) && calibration.sourcePdf === plan.sourceName) {
+    if (calibration &&
+        Number(calibration.pageNumber) === Number(pageNumber) &&
+        calibration.sourcePdf === plan.sourceName) {
       setControlPoints(calibration.controlPoints || []);
     } else {
       setControlPoints([]);
