@@ -16,26 +16,48 @@ function printCredentials(email, password, action) {
   console.log('======================================================\n');
 }
 
+async function rotateLegacyAccount(user, label) {
+  const password = createTemporaryPassword();
+  user.password = password;
+  user.mustChangePassword = true;
+  user.credentialsRotatedAt = new Date();
+  if (user.role === 'Admin') user.bootstrapAdminInitializedAt = new Date();
+  await user.save();
+  printCredentials(user.email, password, label);
+}
+
+/**
+ * Creates the first Admin and invalidates known demo credentials left by
+ * older seed scripts. Rotation markers ensure this happens only once.
+ */
 async function ensureBootstrapAdmin() {
   const existingAdmins = await User.find({ role: 'Admin' }).sort({ createdAt: 1 });
 
-  if (existingAdmins.length > 0) {
-    let rotated = 0;
-    for (const admin of existingAdmins) {
-      if (admin.bootstrapAdminInitializedAt) continue;
-      const password = createTemporaryPassword();
-      admin.password = password;
-      admin.mustChangePassword = true;
-      admin.bootstrapAdminInitializedAt = new Date();
-      await admin.save();
-      printCredentials(admin.email, password, 'ADMIN PASSWORD ROTATED');
-      rotated += 1;
+  for (const admin of existingAdmins) {
+    if (!admin.bootstrapAdminInitializedAt) {
+      await rotateLegacyAccount(admin, 'LEGACY ADMIN PASSWORD ROTATED');
     }
+  }
 
-    if (rotated === 0) {
-      console.log(`Bootstrap administrator(s) already configured: ${existingAdmins.map((admin) => admin.email).join(', ')}`);
+  const legacyDemoEmails = [
+    'priya.nair@bji.ac.in',
+    'student@bji.ac.in',
+    'visitor@bji.ac.in',
+  ];
+  const legacyAccounts = await User.find({
+    email: { $in: legacyDemoEmails },
+    role: { $ne: 'Admin' },
+  });
+
+  for (const account of legacyAccounts) {
+    if (!account.credentialsRotatedAt) {
+      await rotateLegacyAccount(account, `LEGACY ${account.role.toUpperCase()} PASSWORD ROTATED`);
     }
-    return { created: false, rotated, count: existingAdmins.length };
+  }
+
+  if (existingAdmins.length > 0) {
+    console.log(`Bootstrap administrator(s) configured: ${existingAdmins.map((admin) => admin.email).join(', ')}`);
+    return { created: false, count: existingAdmins.length };
   }
 
   const email = String(process.env.BOOTSTRAP_ADMIN_EMAIL || 'admin@bji.ac.in')
@@ -43,6 +65,7 @@ async function ensureBootstrapAdmin() {
     .toLowerCase();
   const name = String(process.env.BOOTSTRAP_ADMIN_NAME || 'Campus Administrator').trim();
   const password = createTemporaryPassword();
+  const now = new Date();
 
   const account = await User.create({
     name,
@@ -52,7 +75,8 @@ async function ensureBootstrapAdmin() {
     department: 'Administration',
     avatarColor: '#1d4ed8',
     mustChangePassword: true,
-    bootstrapAdminInitializedAt: new Date(),
+    bootstrapAdminInitializedAt: now,
+    credentialsRotatedAt: now,
   });
 
   printCredentials(account.email, password, 'FIRST ADMINISTRATOR CREATED');
