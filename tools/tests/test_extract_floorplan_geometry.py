@@ -1,7 +1,9 @@
 import unittest
 from pathlib import Path
 import tempfile
+import sys
 import fitz
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from extract_floorplan_geometry import extract_pdf
 
 class PdfGeometryExtractionTests(unittest.TestCase):
