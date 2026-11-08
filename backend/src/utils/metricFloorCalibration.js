@@ -3,7 +3,7 @@ function calculateMetricScale(input = {}) {
  const width = Number(input.pageWidth), height = Number(input.pageHeight), distance = Number(input.knownDistanceMeters);
  const points = Array.isArray(input.calibrationPoints) ? input.calibrationPoints : [];
  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) errors.push('pageWidth and pageHeight must be positive PDF point dimensions.');
- if (!Number.isFinite(distance) || distance <= 0) errors.push('knownDistanceMeters must be positive.');
+ if (!Number.isFinite(distance) || distance < 0.01) errors.push('knownDistanceMeters must be positive.');
  if (points.length !== 2) errors.push('Exactly two PDF points are required for scale calibration.');
  if (points.some(p => !Number.isFinite(Number(p?.x)) || !Number.isFinite(Number(p?.y)) || Number(p.x) < 0 || Number(p.x) > 1 || Number(p.y) < 0 || Number(p.y) > 1)) errors.push('Calibration points must use normalized coordinates between 0 and 1.');
  if (errors.length) return { valid: false, errors, metersPerPdfPoint: null, pdfPointDistance: null };

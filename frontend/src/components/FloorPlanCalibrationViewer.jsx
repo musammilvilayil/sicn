@@ -301,7 +301,7 @@ export default function FloorPlanCalibrationViewer({
       await api.createEdge({
         fromNode: fromNode.nodeId, toNode: toNode.nodeId, distance,
         distanceEvidence: { source: 'architectural_plan', reference: `${plan.sourceName}#page=${pageNumber}; ${metricCalibration.reference}`, notes: 'Distance derived from admin-traced PDF polyline and two-point plan scale calibration; physical field measurement pending.' },
-        geometry: { kind, coordinateSystem: 'local_metric_m', coordinateFrameId: `${plan.sourceName}:page-${pageNumber}:floor-${floor}:metric-v1`, floor: Number(floor), sourceRef: `${plan.sourceName}#page=${pageNumber}`, points, verification: { status: 'reviewed', notes: 'Reviewed against the source plan; not field-verified.' } },
+        geometry: { kind, coordinateSystem: 'local_metric_m', coordinateFrameId: `${plan.sourceName}:page-${pageNumber}:floor-${floor}:metric-${metricCalibration._id}`, floor: Number(floor), sourceRef: `${plan.sourceName}#page=${pageNumber}`, points, verification: { status: 'reviewed', notes: 'Reviewed against the source plan; not field-verified.' } },
         type: 'walking', accessible: fromNode.accessible && toNode.accessible,
         instruction: `Follow ${feature.label || 'the traced corridor'} towards ${toNode.name}`,
         reverseInstruction: `Follow ${feature.label || 'the traced corridor'} towards ${fromNode.name}`,
@@ -461,7 +461,7 @@ export default function FloorPlanCalibrationViewer({
 
           {adminEnabled && (
             <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3">
-              <div className="flex items-center justify-between gap-2"><div className="text-[11px] font-bold text-amber-100">Floor geometry survey</div><button type="button" onClick={() => { setSurveyMode((value) => !value); setSurveyPoints([]); }} className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${surveyMode ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'}`}>{surveyMode ? 'Exit trace mode' : 'Trace features'}</button></div>
+              <div className="flex items-center justify-between gap-2"><div className="text-[11px] font-bold text-amber-100">Floor geometry survey</div><button type="button" onClick={() => { setSurveyMode((value) => !value); setMetricCalibrationMode(false); setScalePoints([]); setSurveyPoints([]); }} className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${surveyMode ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'}`}>{surveyMode ? 'Exit trace mode' : 'Trace features'}</button></div>
               <p className="mt-1 text-[10px] leading-4 text-slate-400">Trace wall/fence lines, door openings, corridor centrelines, room outlines or room-label anchors on this PDF. Saved traces remain PDF-normalized candidates until metric calibration and review.</p>
               {surveyMode && <div className="mt-2 space-y-2">
                 <select value={surveyFeatureType} onChange={(event) => { setSurveyFeatureType(event.target.value); setSurveyPoints([]); }} className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white"><option value="corridor_centerline">Corridor centreline</option><option value="wall_boundary">Wall boundary</option><option value="fence_boundary">Fence boundary</option><option value="door_opening">Door opening</option><option value="room_footprint">Room footprint</option><option value="room_label_anchor">Room label anchor</option><option value="room_entry_connector">Room-entry connector</option></select>
