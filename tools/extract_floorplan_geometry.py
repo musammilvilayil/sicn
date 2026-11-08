@@ -102,12 +102,26 @@ def extract_page(page):
             "review_required": True,
             "note": "Text annotation anchor only; not a room centre, polygon, door or navigable node.",
         })
-    titles = [s["text"] for s in spans if FLOOR_TITLE_RE.search(s["text"])]
+    title_spans = [s for s in spans if FLOOR_TITLE_RE.search(s["text"])]
+    for candidate in room_candidates:
+        cx, cy = bbox_center(candidate["label_bbox_pdf_points"])
+        nearest_title = min(
+            title_spans,
+            key=lambda title: ((cx - bbox_center(title["bbox_pdf_points"])[0]) ** 2 +
+                               (cy - bbox_center(title["bbox_pdf_points"])[1]) ** 2) ** 0.5,
+            default=None,
+        )
+        if nearest_title:
+            tx, ty = bbox_center(nearest_title["bbox_pdf_points"])
+            candidate["nearest_floor_plan_title"] = nearest_title["text"]
+            candidate["floor_title_gap_pdf_points"] = round(((cx - tx) ** 2 + (cy - ty) ** 2) ** 0.5, 2)
+    unit_notes = [s["text"] for s in spans if re.search(r"ALL DIMENSIONS.*CM", s["text"], re.I)]
     return {
         "page_number": page.number + 1,
         "page_rect_pdf_points": [round(v, 2) for v in (page.rect.x0, page.rect.y0, page.rect.x1, page.rect.y1)],
         "rotation_degrees": page.rotation,
-        "floor_plan_titles_detected": titles,
+        "floor_plan_titles_detected": [s["text"] for s in title_spans],
+        "dimension_unit_notes_detected": unit_notes,
         "text_spans": spans,
         "dimension_annotations": dimensions,
         "room_annotation_candidates": room_candidates,
@@ -173,6 +187,7 @@ def main():
                 "text_span_count": len(page["text_spans"]),
                 "dimension_annotation_count": len(page["dimension_annotations"]),
                 "room_annotation_candidate_count": len(page["room_annotation_candidates"]),
+                "room_candidates_by_floor_title": {title: sum(1 for item in page["room_annotation_candidates"] if item.get("nearest_floor_plan_title") == title) for title in page["floor_plan_titles_detected"]},
             } for page in report["pages"]],
         })
     summary = {
