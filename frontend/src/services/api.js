@@ -167,6 +167,21 @@ export const api = {
     return data;
   },
 
+  // ================= METRIC FLOOR SCALE CALIBRATION =================
+  async getMetricFloorCalibration({ floor, pageNumber, sourcePdf }) {
+    const query = new URLSearchParams({ floor: String(floor), pageNumber: String(pageNumber), sourcePdf });
+    const res = await fetch(`${API_BASE}/metric-floor-calibrations?${query.toString()}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to load metric scale');
+    return data;
+  },
+  async saveMetricFloorCalibration(floor, payload) {
+    const res = await fetch(`${API_BASE}/metric-floor-calibrations/${floor}`, { method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to save metric scale');
+    return data.calibration;
+  },
+
   // ================= TEACHERS & TIMETABLES (RBAC Protected) =================
   async getTeachers() {
     const res = await fetch(`${API_BASE}/teachers`, {
