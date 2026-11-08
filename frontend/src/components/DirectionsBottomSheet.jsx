@@ -121,7 +121,7 @@ export default function DirectionsBottomSheet({
             <p className="text-xs text-slate-500 truncate mt-0.5">
               {startNode?.name || 'Start'} → <strong className="text-slate-800">{destinationNode?.name || 'Destination'}</strong>
             </p>
-            {routeResult.distanceQuality?.status && routeResult.distanceQuality.status !== 'verified' && routeResult.distanceQuality.status !== 'not_applicable' && (
+            {routeResult.distanceQuality?.status && routeResult.distanceQuality.status !== 'field_verified' && routeResult.distanceQuality.status !== 'not_applicable' && (
               <p
                 role="status"
                 className="mt-1 text-[10px] leading-snug font-semibold text-amber-700"
@@ -130,7 +130,9 @@ export default function DirectionsBottomSheet({
                 <span aria-hidden="true">ⓘ </span>
                 {routeResult.distanceQuality.status === 'unverified'
                   ? 'Distance and time are provisional — some segments are unverified'
-                  : 'Distance and time are approximate — some segments are estimates'}
+                  : routeResult.distanceQuality.status === 'plan_derived'
+                    ? 'Plan-derived distance — physical site verification pending'
+                    : 'Distance and time are approximate — some segments are estimates'}
               </p>
             )}
           </div>

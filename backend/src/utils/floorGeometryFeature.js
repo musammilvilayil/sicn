@@ -1,4 +1,4 @@
-const FEATURE_TYPES = new Set(['wall_boundary','fence_boundary','door_opening','corridor_centerline','room_footprint','room_label_anchor']);
+const FEATURE_TYPES = new Set(['wall_boundary','fence_boundary','door_opening','corridor_centerline','room_footprint','room_label_anchor','room_entry_connector']);
 function validateFloorGeometryFeature(input = {}) {
  const errors = [];
  const floor = Number(input.floor), pageNumber = Number(input.pageNumber);

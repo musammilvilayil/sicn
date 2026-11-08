@@ -1,13 +1,12 @@
-const VERIFIED_SOURCES = new Set(['architectural_plan', 'field_measured']);
-
 function summarizeRouteDistanceQuality(edges = []) {
   const list = Array.isArray(edges) ? edges : [];
-  const verifiedEdgeCount = list.filter((edge) => VERIFIED_SOURCES.has(edge.distanceEvidence?.source)).length;
+  const fieldVerifiedEdgeCount = list.filter((edge) => edge.distanceEvidence?.source === 'field_measured').length;
+  const planDerivedEdgeCount = list.filter((edge) => edge.distanceEvidence?.source === 'architectural_plan').length;
   const estimatedEdgeCount = list.filter((edge) => edge.distanceEvidence?.source === 'admin_estimate').length;
-  const unverifiedEdgeCount = list.length - verifiedEdgeCount - estimatedEdgeCount;
+  const unverifiedEdgeCount = list.length - fieldVerifiedEdgeCount - planDerivedEdgeCount - estimatedEdgeCount;
 
-  let status = 'verified';
-  let message = 'All route segments have declared measurement evidence.';
+  let status = 'field_verified';
+  let message = 'Every route segment has a field-measured distance.';
   if (!list.length) {
     status = 'not_applicable';
     message = 'No route segments to assess.';
@@ -17,13 +16,18 @@ function summarizeRouteDistanceQuality(edges = []) {
   } else if (estimatedEdgeCount > 0) {
     status = 'estimated';
     message = 'This route includes administrator estimates. Distance and walking time are approximate.';
+  } else if (planDerivedEdgeCount > 0) {
+    status = 'plan_derived';
+    message = 'Distances are derived from calibrated architectural plans, not physically measured on site. Complete a walkthrough before relying on precise navigation.';
   }
 
   return {
     status,
     message,
     edgeCount: list.length,
-    verifiedEdgeCount,
+    verifiedEdgeCount: fieldVerifiedEdgeCount + planDerivedEdgeCount,
+    fieldVerifiedEdgeCount,
+    planDerivedEdgeCount,
     estimatedEdgeCount,
     unverifiedEdgeCount,
   };

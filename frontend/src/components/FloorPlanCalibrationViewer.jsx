@@ -38,6 +38,14 @@ export default function FloorPlanCalibrationViewer({
   const [surveyLabel, setSurveyLabel] = useState('');
   const [surveyPoints, setSurveyPoints] = useState([]);
   const [surveyFeatures, setSurveyFeatures] = useState([]);
+  const [metricCalibrationMode, setMetricCalibrationMode] = useState(false);
+  const [metricCalibration, setMetricCalibration] = useState(null);
+  const [scalePoints, setScalePoints] = useState([]);
+  const [knownDistanceMeters, setKnownDistanceMeters] = useState('');
+  const [scaleReference, setScaleReference] = useState('');
+  const [selectedRouteFeatureId, setSelectedRouteFeatureId] = useState('');
+  const [routeFromNodeId, setRouteFromNodeId] = useState('');
+  const [routeToNodeId, setRouteToNodeId] = useState('');
 
   const floorNodes = useMemo(
     () => nodes.filter((node) => Number(node.floor) === Number(floor)),
@@ -82,6 +90,8 @@ export default function FloorPlanCalibrationViewer({
   useEffect(() => {
     setSurveyMode(false);
     setSurveyPoints([]);
+    setMetricCalibrationMode(false);
+    setScalePoints([]);
   }, [floor, pageNumber]);
 
   useEffect(() => {
@@ -89,6 +99,15 @@ export default function FloorPlanCalibrationViewer({
     api.getFloorGeometryFeatures({ floor, pageNumber, sourcePdf: plan?.sourceName || '' })
       .then((items) => { if (active) setSurveyFeatures(items); })
       .catch((err) => { if (active) setError(err.message || 'Unable to load survey traces.'); });
+    return () => { active = false; };
+  }, [floor, pageNumber, plan?.sourceName]);
+
+  useEffect(() => {
+    let active = true;
+    setMetricCalibration(null);
+    api.getMetricFloorCalibration({ floor, pageNumber, sourcePdf: plan?.sourceName || '' })
+      .then((item) => { if (active) setMetricCalibration(item); })
+      .catch((err) => { if (active) setError(err.message || 'Unable to load metric scale.'); });
     return () => { active = false; };
   }, [floor, pageNumber, plan?.sourceName]);
 
@@ -197,6 +216,12 @@ export default function FloorPlanCalibrationViewer({
       setError('');
       return;
     }
+    if (metricCalibrationMode) {
+      setScalePoints((previous) => previous.length >= 2 ? [{ x: pdfX, y: pdfY }] : [...previous, { x: pdfX, y: pdfY }]);
+      setMessage('Metric calibration point added. Select the second endpoint of the same known plan dimension.');
+      setError('');
+      return;
+    }
     if (!selectedNodeId) return;
     const node = floorNodes.find((item) => item.nodeId === selectedNodeId);
     if (!node) return;
@@ -234,6 +259,56 @@ export default function FloorPlanCalibrationViewer({
     if (!window.confirm('Delete this traced survey candidate?')) return;
     try { await api.deleteFloorGeometryFeature(id); setSurveyFeatures((previous) => previous.filter((feature) => feature._id !== id)); }
     catch (err) { setError(err.message || 'Unable to delete survey candidate.'); }
+  };
+
+  const handleSaveMetricCalibration = async () => {
+    if (scalePoints.length !== 2 || !pageMetrics || !(Number(knownDistanceMeters) > 0) || !scaleReference.trim()) {
+      setError('Select two dimension endpoints, enter the known distance in metres and cite the plan dimension.');
+      return;
+    }
+    setSaving(true); setError(''); setMessage('');
+    try {
+      const result = await api.saveMetricFloorCalibration(floor, {
+        sourcePdf: plan.sourceName, pageNumber,
+        pageWidth: pageMetrics.pageWidth, pageHeight: pageMetrics.pageHeight,
+        calibrationPoints: scalePoints, knownDistanceMeters: Number(knownDistanceMeters), reference: scaleReference.trim(),
+      });
+      setMetricCalibration(result); setMetricCalibrationMode(false); setScalePoints([]);
+      setMessage(`Metric scale saved: ${result.metersPerPdfPoint.toFixed(6)} metres per PDF point. Plan-derived only; site verification pending.`);
+    } catch (err) { setError(err.message || 'Unable to save metric scale.'); }
+    finally { setSaving(false); }
+  };
+
+  const handleCreateRouteEdge = async () => {
+    const feature = surveyFeatures.find((item) => item._id === selectedRouteFeatureId);
+    const fromNode = floorNodes.find((item) => item.nodeId === routeFromNodeId);
+    const toNode = floorNodes.find((item) => item.nodeId === routeToNodeId);
+    if (!metricCalibration || !feature || !fromNode || !toNode || fromNode.nodeId === toNode.nodeId) {
+      setError('Choose a calibrated plan, a routeable trace and two different endpoint nodes on this floor.');
+      return;
+    }
+    const kind = feature.featureType === 'corridor_centerline' ? 'corridor_centerline' : feature.featureType === 'room_entry_connector' ? 'room_entry_connector' : null;
+    if (!kind) { setError('Only corridor centrelines and room-entry connectors can become route edges.'); return; }
+    const points = feature.points.map((point) => ({
+      x: Number(point.x) * pageMetrics.pageWidth * metricCalibration.metersPerPdfPoint,
+      y: Number(point.y) * pageMetrics.pageHeight * metricCalibration.metersPerPdfPoint,
+    }));
+    let distance = 0;
+    for (let index = 1; index < points.length; index += 1) distance += Math.hypot(points[index].x - points[index - 1].x, points[index].y - points[index - 1].y);
+    if (!(distance > 0)) { setError('The traced route has no measurable length.'); return; }
+    setSaving(true); setError(''); setMessage('');
+    try {
+      await api.createEdge({
+        fromNode: fromNode.nodeId, toNode: toNode.nodeId, distance,
+        distanceEvidence: { source: 'architectural_plan', reference: `${plan.sourceName}#page=${pageNumber}; ${metricCalibration.reference}`, notes: 'Distance derived from admin-traced PDF polyline and two-point plan scale calibration; physical field measurement pending.' },
+        geometry: { kind, coordinateSystem: 'local_metric_m', coordinateFrameId: `${plan.sourceName}:page-${pageNumber}:floor-${floor}:metric-${metricCalibration._id}`, floor: Number(floor), sourceRef: `${plan.sourceName}#page=${pageNumber}`, points, verification: { status: 'reviewed', notes: 'Reviewed against the source plan; not field-verified.' } },
+        type: 'walking', accessible: fromNode.accessible && toNode.accessible,
+        instruction: `Follow ${feature.label || 'the traced corridor'} towards ${toNode.name}`,
+        reverseInstruction: `Follow ${feature.label || 'the traced corridor'} towards ${fromNode.name}`,
+      });
+      setMessage(`Route edge saved: ${distance.toFixed(2)} m from ${fromNode.name} to ${toNode.name}. Physical site verification is still pending.`);
+    } catch (err) { setError(err.message || 'Unable to create route edge.'); }
+    finally { setSaving(false); }
   };
 
   const handleUseDetectedAnchors = () => {
@@ -370,15 +445,38 @@ export default function FloorPlanCalibrationViewer({
           )}
 
           {adminEnabled && (
+            <div className="mt-3 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3">
+              <div className="flex items-center justify-between gap-2"><div className="text-[11px] font-bold text-cyan-100">Metric scale calibration</div><button type="button" onClick={() => { setMetricCalibrationMode((value) => !value); setSurveyMode(false); setSurveyPoints([]); setScalePoints([]); }} className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${metricCalibrationMode ? 'bg-cyan-300 text-slate-950' : 'bg-white/10 text-white'}`}>{metricCalibrationMode ? 'Exit scale mode' : metricCalibration ? 'Recalibrate scale' : 'Calibrate scale'}</button></div>
+              <p className="mt-1 text-[10px] leading-4 text-slate-400">Click the two ends of one clearly labelled dimension on this exact PDF page. Enter its real-world length in metres (for example, 876 cm = 8.76 m). This calibrates the drawing scale only.</p>
+              {metricCalibrationMode && <div className="mt-2 space-y-2">
+                <div className="text-[10px] text-cyan-100">{scalePoints.length}/2 dimension endpoints selected</div>
+                <input type="number" min="0.01" step="0.01" value={knownDistanceMeters} onChange={(event) => setKnownDistanceMeters(event.target.value)} placeholder="Known distance in metres" className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white" />
+                <input value={scaleReference} onChange={(event) => setScaleReference(event.target.value)} maxLength={200} placeholder="Source dimension (e.g. 876 cm label)" className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white" />
+                <div className="flex gap-2"><button type="button" onClick={() => setScalePoints((previous) => previous.slice(0, -1))} disabled={!scalePoints.length} className="flex-1 rounded-lg bg-white/10 px-2 py-2 text-[10px] font-bold disabled:opacity-40">Undo endpoint</button><button type="button" onClick={() => setScalePoints([])} disabled={!scalePoints.length} className="flex-1 rounded-lg bg-white/10 px-2 py-2 text-[10px] font-bold disabled:opacity-40">Clear</button></div>
+                <button type="button" onClick={handleSaveMetricCalibration} disabled={saving || scalePoints.length !== 2 || !(Number(knownDistanceMeters) > 0) || !scaleReference.trim()} className="w-full rounded-lg bg-cyan-300 px-3 py-2 text-[10px] font-extrabold text-slate-950 disabled:opacity-40">{saving ? 'Saving…' : 'Save metric scale'}</button>
+              </div>}
+              {metricCalibration && !metricCalibrationMode && <div className="mt-2 text-[10px] leading-4 text-emerald-200">Scale saved · {metricCalibration.metersPerPdfPoint.toFixed(6)} m/PDF point · {metricCalibration.reference}. Plan-derived; physical verification pending.</div>}
+            </div>
+          )}
+
+          {adminEnabled && (
             <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3">
-              <div className="flex items-center justify-between gap-2"><div className="text-[11px] font-bold text-amber-100">Floor geometry survey</div><button type="button" onClick={() => { setSurveyMode((value) => !value); setSurveyPoints([]); }} className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${surveyMode ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'}`}>{surveyMode ? 'Exit trace mode' : 'Trace features'}</button></div>
+              <div className="flex items-center justify-between gap-2"><div className="text-[11px] font-bold text-amber-100">Floor geometry survey</div><button type="button" onClick={() => { setSurveyMode((value) => !value); setMetricCalibrationMode(false); setScalePoints([]); setSurveyPoints([]); }} className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${surveyMode ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'}`}>{surveyMode ? 'Exit trace mode' : 'Trace features'}</button></div>
               <p className="mt-1 text-[10px] leading-4 text-slate-400">Trace wall/fence lines, door openings, corridor centrelines, room outlines or room-label anchors on this PDF. Saved traces remain PDF-normalized candidates until metric calibration and review.</p>
               {surveyMode && <div className="mt-2 space-y-2">
-                <select value={surveyFeatureType} onChange={(event) => { setSurveyFeatureType(event.target.value); setSurveyPoints([]); }} className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white"><option value="corridor_centerline">Corridor centreline</option><option value="wall_boundary">Wall boundary</option><option value="fence_boundary">Fence boundary</option><option value="door_opening">Door opening</option><option value="room_footprint">Room footprint</option><option value="room_label_anchor">Room label anchor</option></select>
+                <select value={surveyFeatureType} onChange={(event) => { setSurveyFeatureType(event.target.value); setSurveyPoints([]); }} className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white"><option value="corridor_centerline">Corridor centreline</option><option value="wall_boundary">Wall boundary</option><option value="fence_boundary">Fence boundary</option><option value="door_opening">Door opening</option><option value="room_footprint">Room footprint</option><option value="room_label_anchor">Room label anchor</option><option value="room_entry_connector">Room-entry connector</option></select>
                 <input value={surveyLabel} onChange={(event) => setSurveyLabel(event.target.value)} maxLength={100} placeholder="Label (e.g. Corridor A / Room 101)" className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white" />
                 <div className="flex items-center justify-between text-[10px] text-amber-100"><span>{surveyPoints.length} points added</span><span>Click the PDF to add points</span></div>
                 <div className="flex gap-2"><button type="button" onClick={() => setSurveyPoints((previous) => previous.slice(0, -1))} disabled={!surveyPoints.length} className="flex-1 rounded-lg bg-white/10 px-2 py-2 text-[10px] font-bold disabled:opacity-40">Undo point</button><button type="button" onClick={() => setSurveyPoints([])} disabled={!surveyPoints.length} className="flex-1 rounded-lg bg-white/10 px-2 py-2 text-[10px] font-bold disabled:opacity-40">Clear</button></div>
                 <button type="button" onClick={handleSaveSurveyFeature} disabled={saving || surveyPoints.length < (surveyFeatureType === 'room_label_anchor' ? 1 : surveyFeatureType === 'room_footprint' ? 3 : 2)} className="w-full rounded-lg bg-amber-400 px-3 py-2 text-[10px] font-extrabold text-slate-950 disabled:opacity-40">{saving ? 'Saving…' : 'Save survey candidate'}</button>
+              </div>}
+              {metricCalibration && <div className="mt-3 border-t border-white/10 pt-2 space-y-2">
+                <div className="text-[10px] font-bold text-cyan-100">Create route edge from a trace</div>
+                <select value={selectedRouteFeatureId} onChange={(event) => setSelectedRouteFeatureId(event.target.value)} className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white"><option value="">Choose corridor / room-entry trace</option>{surveyFeatures.filter((feature) => ['corridor_centerline','room_entry_connector'].includes(feature.featureType)).map((feature) => <option key={feature._id} value={feature._id}>{feature.label || feature.featureType.replaceAll('_',' ')} · {feature.points.length} pts</option>)}</select>
+                <select value={routeFromNodeId} onChange={(event) => setRouteFromNodeId(event.target.value)} className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white"><option value="">From node</option>{floorNodes.map((node) => <option key={node.nodeId} value={node.nodeId}>{node.name} ({node.nodeId})</option>)}</select>
+                <select value={routeToNodeId} onChange={(event) => setRouteToNodeId(event.target.value)} className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white"><option value="">To node</option>{floorNodes.map((node) => <option key={node.nodeId} value={node.nodeId}>{node.name} ({node.nodeId})</option>)}</select>
+                <button type="button" onClick={handleCreateRouteEdge} disabled={saving || !selectedRouteFeatureId || !routeFromNodeId || !routeToNodeId || routeFromNodeId === routeToNodeId} className="w-full rounded-lg bg-cyan-300 px-3 py-2 text-[10px] font-extrabold text-slate-950 disabled:opacity-40">Create plan-derived route edge</button>
+                <p className="text-[9px] leading-4 text-amber-200">Creates a reviewed, plan-derived edge only. Verify the distance and walkable path on site before relying on it for navigation.</p>
               </div>}
               <div className="mt-2 border-t border-white/10 pt-2"><div className="text-[10px] font-bold text-slate-300">Saved traces · {surveyFeatures.length}</div><div className="mt-1 max-h-28 space-y-1 overflow-y-auto">
                 {surveyFeatures.map((feature) => <div key={feature._id} className="flex items-center justify-between gap-2 text-[10px] text-slate-300"><span className="min-w-0 truncate">{feature.label || feature.featureType.replaceAll('_', ' ')} <span className="text-amber-200">· candidate</span></span><button type="button" onClick={() => handleDeleteSurveyFeature(feature._id)} className="shrink-0 rounded p-1 text-rose-300 hover:bg-white/10" aria-label="Delete survey trace"><Trash2 size={11} /></button></div>)}
@@ -495,6 +593,7 @@ export default function FloorPlanCalibrationViewer({
                   if (feature.featureType === 'room_label_anchor') { const point = feature.points?.[0]; return point ? <g key={feature._id}><circle cx={point.x * pageMetrics.width} cy={point.y * pageMetrics.height} r="7" fill={color} stroke="white" strokeWidth="2" /><text x={point.x * pageMetrics.width + 9} y={point.y * pageMetrics.height - 8} fill="#111827" stroke="white" strokeWidth="3" paintOrder="stroke" fontSize="11">{feature.label}</text></g> : null; }
                   return <polyline key={feature._id} points={points} fill={feature.featureType === 'room_footprint' ? `${color}22` : 'none'} stroke={color} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={feature.status === 'candidate' ? '8 5' : undefined} />;
                 })}
+                {metricCalibrationMode && scalePoints.length > 0 && <g><polyline points={scalePoints.map((point) => `${point.x * pageMetrics.width},${point.y * pageMetrics.height}`).join(' ')} fill="none" stroke="#22d3ee" strokeWidth="4" strokeDasharray="6 4" />{scalePoints.map((point,index)=><circle key={index} cx={point.x*pageMetrics.width} cy={point.y*pageMetrics.height} r="6" fill="#22d3ee" stroke="#111827" strokeWidth="2" />)}</g>}
                 {surveyMode && surveyPoints.length > 0 && <g><polyline points={surveyPoints.map((point) => `${point.x * pageMetrics.width},${point.y * pageMetrics.height}`).join(' ')} fill="none" stroke="#fbbf24" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="7 4" />{surveyPoints.map((point, index) => <circle key={index} cx={point.x * pageMetrics.width} cy={point.y * pageMetrics.height} r="5" fill="#fbbf24" stroke="#111827" strokeWidth="2" />)}</g>}
                 {controlPoints.map((point) => (
                   <g key={point.nodeId}>
