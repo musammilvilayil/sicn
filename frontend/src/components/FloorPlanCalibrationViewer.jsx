@@ -80,6 +80,11 @@ export default function FloorPlanCalibrationViewer({
   }, [floor]);
 
   useEffect(() => {
+    setSurveyMode(false);
+    setSurveyPoints([]);
+  }, [floor, pageNumber]);
+
+  useEffect(() => {
     let active = true;
     api.getFloorGeometryFeatures({ floor, pageNumber, sourcePdf: plan?.sourceName || '' })
       .then((items) => { if (active) setSurveyFeatures(items); })
