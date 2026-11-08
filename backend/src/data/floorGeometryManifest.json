@@ -10,113 +10,121 @@
       "floor": 0,
       "label": "Ground Floor",
       "sourcePlan": "floorplan/BJI_BUILDING PLAN 01 GF MAIN BLOCK_04022026.pdf",
-      "pageNumber": null,
-      "geometryStatus": "source_available_not_extracted",
+      "pageNumber": 1,
+      "geometryStatus": "pdf_page_text_and_vector_candidates_extracted_unreviewed",
       "features": {
         "roomFootprints": 0,
         "wallSegments": 0,
         "corridorCentrelines": 0,
         "doorOpenings": 0,
         "verifiedRouteEdges": 0
-      }
+      },
+      "detectedPageTitle": "GROUND FLOOR PLAN"
     },
     {
       "floor": 1,
       "label": "1st Floor",
       "sourcePlan": "floorplan/BJI_BUILDING PLAN 0000_1ST FLOOR MAIN BLOCK_04022026.pdf",
-      "pageNumber": null,
-      "geometryStatus": "source_available_not_extracted",
+      "pageNumber": 1,
+      "geometryStatus": "pdf_page_text_and_vector_candidates_extracted_unreviewed",
       "features": {
         "roomFootprints": 0,
         "wallSegments": 0,
         "corridorCentrelines": 0,
         "doorOpenings": 0,
         "verifiedRouteEdges": 0
-      }
+      },
+      "detectedPageTitle": "FIRST FLOOR PLAN"
     },
     {
       "floor": 2,
       "label": "2nd Floor",
       "sourcePlan": "floorplan/BJI_MAIN_BLOCK_2ND_&_3RD_FLOOR_BUILDING_PLAN_00000_04022026.pdf",
-      "pageNumber": null,
-      "geometryStatus": "source_available_not_extracted",
+      "pageNumber": 1,
+      "geometryStatus": "pdf_page_text_and_vector_candidates_extracted_unreviewed",
       "features": {
         "roomFootprints": 0,
         "wallSegments": 0,
         "corridorCentrelines": 0,
         "doorOpenings": 0,
         "verifiedRouteEdges": 0
-      }
+      },
+      "detectedPageTitle": "SECOND FLOOR PLAN"
     },
     {
       "floor": 3,
       "label": "3rd Floor",
       "sourcePlan": "floorplan/BJI_MAIN_BLOCK_2ND_&_3RD_FLOOR_BUILDING_PLAN_00000_04022026.pdf",
-      "pageNumber": null,
-      "geometryStatus": "source_available_not_extracted",
+      "pageNumber": 1,
+      "geometryStatus": "pdf_page_text_and_vector_candidates_extracted_unreviewed",
       "features": {
         "roomFootprints": 0,
         "wallSegments": 0,
         "corridorCentrelines": 0,
         "doorOpenings": 0,
         "verifiedRouteEdges": 0
-      }
+      },
+      "detectedPageTitle": "THIRD FLOOR PLAN"
     },
     {
       "floor": 4,
       "label": "4th Floor",
       "sourcePlan": "floorplan/BJI_BUILDING_PLAN_0002_4TH_&_5TH_FLOOR_MAIN_BLOCK_04022026.pdf",
-      "pageNumber": null,
-      "geometryStatus": "source_available_not_extracted",
+      "pageNumber": 1,
+      "geometryStatus": "pdf_page_text_and_vector_candidates_extracted_unreviewed",
       "features": {
         "roomFootprints": 0,
         "wallSegments": 0,
         "corridorCentrelines": 0,
         "doorOpenings": 0,
         "verifiedRouteEdges": 0
-      }
+      },
+      "detectedPageTitle": "FOURTH FLOOR PLAN"
     },
     {
       "floor": 5,
       "label": "5th Floor",
       "sourcePlan": "floorplan/BJI_BUILDING_PLAN_0002_4TH_&_5TH_FLOOR_MAIN_BLOCK_04022026.pdf",
-      "pageNumber": null,
-      "geometryStatus": "source_available_not_extracted",
+      "pageNumber": 1,
+      "geometryStatus": "pdf_page_text_and_vector_candidates_extracted_unreviewed",
       "features": {
         "roomFootprints": 0,
         "wallSegments": 0,
         "corridorCentrelines": 0,
         "doorOpenings": 0,
         "verifiedRouteEdges": 0
-      }
+      },
+      "detectedPageTitle": "FIFTH FLOOR PLAN"
     },
     {
       "floor": 6,
       "label": "6th Floor",
       "sourcePlan": "floorplan/BJI_BUILDING_PLAN_003_6TH_&_7TH_FLOOR_MAIN_BLOCK_04022026.pdf",
-      "pageNumber": null,
-      "geometryStatus": "source_available_not_extracted",
+      "pageNumber": 1,
+      "geometryStatus": "pdf_page_text_and_vector_candidates_extracted_unreviewed",
       "features": {
         "roomFootprints": 0,
         "wallSegments": 0,
         "corridorCentrelines": 0,
         "doorOpenings": 0,
         "verifiedRouteEdges": 0
-      }
+      },
+      "detectedPageTitle": "SIXTH FLOOR PLAN"
     },
     {
       "floor": 7,
       "label": "7th Floor",
       "sourcePlan": "floorplan/BJI_BUILDING_PLAN_003_6TH_&_7TH_FLOOR_MAIN_BLOCK_04022026.pdf",
-      "pageNumber": null,
-      "geometryStatus": "source_available_not_extracted",
+      "pageNumber": 1,
+      "geometryStatus": "pdf_page_text_and_vector_candidates_extracted_unreviewed",
       "features": {
         "roomFootprints": 0,
         "wallSegments": 0,
         "corridorCentrelines": 0,
         "doorOpenings": 0,
         "verifiedRouteEdges": 0
-      }
+      },
+      "detectedPageTitle": "SEVENTH FLOOR PLAN"
     }
   ],
   "extractionPipeline": {
@@ -125,6 +133,7 @@
     "coordinateSystem": "pdf_page_points_top_left_origin",
     "metricCalibrationPerformed": false,
     "semanticClassificationPerformed": false,
-    "note": "Raw PDF vector and text candidates require per-page calibration and visual review before any wall, door, fence, room or walkable-corridor interpretation."
+    "note": "PDF page titles and raw vector/text candidates have been indexed. Room annotation anchors are not room centres or polygons. Per-floor metric calibration and semantic tracing remain required.",
+    "duplicateSourcePdfDetected": true
   }
 }
