@@ -13,7 +13,7 @@ FLOOR_TITLE_RE = re.compile(r"\b(GROUND|FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH|SE
 ROOM_LABEL_RE = re.compile(
     r"\b(room|lab|office|class|toilet|library|store|staff|hall|corridor|lobby|stair|lift|reception|"
     r"principal|conference|waiting|department|pantry|records|valuation|drawing|rest|HOD|balcony|"
-    r"faculty|hostel|kitchen|workshop|auditorium|passage|security|account|computer)\b", re.I
+    r"faculty|hostel|kitchen|workshop|auditorium|passage|security|account|computer|terrace)\b", re.I
 )
 
 def rgb_key(value):
