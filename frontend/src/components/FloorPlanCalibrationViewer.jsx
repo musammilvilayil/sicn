@@ -33,6 +33,11 @@ export default function FloorPlanCalibrationViewer({
   const [verificationNote, setVerificationNote] = useState('');
   const [error, setError] = useState('');
   const [detectedAnchors, setDetectedAnchors] = useState([]);
+  const [surveyMode, setSurveyMode] = useState(false);
+  const [surveyFeatureType, setSurveyFeatureType] = useState('corridor_centerline');
+  const [surveyLabel, setSurveyLabel] = useState('');
+  const [surveyPoints, setSurveyPoints] = useState([]);
+  const [surveyFeatures, setSurveyFeatures] = useState([]);
 
   const floorNodes = useMemo(
     () => nodes.filter((node) => Number(node.floor) === Number(floor)),
@@ -73,6 +78,14 @@ export default function FloorPlanCalibrationViewer({
       });
     return () => { active = false; };
   }, [floor]);
+
+  useEffect(() => {
+    let active = true;
+    api.getFloorGeometryFeatures({ floor, pageNumber, sourcePdf: plan?.sourceName || '' })
+      .then((items) => { if (active) setSurveyFeatures(items); })
+      .catch((err) => { if (active) setError(err.message || 'Unable to load survey traces.'); });
+    return () => { active = false; };
+  }, [floor, pageNumber, plan?.sourceName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,12 +182,19 @@ export default function FloorPlanCalibrationViewer({
   };
 
   const addControlPoint = (event) => {
-    if (!adminEnabled || pdfState !== 'ready' || !selectedNodeId || !pageMetrics) return;
-    const node = floorNodes.find((item) => item.nodeId === selectedNodeId);
-    if (!node) return;
+    if (!adminEnabled || pdfState !== 'ready' || !pageMetrics) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const pdfX = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     const pdfY = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    if (surveyMode) {
+      setSurveyPoints((previous) => [...previous, { x: pdfX, y: pdfY }]);
+      setMessage(`Added survey point ${surveyPoints.length + 1}. Continue tracing the selected feature.`);
+      setError('');
+      return;
+    }
+    if (!selectedNodeId) return;
+    const node = floorNodes.find((item) => item.nodeId === selectedNodeId);
+    if (!node) return;
     setControlPoints((previous) => [
       ...previous.filter((point) => point.nodeId !== node.nodeId),
       {
@@ -187,6 +207,28 @@ export default function FloorPlanCalibrationViewer({
     ]);
     setMessage(`Added control point for ${node.name}. Choose another well-separated node.`);
     setError('');
+  };
+
+  const handleSaveSurveyFeature = async () => {
+    const minimum = surveyFeatureType === 'room_label_anchor' ? 1 : surveyFeatureType === 'room_footprint' ? 3 : 2;
+    if (surveyPoints.length < minimum || !plan) {
+      setError(`Add at least ${minimum} points for this feature.`);
+      return;
+    }
+    setSaving(true); setError(''); setMessage('');
+    try {
+      const feature = await api.createFloorGeometryFeature({ floor: Number(floor), sourcePdf: plan.sourceName, pageNumber, featureType: surveyFeatureType, label: surveyLabel.trim(), coordinateSystem: 'pdf_normalized', points: surveyPoints, notes: 'Admin-traced PDF candidate. Not metric-calibrated or field-verified.' });
+      setSurveyFeatures((previous) => [...previous, feature]);
+      setSurveyPoints([]); setSurveyLabel('');
+      setMessage('Survey candidate saved. It is not yet a measured navigation route.');
+    } catch (err) { setError(err.message || 'Unable to save survey candidate.'); }
+    finally { setSaving(false); }
+  };
+
+  const handleDeleteSurveyFeature = async (id) => {
+    if (!window.confirm('Delete this traced survey candidate?')) return;
+    try { await api.deleteFloorGeometryFeature(id); setSurveyFeatures((previous) => previous.filter((feature) => feature._id !== id)); }
+    catch (err) { setError(err.message || 'Unable to delete survey candidate.'); }
   };
 
   const handleUseDetectedAnchors = () => {
@@ -322,6 +364,24 @@ export default function FloorPlanCalibrationViewer({
             </>
           )}
 
+          {adminEnabled && (
+            <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/5 p-3">
+              <div className="flex items-center justify-between gap-2"><div className="text-[11px] font-bold text-amber-100">Floor geometry survey</div><button type="button" onClick={() => { setSurveyMode((value) => !value); setSurveyPoints([]); }} className={`rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${surveyMode ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-white'}`}>{surveyMode ? 'Exit trace mode' : 'Trace features'}</button></div>
+              <p className="mt-1 text-[10px] leading-4 text-slate-400">Trace wall/fence lines, door openings, corridor centrelines, room outlines or room-label anchors on this PDF. Saved traces remain PDF-normalized candidates until metric calibration and review.</p>
+              {surveyMode && <div className="mt-2 space-y-2">
+                <select value={surveyFeatureType} onChange={(event) => { setSurveyFeatureType(event.target.value); setSurveyPoints([]); }} className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white"><option value="corridor_centerline">Corridor centreline</option><option value="wall_boundary">Wall boundary</option><option value="fence_boundary">Fence boundary</option><option value="door_opening">Door opening</option><option value="room_footprint">Room footprint</option><option value="room_label_anchor">Room label anchor</option></select>
+                <input value={surveyLabel} onChange={(event) => setSurveyLabel(event.target.value)} maxLength={100} placeholder="Label (e.g. Corridor A / Room 101)" className="w-full rounded-lg border border-white/10 bg-slate-800 px-2 py-2 text-xs text-white" />
+                <div className="flex items-center justify-between text-[10px] text-amber-100"><span>{surveyPoints.length} points added</span><span>Click the PDF to add points</span></div>
+                <div className="flex gap-2"><button type="button" onClick={() => setSurveyPoints((previous) => previous.slice(0, -1))} disabled={!surveyPoints.length} className="flex-1 rounded-lg bg-white/10 px-2 py-2 text-[10px] font-bold disabled:opacity-40">Undo point</button><button type="button" onClick={() => setSurveyPoints([])} disabled={!surveyPoints.length} className="flex-1 rounded-lg bg-white/10 px-2 py-2 text-[10px] font-bold disabled:opacity-40">Clear</button></div>
+                <button type="button" onClick={handleSaveSurveyFeature} disabled={saving || surveyPoints.length < (surveyFeatureType === 'room_label_anchor' ? 1 : surveyFeatureType === 'room_footprint' ? 3 : 2)} className="w-full rounded-lg bg-amber-400 px-3 py-2 text-[10px] font-extrabold text-slate-950 disabled:opacity-40">{saving ? 'Saving…' : 'Save survey candidate'}</button>
+              </div>}
+              <div className="mt-2 border-t border-white/10 pt-2"><div className="text-[10px] font-bold text-slate-300">Saved traces · {surveyFeatures.length}</div><div className="mt-1 max-h-28 space-y-1 overflow-y-auto">
+                {surveyFeatures.map((feature) => <div key={feature._id} className="flex items-center justify-between gap-2 text-[10px] text-slate-300"><span className="min-w-0 truncate">{feature.label || feature.featureType.replaceAll('_', ' ')} <span className="text-amber-200">· candidate</span></span><button type="button" onClick={() => handleDeleteSurveyFeature(feature._id)} className="shrink-0 rounded p-1 text-rose-300 hover:bg-white/10" aria-label="Delete survey trace"><Trash2 size={11} /></button></div>)}
+                {!surveyFeatures.length && <div className="text-[10px] text-slate-500">No survey traces saved for this floor/page.</div>}
+              </div></div>
+            </div>
+          )}
+
           <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
             <div className="flex items-center justify-between text-xs font-bold">
               <span>Control points</span><span>{controlPoints.length}</span>
@@ -407,7 +467,7 @@ export default function FloorPlanCalibrationViewer({
             {pageMetrics && (
               <svg
                 viewBox={`0 0 ${pageMetrics.width} ${pageMetrics.height}`}
-                className={`absolute inset-0 h-full w-full ${adminEnabled && selectedNodeId ? 'cursor-crosshair' : ''}`}
+                className={`absolute inset-0 h-full w-full ${adminEnabled && (selectedNodeId || surveyMode) ? 'cursor-crosshair' : ''}`}
                 onClick={addControlPoint}
                 role="img"
                 aria-label="Architectural drawing with registered navigation route overlay"
@@ -424,6 +484,13 @@ export default function FloorPlanCalibrationViewer({
                   const point = toViewport(userPosition);
                   return point ? <g><circle cx={point.x} cy={point.y} r="12" fill="#0ea5e9" opacity="0.25" /><circle cx={point.x} cy={point.y} r="5" fill="#0284c7" stroke="white" strokeWidth="2" /></g> : null;
                 })()}
+                {surveyFeatures.map((feature) => {
+                  const points = (feature.points || []).map((point) => `${point.x * pageMetrics.width},${point.y * pageMetrics.height}`).join(' ');
+                  const color = feature.featureType === 'wall_boundary' ? '#ef4444' : feature.featureType === 'fence_boundary' ? '#a3e635' : feature.featureType === 'door_opening' ? '#f59e0b' : feature.featureType === 'room_footprint' ? '#eab308' : feature.featureType === 'room_label_anchor' ? '#d946ef' : '#06b6d4';
+                  if (feature.featureType === 'room_label_anchor') { const point = feature.points?.[0]; return point ? <g key={feature._id}><circle cx={point.x * pageMetrics.width} cy={point.y * pageMetrics.height} r="7" fill={color} stroke="white" strokeWidth="2" /><text x={point.x * pageMetrics.width + 9} y={point.y * pageMetrics.height - 8} fill="#111827" stroke="white" strokeWidth="3" paintOrder="stroke" fontSize="11">{feature.label}</text></g> : null; }
+                  return <polyline key={feature._id} points={points} fill={feature.featureType === 'room_footprint' ? `${color}22` : 'none'} stroke={color} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={feature.status === 'candidate' ? '8 5' : undefined} />;
+                })}
+                {surveyMode && surveyPoints.length > 0 && <g><polyline points={surveyPoints.map((point) => `${point.x * pageMetrics.width},${point.y * pageMetrics.height}`).join(' ')} fill="none" stroke="#fbbf24" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="7 4" />{surveyPoints.map((point, index) => <circle key={index} cx={point.x * pageMetrics.width} cy={point.y * pageMetrics.height} r="5" fill="#fbbf24" stroke="#111827" strokeWidth="2" />)}</g>}
                 {controlPoints.map((point) => (
                   <g key={point.nodeId}>
                     <circle cx={point.pdfX * pageMetrics.width} cy={point.pdfY * pageMetrics.height} r="8" fill="#f59e0b" stroke="#111827" strokeWidth="2" />

@@ -146,6 +146,27 @@ export const api = {
     return data.calibration;
   },
 
+  // ================= FLOOR GEOMETRY SURVEY =================
+  async getFloorGeometryFeatures({ floor, pageNumber, sourcePdf }) {
+    const query = new URLSearchParams({ floor: String(floor), pageNumber: String(pageNumber), sourcePdf });
+    const res = await fetch(`${API_BASE}/floor-geometry?${query.toString()}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to load floor geometry traces');
+    return data;
+  },
+  async createFloorGeometryFeature(payload) {
+    const res = await fetch(`${API_BASE}/floor-geometry`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to save floor geometry trace');
+    return data.feature;
+  },
+  async deleteFloorGeometryFeature(id) {
+    const res = await fetch(`${API_BASE}/floor-geometry/${encodeURIComponent(id)}`, { method: 'DELETE', headers: getAuthHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to delete floor geometry trace');
+    return data;
+  },
+
   // ================= TEACHERS & TIMETABLES (RBAC Protected) =================
   async getTeachers() {
     const res = await fetch(`${API_BASE}/teachers`, {
