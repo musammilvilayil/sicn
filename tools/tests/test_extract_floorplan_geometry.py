@@ -20,8 +20,8 @@ class PdfGeometryExtractionTests(unittest.TestCase):
             report = extract_pdf(source, root / "out")
             page_report = report["pages"][0]
             self.assertEqual(report["page_count"], 1)
-            self.assertEqual(page_report["line_segment_count"], 1)
-            self.assertGreaterEqual(page_report["rectangle_count"], 1)
+            self.assertEqual(page_report["raw_line_segment_occurrences"], 1)
+            self.assertGreaterEqual(len(page_report["rectangle_paths_compact"]), 1)
             self.assertTrue(page_report["dimension_like_text"])
             self.assertTrue(report["not_metric_coordinates"])
 
