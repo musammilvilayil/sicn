@@ -118,5 +118,13 @@
         "verifiedRouteEdges": 0
       }
     }
-  ]
+  ],
+  "extractionPipeline": {
+    "script": "tools/extract_floorplan_geometry.py",
+    "artifact": "floorplan-vector-extraction",
+    "coordinateSystem": "pdf_page_points_top_left_origin",
+    "metricCalibrationPerformed": false,
+    "semanticClassificationPerformed": false,
+    "note": "Raw PDF vector and text candidates require per-page calibration and visual review before any wall, door, fence, room or walkable-corridor interpretation."
+  }
 }
