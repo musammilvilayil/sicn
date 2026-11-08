@@ -48,6 +48,7 @@ const timetableRoutes = require('./routes/timetableRoutes');
 const seedRoutes = require('./routes/seedRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const floorCalibrationRoutes = require('./routes/floorCalibrationRoutes');
+const floorGeometryRoutes = require('./routes/floorGeometryRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/nodes', nodeRoutes);
@@ -57,6 +58,7 @@ app.use('/api/timetable', timetableRoutes);
 app.use('/api/seed', seedRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/floor-calibrations', floorCalibrationRoutes);
+app.use('/api/floor-geometry', floorGeometryRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({
