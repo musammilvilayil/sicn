@@ -1,104 +1,133 @@
 #!/usr/bin/env python3
-"""Extract auditable PDF primitives without guessing their architectural meaning."""
+"""Extract compact, auditable PDF text/vector candidates without guessing semantics."""
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
 import fitz
 
-DIMENSION_RE = re.compile(r"(?<![A-Za-z])(?:\d+(?:\.\d+)?)\s*(?:mm|cm|m|')?(?:\s*[x×]\s*\d+(?:\.\d+)?)?", re.I)
-ROOM_LABEL_RE = re.compile(r"\b(room|lab|office|class|toilet|library|store|staff|hall|corridor|lobby|stair|lift|reception)\b", re.I)
+DIMENSION_RE = re.compile(r"^\s*\d+(?:\.\d+)?\s*[xX×]\s*\d+(?:\.\d+)?\s*$")
+FLOOR_TITLE_RE = re.compile(r"\b(GROUND|FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH|SEVENTH)\s+FLOOR\s+PLAN\b", re.I)
+ROOM_LABEL_RE = re.compile(
+    r"\b(room|lab|office|class|toilet|library|store|staff|hall|corridor|lobby|stair|lift|reception|"
+    r"principal|conference|waiting|department|pantry|records|valuation|drawing|rest|HOD|balcony|"
+    r"faculty|hostel|kitchen|workshop|auditorium|passage|security|account|computer)\b", re.I
+)
 
-def serialise_color(value):
-    return list(value) if value is not None else None
+def rgb_key(value):
+    return tuple(round(float(v), 3) for v in value) if value is not None else None
+
+def bbox_center(bbox):
+    return ((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
 
 def extract_page(page):
-    text_dict = page.get_text("dict")
     spans = []
-    for block in text_dict.get("blocks", []):
+    raw = page.get_text("dict")
+    for block in raw.get("blocks", []):
         for line in block.get("lines", []):
             for span in line.get("spans", []):
                 value = " ".join(span.get("text", "").split())
                 if not value:
                     continue
-                bbox = [round(float(v), 3) for v in span.get("bbox", [])]
+                bbox = [round(float(v), 2) for v in span.get("bbox", [])]
                 spans.append({
                     "text": value,
                     "bbox_pdf_points": bbox,
                     "font": span.get("font"),
-                    "font_size_pdf_points": round(float(span.get("size", 0)), 3),
-                    "dimension_like": bool(DIMENSION_RE.search(value)),
-                    "room_or_wayfinding_label_like": bool(ROOM_LABEL_RE.search(value)),
+                    "font_size_pdf_points": round(float(span.get("size", 0)), 2),
                 })
-    drawings = []
-    line_segments = []
-    rectangles = []
+
+    styles, style_ids = [], {}
+    line_counts, curve_paths, rectangle_paths = {}, [], []
+    operation_counts = {}
+    drawing_count = 0
     for drawing_index, drawing in enumerate(page.get_drawings()):
-        rect = drawing.get("rect")
-        item_types = {}
-        items = []
+        drawing_count += 1
+        style = (
+            rgb_key(drawing.get("color")),
+            rgb_key(drawing.get("fill")),
+            round(float(drawing.get("width") or 0), 2),
+            bool(drawing.get("closePath")),
+        )
+        if style not in style_ids:
+            style_ids[style] = len(styles)
+            styles.append({
+                "stroke_rgb": list(style[0]) if style[0] is not None else None,
+                "fill_rgb": list(style[1]) if style[1] is not None else None,
+                "stroke_width_pdf_points": style[2],
+                "close_path": style[3],
+            })
+        style_id = style_ids[style]
         for item in drawing.get("items", []):
             kind = item[0]
-            item_types[kind] = item_types.get(kind, 0) + 1
+            operation_counts[kind] = operation_counts.get(kind, 0) + 1
             if kind == "l":
                 p1, p2 = item[1], item[2]
-                segment = {
-                    "drawing_index": drawing_index,
-                    "p1_pdf_points": [round(p1.x, 3), round(p1.y, 3)],
-                    "p2_pdf_points": [round(p2.x, 3), round(p2.y, 3)],
-                    "stroke_width_pdf_points": round(float(drawing.get("width") or 0), 3),
-                    "stroke_rgb": serialise_color(drawing.get("color")),
-                    "fill_rgb": serialise_color(drawing.get("fill")),
-                    "close_path": bool(drawing.get("closePath")),
-                }
-                line_segments.append(segment)
-                items.append({"type": "line", **segment})
+                coords = tuple(round(v, 2) for v in (p1.x, p1.y, p2.x, p2.y))
+                # Canonicalise direction so identical hatch strokes collapse into one record.
+                reverse = (coords[2], coords[3], coords[0], coords[1])
+                if reverse < coords:
+                    coords = reverse
+                key = (coords, style_id)
+                line_counts[key] = line_counts.get(key, 0) + 1
+            elif kind == "c":
+                points = item[1:]
+                curve_paths.append([round(v, 2) for point in points for v in (point.x, point.y)] + [style_id])
             elif kind == "re":
-                r = item[1]
-                rectangle = {
-                    "drawing_index": drawing_index,
-                    "rect_pdf_points": [round(r.x0, 3), round(r.y0, 3), round(r.x1, 3), round(r.y1, 3)],
-                    "stroke_width_pdf_points": round(float(drawing.get("width") or 0), 3),
-                    "stroke_rgb": serialise_color(drawing.get("color")),
-                    "fill_rgb": serialise_color(drawing.get("fill")),
-                }
-                rectangles.append(rectangle)
-                items.append({"type": "rectangle", **rectangle})
-            else:
-                # Preserve the operation type and let reviewers inspect the source drawing.
-                items.append({"type": str(kind)})
-        drawings.append({
-            "drawing_index": drawing_index,
-            "bbox_pdf_points": [round(v, 3) for v in rect] if rect else None,
-            "operation_counts": item_types,
-            "item_count": len(drawing.get("items", [])),
-            "stroke_width_pdf_points": round(float(drawing.get("width") or 0), 3),
-            "stroke_rgb": serialise_color(drawing.get("color")),
-            "fill_rgb": serialise_color(drawing.get("fill")),
-            "items": items,
+                rect = item[1]
+                rectangle_paths.append([round(v, 2) for v in (rect.x0, rect.y0, rect.x1, rect.y1)] + [style_id])
+    line_segments = [list(coords) + [style_id, count] for (coords, style_id), count in line_counts.items()]
+
+    dimensions = [s for s in spans if DIMENSION_RE.match(s["text"])]
+    labels = [s for s in spans if ROOM_LABEL_RE.search(s["text"]) and not DIMENSION_RE.match(s["text"])]
+    room_candidates = []
+    for label in labels:
+        lx, ly = bbox_center(label["bbox_pdf_points"])
+        nearby = []
+        for dim in dimensions:
+            dx, dy = bbox_center(dim["bbox_pdf_points"])
+            distance = ((lx - dx) ** 2 + (ly - dy) ** 2) ** 0.5
+            if distance <= 100:
+                nearby.append((distance, dim))
+        nearby.sort(key=lambda pair: pair[0])
+        room_candidates.append({
+            "label": label["text"],
+            "label_bbox_pdf_points": label["bbox_pdf_points"],
+            "nearby_dimension_candidates": [
+                {"text": dim["text"], "bbox_pdf_points": dim["bbox_pdf_points"], "annotation_gap_pdf_points": round(distance, 2)}
+                for distance, dim in nearby[:3]
+            ],
+            "review_required": True,
+            "note": "Text annotation anchor only; not a room centre, polygon, door or navigable node.",
         })
+    titles = [s["text"] for s in spans if FLOOR_TITLE_RE.search(s["text"])]
     return {
         "page_number": page.number + 1,
-        "page_rect_pdf_points": [round(page.rect.x0, 3), round(page.rect.y0, 3), round(page.rect.x1, 3), round(page.rect.y1, 3)],
+        "page_rect_pdf_points": [round(v, 2) for v in (page.rect.x0, page.rect.y0, page.rect.x1, page.rect.y1)],
         "rotation_degrees": page.rotation,
+        "floor_plan_titles_detected": titles,
         "text_spans": spans,
-        "drawing_count": len(drawings),
-        "line_segment_count": len(line_segments),
-        "rectangle_count": len(rectangles),
-        "drawings": drawings,
-        "line_segments": line_segments,
-        "rectangles": rectangles,
-        "dimension_like_text": [s for s in spans if s["dimension_like"]],
-        "room_or_wayfinding_label_like_text": [s for s in spans if s["room_or_wayfinding_label_like"]],
+        "dimension_annotations": dimensions,
+        "room_annotation_candidates": room_candidates,
+        "drawing_count": drawing_count,
+        "drawing_operation_counts": operation_counts,
+        "vector_style_table": styles,
+        "line_segments_compact": line_segments,
+        "curve_paths_compact": curve_paths,
+        "rectangle_paths_compact": rectangle_paths,
+        "unique_line_segment_count": len(line_segments),
+        "raw_line_segment_occurrences": sum(line_counts.values()),
+        "not_metric_coordinates": True,
     }
 
 def extract_pdf(pdf_path: Path, output_dir: Path):
     doc = fitz.open(pdf_path)
     pages = [extract_page(page) for page in doc]
     output_dir.mkdir(parents=True, exist_ok=True)
-    for page, page_data in zip(doc, pages):
-        pix = page.get_pixmap(matrix=fitz.Matrix(1.25, 1.25), alpha=False)
+    for page in doc:
+        pix = page.get_pixmap(matrix=fitz.Matrix(1.0, 1.0), alpha=False)
         pix.save(output_dir / f"{pdf_path.stem.replace(' ', '_')}_page_{page.number + 1:02d}.png")
     return {
         "source_pdf": str(pdf_path),
@@ -119,31 +148,41 @@ def main():
     pdfs = sorted(input_dir.glob("*.pdf"))
     if not pdfs:
         raise SystemExit(f"No PDF files found in {input_dir}")
-    reports = []
+    reports, seen_hashes, duplicate_files = [], {}, []
     for pdf_path in pdfs:
+        digest = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
+        if digest in seen_hashes:
+            duplicate_files.append({"duplicate_pdf": pdf_path.name, "identical_to": seen_hashes[digest], "sha256": digest})
+            continue
+        seen_hashes[digest] = pdf_path.name
         report = extract_pdf(pdf_path, output_dir)
         json_path = output_dir / f"{pdf_path.stem.replace(' ', '_')}.geometry.json"
-        json_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+        json_path.write_text(json.dumps(report, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
         reports.append({
             "source_pdf": pdf_path.name,
+            "sha256": digest,
             "page_count": report["page_count"],
             "pages": [{
                 "page_number": page["page_number"],
+                "floor_plan_titles_detected": page["floor_plan_titles_detected"],
                 "drawing_count": page["drawing_count"],
-                "line_segment_count": page["line_segment_count"],
-                "rectangle_count": page["rectangle_count"],
+                "raw_line_segment_occurrences": page["raw_line_segment_occurrences"],
+                "unique_line_segment_count": page["unique_line_segment_count"],
+                "curve_path_count": len(page["curve_paths_compact"]),
+                "rectangle_path_count": len(page["rectangle_paths_compact"]),
                 "text_span_count": len(page["text_spans"]),
-                "dimension_annotation_count": len(page["dimension_like_text"]),
-                "room_or_wayfinding_label_count": len(page["room_or_wayfinding_label_like_text"]),
+                "dimension_annotation_count": len(page["dimension_annotations"]),
+                "room_annotation_candidate_count": len(page["room_annotation_candidates"]),
             } for page in report["pages"]],
         })
     summary = {
-        "schema_version": 1,
-        "extraction": "PDF text spans and vector primitives",
+        "schema_version": 2,
+        "extraction": "PDF text spans, dimension annotation candidates and compact vector primitives",
         "coordinate_system": "pdf_page_points_top_left_origin",
         "metric_calibration_performed": False,
         "architectural_semantics_assigned": False,
-        "warning": "Vector lines/rectangles are raw candidates only. They are not classified as walls, doors, fences, room boundaries or walkable corridors without visual review and calibrated source evidence.",
+        "warning": "Text and vector primitives are candidates only. They are not classified as walls, doors, fences, room boundaries or walkable corridors without visual review and calibrated source evidence.",
+        "duplicate_files": duplicate_files,
         "files": reports,
     }
     (output_dir / "extraction-summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
