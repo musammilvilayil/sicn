@@ -4,7 +4,7 @@ const schema = new mongoose.Schema({
  floor: { type: Number, required: true, min: 0, max: 7, index: true },
  sourcePdf: { type: String, required: true, trim: true },
  pageNumber: { type: Number, required: true, min: 1 },
- featureType: { type: String, required: true, enum: ['wall_boundary','fence_boundary','door_opening','corridor_centerline','room_footprint','room_label_anchor'] },
+ featureType: { type: String, required: true, enum: ['wall_boundary','fence_boundary','door_opening','corridor_centerline','room_footprint','room_label_anchor','room_entry_connector'] },
  label: { type: String, trim: true, maxlength: 100, default: '' },
  coordinateSystem: { type: String, enum: ['pdf_normalized'], default: 'pdf_normalized' },
  points: { type: [pointSchema], required: true },
