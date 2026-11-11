@@ -11,7 +11,8 @@ function auditCampusGraph(graph, options = {}) {
   const edges = Array.isArray(graph?.edges) ? graph.edges : [];
   const nodeMap = new Map();
   const edgeIds = new Set();
-  const geometrySummary = { edgesWithGeometry: 0, reviewedGeometry: 0, fieldVerifiedGeometry: 0, edgesWithoutGeometry: 0, invalidGeometry: 0, geometryLengthMismatches: 0 };
+  const geometrySummary = { edgesWithGeometry: 0, reviewedGeometry: 0, fieldVerifiedGeometry: 0, edgesWithoutGeometry: 0, verticalTransitionsWithoutGeometry: 0, invalidGeometry: 0, geometryLengthMismatches: 0 };
+  const geometryFrames = new Set();
   const floorCounts = {};
   const measurementSummary = {
     parsed: 0,
@@ -100,10 +101,16 @@ function auditCampusGraph(graph, options = {}) {
       warnings.push({ code: 'SAME_FLOOR_VERTICAL_EDGE', edgeId: edge.edgeId, type: edge.type });
     }
     if (!edge.geometry) {
-      geometrySummary.edgesWithoutGeometry += 1;
-      warnings.push({ code: 'MISSING_WALKABLE_GEOMETRY', edgeId: edge.edgeId });
+      if (floorDelta > 0) {
+        // A floor-local 2D polyline cannot describe a stair or lift run.
+        geometrySummary.verticalTransitionsWithoutGeometry += 1;
+      } else {
+        geometrySummary.edgesWithoutGeometry += 1;
+        warnings.push({ code: 'MISSING_WALKABLE_GEOMETRY', edgeId: edge.edgeId });
+      }
     } else {
       geometrySummary.edgesWithGeometry += 1;
+      if (edge.geometry.coordinateFrameId) geometryFrames.add(edge.geometry.coordinateFrameId);
       const geometryCheck = validateEdgeGeometry(edge.geometry, {
         distanceMeters: edge.distance,
         distanceEvidenceSource: edge.distanceEvidence?.source,
@@ -157,6 +164,13 @@ function auditCampusGraph(graph, options = {}) {
 
   const unverifiedDistanceCount = edges.filter((edge) => !edge.distanceEvidence).length;
   const verifiedDistanceCount = edges.length - unverifiedDistanceCount;
+  const countBySource = (source) => edges.filter((edge) => edge.distanceEvidence?.source === source).length;
+  // Node x/y only count as metres when every same-floor edge carries valid
+  // metric geometry in one shared frame; otherwise they are schematic.
+  const metricPlanFrame = edges.length > 0
+    && geometrySummary.edgesWithoutGeometry === 0
+    && geometrySummary.invalidGeometry === 0
+    && geometryFrames.size === 1;
   return {
     valid: errors.length === 0,
     summary: {
@@ -166,9 +180,16 @@ function auditCampusGraph(graph, options = {}) {
       connectedComponents: components.length,
       verifiedDistanceCount,
       unverifiedDistanceCount,
-      coordinateSpace: 'schematic_xy_with_metric_floor_elevation',
+      planDerivedDistanceCount: countBySource('architectural_plan'),
+      fieldMeasuredDistanceCount: countBySource('field_measured'),
+      adminEstimateDistanceCount: countBySource('admin_estimate'),
+      coordinateSpace: metricPlanFrame
+        ? 'architectural_plan_xy_metres_with_metric_floor_elevation'
+        : 'schematic_xy_with_metric_floor_elevation',
+      coordinateFrameId: metricPlanFrame ? [...geometryFrames][0] : null,
       floorHeightMeters,
     },
+    geometrySummary,
     measurementSummary,
     errors,
     warnings,

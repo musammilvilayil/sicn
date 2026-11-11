@@ -5,6 +5,8 @@ const Node = require('../models/Node');
 const Edge = require('../models/Edge');
 const Teacher = require('../models/Teacher');
 const Timetable = require('../models/Timetable');
+const FloorCalibration = require('../models/FloorCalibration');
+const LEGACY_SEED_IDS = require('../data/legacySeedIds.json');
 const { syncSeedDataFile } = require('./buildCampusGraph');
 const { findShortestPath } = require('../algorithms/aStar');
 
@@ -179,6 +181,43 @@ async function upsertCampusGraph(seedData, { pruneStale = false } = {}) {
       opts
     );
 
+    // The plan-traced graph replaced the old schematic seed graph. Remove the
+    // retired seed records (and only those) so 0–100 schematic nodes never mix
+    // with nodes positioned in plan metres. Admin-created records are untouched.
+    const keepNodeIds = new Set(normalizedNodes.map((n) => n.nodeId));
+    const keepEdgeIds = new Set(normalizedEdges.map((e) => e.edgeId));
+    const retiredNodeIds = LEGACY_SEED_IDS.nodeIds.filter((id) => !keepNodeIds.has(id));
+    const retiredEdgeIds = LEGACY_SEED_IDS.edgeIds.filter((id) => !keepEdgeIds.has(id));
+    if (retiredNodeIds.length || retiredEdgeIds.length) {
+      await Edge.deleteMany(
+        {
+          $or: [
+            { edgeId: { $in: retiredEdgeIds } },
+            { fromNode: { $in: retiredNodeIds } },
+            { toNode: { $in: retiredNodeIds } },
+          ],
+        },
+        queryOpts
+      );
+      await Node.deleteMany({ nodeId: { $in: retiredNodeIds } }, queryOpts);
+    }
+    // A PDF registration is only valid for the node positions it was fitted to.
+    // Drop registrations whose control points no longer match the seed nodes
+    // (for example ones saved against the old schematic 0–100 coordinates).
+    const coordinatesById = new Map(normalizedNodes.map((n) => [n.nodeId, n.coordinates]));
+    const retiredNodeIdSet = new Set(retiredNodeIds);
+    const calibrations = await FloorCalibration.find({}, null, queryOpts).lean();
+    const staleCalibrationIds = calibrations
+      .filter((calibration) => (calibration.controlPoints || []).some((point) => {
+        if (retiredNodeIdSet.has(point.nodeId)) return true;
+        const current = coordinatesById.get(point.nodeId);
+        return current && (Math.abs(current.x - point.mapX) > 0.01 || Math.abs(current.y - point.mapY) > 0.01);
+      }))
+      .map((calibration) => calibration._id);
+    if (staleCalibrationIds.length) {
+      await FloorCalibration.deleteMany({ _id: { $in: staleCalibrationIds } }, queryOpts);
+    }
+
     if (pruneStale) {
       await Promise.all([
         Node.deleteMany({ nodeId: { $nin: normalizedNodes.map((n) => n.nodeId) } }, queryOpts),
@@ -278,7 +317,7 @@ const seedDatabase = async () => {
     );
     const rooftopAccessibleRoute = findShortestPath(
       'GF-MAIN-ENTRANCE',
-      '7F-TERRACE-CENTRAL',
+      '7F-OPEN-TERRACE',
       summary.nodes,
       summary.edges,
       { accessibleOnly: true }
@@ -292,7 +331,7 @@ const seedDatabase = async () => {
       `Verified A* Route [GF -> 6F Seminar Hall]: ${seminarRoute.totalDistance}m via floors [${seminarRoute.floorsCovered.join(' -> ')}]`
     );
     console.log(
-      `Verified Accessible A* Route [GF -> 7F Central Terrace]: ${rooftopAccessibleRoute.totalDistance}m via [${rooftopAccessibleRoute.nodeIds.join(' -> ')}]`
+      `Verified Accessible A* Route [GF -> 7F Open Terrace]: ${rooftopAccessibleRoute.totalDistance}m via [${rooftopAccessibleRoute.nodeIds.join(' -> ')}]`
     );
     console.log(
       'Campus data synchronization completed. User and administrator accounts were preserved (admin provisioning runs at server startup).'

@@ -131,15 +131,26 @@ const createNode = async (req, res) => {
       if (neighbor) {
         const dx = createdNode.coordinates.x - neighbor.coordinates.x;
         const dy = createdNode.coordinates.y - neighbor.coordinates.y;
+        // Node x/y are metres in the architectural plan frame, so a same-floor
+        // default is the straight-line plan distance (an estimate, not a traced path).
+        const sameFloor = createdNode.floor === neighbor.floor;
         const computedDist = edgeDistance
           ? Number(edgeDistance)
-          : Math.max(2, Math.round(Math.sqrt(dx * dx + dy * dy) * 10) / 10);
+          : sameFloor
+            ? Math.max(0.5, Math.round(Math.sqrt(dx * dx + dy * dy) * 10) / 10)
+            : 10.6;
 
         createdEdge = await Edge.create({
           edgeId: `E_${neighbor.nodeId}_${createdNode.nodeId}_${Date.now()}`,
           fromNode: neighbor.nodeId,
           toNode: createdNode.nodeId,
           distance: computedDist,
+          distanceEvidence: {
+            source: 'admin_estimate',
+            notes: edgeDistance
+              ? 'Distance entered by the administrator when the node was created.'
+              : 'Straight-line distance between plan positions; replace with a traced walkable path.',
+          },
           accessible: createdNode.accessible && neighbor.accessible,
           type: createdNode.floor !== neighbor.floor ? 'stairs' : 'walking',
           instruction: `Proceed towards ${createdNode.name}`,

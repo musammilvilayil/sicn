@@ -46,3 +46,34 @@ export const FLOOR_PLANS = Object.freeze({
     sharedSheetFloors: [6, 7],
   },
 });
+
+/**
+ * Exact registration of the building plan frame (node x/y in metres) onto each
+ * source PDF page, as used by tools/build_floorplan_assets.py: the drawings are
+ * 1:100 (72 pt = 2.54 m), rotated a quarter turn on a 2384 × 3370 pt page, and
+ * every floor window is offset by a translation only.
+ */
+const PLAN_PAGE = Object.freeze({ width: 2384, height: 3370, ptPerMeter: 72 / 2.54, originX: 60, originY: 1170 });
+const PLAN_FLOOR_OFFSETS = Object.freeze({
+  0: [150, 1100],
+  1: [272, 961],
+  2: [53, 58],
+  3: [940, 1190],
+  4: [74, 50],
+  5: [948, 1209],
+  6: [350, 23],
+  7: [920, 1162],
+});
+
+/** Affine transform (map metres -> normalized PDF page coordinates) for a floor. */
+export function getPlanRegistration(floor) {
+  const offset = PLAN_FLOOR_OFFSETS[Number(floor)];
+  if (!offset) return null;
+  const { width, height, ptPerMeter, originX, originY } = PLAN_PAGE;
+  return {
+    pageNumber: 1,
+    xCoefficients: [0, ptPerMeter / width, (width - originY - offset[1]) / width],
+    yCoefficients: [ptPerMeter / height, 0, (originX + offset[0]) / height],
+    source: 'built_in_plan_registration',
+  };
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { X, ExternalLink, Crosshair, Save, Trash2, AlertTriangle, CheckCircle2, LoaderCircle } from 'lucide-react';
 import { api } from '../services/api';
-import { FLOOR_PLANS } from '../config/floorPlans';
+import { FLOOR_PLANS, getPlanRegistration } from '../config/floorPlans';
 import { solveAffineCalibration, transformMapToPlan } from '../utils/indoorNavigation';
 import { findPdfNodeAnchors } from '../utils/pdfNodeAnchors';
 
@@ -196,8 +196,11 @@ export default function FloorPlanCalibrationViewer({
     if (controlPoints.length >= 3) {
       try { return solveAffineCalibration(controlPoints); } catch { return null; }
     }
-    return null;
-  }, [calibration, controlPoints, pageNumber, plan?.sourceName]);
+    // Node coordinates are metres in the plan frame, so the drawing's own
+    // registration places routes on the PDF without any manual control points.
+    const builtIn = getPlanRegistration(floor);
+    return builtIn && Number(pageNumber) === builtIn.pageNumber ? builtIn : null;
+  }, [calibration, controlPoints, pageNumber, plan?.sourceName, floor]);
 
   const toViewport = (node) => {
     if (!transform || !pageMetrics) return null;
@@ -389,7 +392,7 @@ export default function FloorPlanCalibrationViewer({
           <div className="text-sm font-extrabold">Calibrated Architectural Floor Plan</div>
           <div className="truncate text-xs text-slate-300">{plan.label} · {plan.sourceName}</div>
           <div className="mt-0.5 text-[10px] text-amber-200">
-            {calibration?.fieldVerified ? 'Field verified' : calibration ? 'Registered · field verification pending' : 'Not registered · schematic navigation remains active'}
+            {calibration?.fieldVerified ? 'Field verified' : calibration ? 'Registered · field verification pending' : 'Plan-registered from the 1:100 drawing · field verification pending'}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -552,7 +555,7 @@ export default function FloorPlanCalibrationViewer({
               {calibration && <button onClick={handleRemove} disabled={saving} className="rounded-xl border border-rose-300/30 px-3 text-rose-200" title="Remove saved registration"><Trash2 size={15} /></button>}
             </div>
           )}
-          {!adminEnabled && !calibration && <p className="mt-4 text-[11px] text-amber-200">An administrator must register this floor before route overlays can be shown on the PDF.</p>}
+          {!adminEnabled && !calibration && !transform && <p className="mt-4 text-[11px] text-amber-200">An administrator must register this floor before route overlays can be shown on the PDF.</p>}
           <div className="mt-4 text-[10px] leading-4 text-slate-500">A successful mathematical fit is not proof of physical accuracy. Field verification is intentionally kept separate.</div>
         </aside>
 

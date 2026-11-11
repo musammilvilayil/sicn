@@ -19,7 +19,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
-import { validateRouteCheckpoint } from '../utils/indoorNavigation';
+import { validateRouteCheckpoint, getRouteSegmentBearing } from '../utils/indoorNavigation';
 
 /**
  * Tilt-compensated compass heading [0, 360) clockwise from North
@@ -443,15 +443,16 @@ export default function ARView() {
     const currNode = path[idx];
     const nextNode = path[idx + 1];
 
-    // Map coordinate system: +x = East, +y = North
+    // Plan frame: +x = right, +y = up on the drawing. Follow the traced walking
+    // line of the active edge (it bends at doors) and fall back to node-to-node.
     const dx = (nextNode?.coordinates?.x ?? 0) - (currNode?.coordinates?.x ?? 0);
     const dy = (nextNode?.coordinates?.y ?? 0) - (currNode?.coordinates?.y ?? 0);
 
-    // Bearing clockwise from North [0, 360)
-    const targetBearing =
+    // Bearing clockwise from plan-up [0, 360)
+    const targetBearing = getRouteSegmentBearing(routeResult, idx, 0) ?? (
       Math.hypot(dx, dy) > 0.001
         ? ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360
-        : 0;
+        : 0);
 
     const effectiveHeading = userHeading ?? 0;
     // Relative angle in [-180, +180]: positive = turn right, negative = turn left

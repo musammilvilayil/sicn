@@ -131,6 +131,76 @@
 }
 
 /* ======================================================== */
+/* REAL FLOOR PLAN LINE WORK (generated from the PDFs)      */
+/* Path units are centimetres; 100 units = 1 m on the plan. */
+/* ======================================================== */
+.plan-slab {
+  fill: #ffffff;
+  stroke: #d5dde8;
+  stroke-width: 6;
+  stroke-linejoin: round;
+}
+
+.plan-line {
+  fill: none;
+  stroke: #1e293b;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.plan-wall {
+  stroke-width: 9;
+}
+
+.plan-detail {
+  stroke-width: 6;
+  stroke: #334155;
+}
+
+.plan-fine {
+  stroke-width: 3.2;
+  stroke: #475569;
+}
+
+.plan-solid {
+  fill: #1e293b;
+  stroke: none;
+}
+
+.plan-annotation {
+  fill: #94a3b8;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.plan-node-label {
+  fill: #0f172a;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 0.28em;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.plan-node-label-stair {
+  fill: #92400e;
+}
+
+.plan-node-label-lift {
+  fill: #0e7490;
+}
+
+.plan-node-label-restroom {
+  fill: #0369a1;
+}
+
+.plan-node-label-entrance {
+  fill: #047857;
+}
+
+/* ======================================================== */
 /* REAL-TIME ANIMATIONS (ROUTE DASH, BEACON, FRIEND GLIDE)  */
 /* ======================================================== */
 .animated-dash-line {
