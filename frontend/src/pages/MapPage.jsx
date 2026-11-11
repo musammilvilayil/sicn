@@ -31,7 +31,8 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import usePhoneSensors from '../hooks/usePhoneSensors';
-import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, advanceAlongRoute, matchPositionToRoute, getRouteTurnInstruction } from '../utils/indoorNavigation';
+import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, advanceAlongRoute, matchPositionToRoute, getRouteTurnInstruction, getRouteSegmentBearing } from '../utils/indoorNavigation';
+import { clampZoom, fitPlanToViewport, getMapUiInsets } from '../utils/mapProjection';
 
 const FLOOR_DEFS = [
   { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
@@ -78,8 +79,12 @@ export default function MapPage() {
   const { roomCode, roomMembers, friendsInRoom, broadcastCheckpoint } = useSocket();
 
   // Map camera state
-  const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 768 ? 1.12 : 1));
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  // Start with the whole building visible beside the floating controls.
+  const getHomeView = () => (typeof window === 'undefined'
+    ? { zoom: 1, pan: { x: 0, y: 0 } }
+    : fitPlanToViewport(window.innerWidth, window.innerHeight, getMapUiInsets(window.innerWidth)));
+  const [zoom, setZoom] = useState(() => getHomeView().zoom);
+  const [pan, setPan] = useState(() => getHomeView().pan);
   const [mapNorthHeading, setMapNorthHeading] = useState(() => {
     if (typeof window === 'undefined') return null;
     const saved = window.localStorage.getItem('sicn_map_north_heading');
@@ -144,7 +149,7 @@ export default function MapPage() {
   const [adminEditMode, setAdminEditMode] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [editingNode, setEditingNode] = useState(null);
-  const [clickedMapCoords, setClickedMapCoords] = useState({ x: 50, y: 50 });
+  const [clickedMapCoords, setClickedMapCoords] = useState({ x: 33, y: 21 });
 
   const searchResults = useMemo(() => {
     const q = searchText.trim().toLowerCase();
@@ -298,7 +303,11 @@ export default function MapPage() {
   const activeRouteSegment = routeResult?.path?.[activeStepIndex] && routeResult?.path?.[activeStepIndex + 1]
     ? { from: routeResult.path[activeStepIndex], to: routeResult.path[activeStepIndex + 1] }
     : null;
-  const targetBearing = activeRouteSegment ? getMapBearing(activeRouteSegment.from, activeRouteSegment.to) : null;
+  // Bearing of the traced walking line at the current progress (door connectors bend).
+  const targetBearing = activeRouteSegment
+    ? getRouteSegmentBearing(routeResult, activeStepIndex, walkedMeters)
+      ?? getMapBearing(activeRouteSegment.from, activeRouteSegment.to)
+    : null;
   const relativeTurn = heading !== null && targetBearing !== null
     ? getRelativeBearing(targetBearing, heading, mapNorthHeading ?? 0)
     : null;
@@ -324,6 +333,14 @@ export default function MapPage() {
     }
   }, [stepCount, routeResult, sensorStatus, relativeTurn, isVerticalTransition]);
   const isRouteComplete = Boolean(routeResult?.path?.length && activeStepIndex >= routeResult.path.length - 1);
+
+  // Zoom buttons keep the map point at the centre of the screen in place.
+  const zoomBy = (factor) => {
+    const nextZoom = clampZoom(zoom * factor);
+    if (nextZoom === zoom) return;
+    setPan((current) => ({ x: current.x * (nextZoom / zoom), y: current.y * (nextZoom / zoom) }));
+    setZoom(nextZoom);
+  };
 
   const handleAdminMapClick = (coords) => {
     if (!canEditMap) return;
@@ -778,14 +795,14 @@ export default function MapPage() {
         {/* Camera Zoom & Recenter Controls */}
         <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1 flex flex-col gap-1">
           <button
-            onClick={() => setZoom((z) => Math.min(2.4, +(z + 0.2).toFixed(2)))}
+            onClick={() => zoomBy(1.3)}
             title="Zoom In"
             className="w-10 h-9 rounded-xl text-slate-700 hover:bg-slate-100 flex items-center justify-center"
           >
             <ZoomIn size={17} />
           </button>
           <button
-            onClick={() => setZoom((z) => Math.max(0.7, +(z - 0.2).toFixed(2)))}
+            onClick={() => zoomBy(1 / 1.3)}
             title="Zoom Out"
             className="w-10 h-9 rounded-xl text-slate-700 hover:bg-slate-100 flex items-center justify-center"
           >
@@ -793,9 +810,10 @@ export default function MapPage() {
           </button>
           <button
             onClick={() => {
-              setZoom(1);
+              const home = getHomeView();
+              setZoom(home.zoom);
               setAutoFollow(true);
-              setPan({ x: 0, y: 0 });
+              setPan(home.pan);
             }}
             title="Recenter Map"
             className="w-10 h-9 rounded-xl text-blue-600 hover:bg-blue-50 flex items-center justify-center"

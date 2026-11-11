@@ -20,7 +20,7 @@ export default function AdminNodeModal({
   isOpen,
   onClose,
   editingNode = null, // null = creating new node
-  initialCoords = { x: 50, y: 50 },
+  initialCoords = { x: 33, y: 21 },
   currentFloor = 0,
   allNodes = [],
   onSaved,
@@ -31,8 +31,8 @@ export default function AdminNodeModal({
   const [name, setName] = useState('');
   const [floor, setFloor] = useState(currentFloor);
   const [type, setType] = useState('room');
-  const [coordX, setCoordX] = useState(50);
-  const [coordY, setCoordY] = useState(50);
+  const [coordX, setCoordX] = useState(33);
+  const [coordY, setCoordY] = useState(21);
   const [qrCode, setQrCode] = useState('');
   const [accessible, setAccessible] = useState(true);
   const [description, setDescription] = useState('');
@@ -49,8 +49,8 @@ export default function AdminNodeModal({
       setName(editingNode.name);
       setFloor(editingNode.floor);
       setType(editingNode.type || 'room');
-      setCoordX(editingNode.coordinates?.x ?? 50);
-      setCoordY(editingNode.coordinates?.y ?? 50);
+      setCoordX(editingNode.coordinates?.x ?? 33);
+      setCoordY(editingNode.coordinates?.y ?? 21);
       setQrCode(editingNode.qrCode || '');
       setAccessible(editingNode.accessible !== false);
       setDescription(editingNode.metadata?.description || '');
@@ -240,20 +240,24 @@ export default function AdminNodeModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">Coord X (0-100)</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Plan X in metres (0–66)</label>
               <input
                 type="number"
-                step="0.5"
+                step="0.1"
+                min="0"
+                max="66"
                 value={coordX}
                 onChange={(e) => setCoordX(e.target.value)}
                 className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">Coord Y (0-100)</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Plan Y in metres (0–42)</label>
               <input
                 type="number"
-                step="0.5"
+                step="0.1"
+                min="0"
+                max="42"
                 value={coordY}
                 onChange={(e) => setCoordY(e.target.value)}
                 className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl"

@@ -1,4 +1,5 @@
 const assert = require('assert');
+const seedData = require('../data/seedData.json');
 
 const BASE_URL = process.env.API_URL || 'http://localhost:5000/api';
 
@@ -31,8 +32,8 @@ async function runTests() {
   const nodes = await getJson('/nodes');
   const edges = await getJson('/navigation/edges');
   console.log(`Loaded ${nodes.length} nodes & ${edges.length} edges from live API.`);
-  assert(nodes.length >= 133, `Expected >= 133 nodes, got ${nodes.length}`);
-  assert(edges.length >= 154, `Expected >= 154 edges, got ${edges.length}`);
+  assert(nodes.length >= seedData.nodes.length, `Expected >= ${seedData.nodes.length} nodes, got ${nodes.length}`);
+  assert(edges.length >= seedData.edges.length, `Expected >= ${seedData.edges.length} edges, got ${edges.length}`);
 
   for (let floor = 0; floor <= 7; floor++) {
     const floorNodes = nodes.filter((n) => n.floor === floor);
@@ -42,18 +43,18 @@ async function runTests() {
     );
   }
 
-  // 2. Verify sequential Staircase A route GF -> 7F
+  // 2. Verify sequential Main Staircase A route GF -> 5F (it ends at the 5th floor terrace)
   const stairARoute = await postJson('/navigation/route', {
     startNodeId: 'GF-STAIR-A',
-    destinationNodeId: '7F-STAIR-A',
+    destinationNodeId: '5F-STAIR-A',
     accessibleOnly: false,
   });
-  assert.deepStrictEqual(stairARoute.floorsCovered, [0, 1, 2, 3, 4, 5, 6, 7]);
+  assert.deepStrictEqual(stairARoute.floorsCovered, [0, 1, 2, 3, 4, 5]);
   console.log(
-    `\n✓ Sequential Staircase A [GF -> 7F]: ${stairARoute.totalDistance}m | Path: ${stairARoute.nodeIds.join(' -> ')}`
+    `\n✓ Sequential Staircase A [GF -> 5F]: ${stairARoute.totalDistance}m | Path: ${stairARoute.nodeIds.join(' -> ')}`
   );
 
-  // 3. Verify sequential Staircase B route GF -> 7F
+  // 3. Verify sequential Fire Escape Staircase B route GF -> 7F
   const stairBRoute = await postJson('/navigation/route', {
     startNodeId: 'GF-STAIR-B',
     destinationNodeId: '7F-STAIR-B',
@@ -64,10 +65,10 @@ async function runTests() {
     `✓ Sequential Staircase B [GF -> 7F]: ${stairBRoute.totalDistance}m | Path: ${stairBRoute.nodeIds.join(' -> ')}`
   );
 
-  // 4. Verify Wheelchair-Accessible route GF Entrance -> 7F Rooftop Terrace (Lift 1)
+  // 4. Verify Wheelchair-Accessible route GF Entrance -> 7F Open Terrace (ramp + Lift 2)
   const lift1Route = await postJson('/navigation/route', {
     startNodeId: 'GF-MAIN-ENTRANCE',
-    destinationNodeId: '7F-TERRACE-CENTRAL',
+    destinationNodeId: '7F-OPEN-TERRACE',
     accessibleOnly: true,
   });
   assert.deepStrictEqual(lift1Route.floorsCovered, [0, 1, 2, 3, 4, 5, 6, 7]);
@@ -76,10 +77,10 @@ async function runTests() {
     'Accessible route must not use stairs!'
   );
   console.log(
-    `✓ Accessible Lift 1 Route [GF Entrance -> 7F Central Terrace]: ${lift1Route.totalDistance}m (${lift1Route.estimatedTimeMinutes} min) | Path: ${lift1Route.nodeIds.join(' -> ')}`
+    `✓ Accessible Route [GF Entrance -> 7F Open Terrace]: ${lift1Route.totalDistance}m (${lift1Route.estimatedTimeMinutes} min) | Path: ${lift1Route.nodeIds.join(' -> ')}`
   );
 
-  // 5. Verify East Wing route GF Drawing Hall -> 5F Open Terrace (Lift 2)
+  // 5. Verify East Wing route GF Drawing Hall -> 5F Open Terrace (Lift 1)
   const lift2Route = await postJson('/navigation/route', {
     startNodeId: 'GF-DRAWING-HALL',
     destinationNodeId: '5F-OPEN-TERRACE',
@@ -87,7 +88,7 @@ async function runTests() {
   });
   assert.deepStrictEqual(lift2Route.floorsCovered, [0, 1, 2, 3, 4, 5]);
   console.log(
-    `✓ East Wing Lift 2 Route [GF Drawing Hall -> 5F Open Terrace]: ${lift2Route.totalDistance}m | Path: ${lift2Route.nodeIds.join(' -> ')}`
+    `✓ East Wing Lift 1 Route [GF Drawing Hall -> 5F Open Terrace]: ${lift2Route.totalDistance}m | Path: ${lift2Route.nodeIds.join(' -> ')}`
   );
 
   // 6. Verify 1F Class 02 -> 6F Main Seminar Hall

@@ -1,8 +1,9 @@
 /**
  * Shared sensor and route-math helpers for phone-only 2D indoor navigation.
- * Map coordinates use +X = East and +Y = North. Compass bearings are clockwise
- * from North. A floor-plan registration offset must be calibrated before these
- * bearings can be treated as geographically accurate.
+ * Map coordinates are metres in the architectural plan frame (+X = right and
+ * +Y = up on the upright drawing). Map bearings are clockwise from plan-up.
+ * The offset between plan-up and compass North ("map north heading") must be
+ * calibrated on site before bearings can be compared with the phone compass.
  */
 
 export const normalizeDegrees = (value) => ((Number(value) % 360) + 360) % 360;
@@ -54,6 +55,65 @@ export function getSegmentDistance(routeResult, segmentIndex) {
   return Number.isFinite(directionDistance) && directionDistance > 0 ? directionDistance : 0;
 }
 
+const finitePoint = (point) => Number.isFinite(Number(point?.x)) && Number.isFinite(Number(point?.y));
+const pointDistance = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+
+/**
+ * Walkable polyline (plan metres) of one route segment, ordered from
+ * path[segmentIndex] to path[segmentIndex + 1]. Uses the edge's traced
+ * geometry (door connectors, corridor centrelines) when the route result
+ * carries it, otherwise the straight line between the two nodes.
+ */
+export function getRouteSegmentPoints(routeResult, segmentIndex) {
+  const from = routeResult?.path?.[segmentIndex];
+  const to = routeResult?.path?.[segmentIndex + 1];
+  if (!finitePoint(from?.coordinates) || !finitePoint(to?.coordinates)) return [];
+  const start = { x: Number(from.coordinates.x), y: Number(from.coordinates.y) };
+  const end = { x: Number(to.coordinates.x), y: Number(to.coordinates.y) };
+  const traced = routeResult?.edges?.[segmentIndex]?.geometry?.points;
+  if (Number(from.floor) === Number(to.floor) && Array.isArray(traced) && traced.length >= 2 && traced.every(finitePoint)) {
+    const points = traced.map((point) => ({ x: Number(point.x), y: Number(point.y) }));
+    const last = points[points.length - 1];
+    const forward = pointDistance(points[0], start) + pointDistance(last, end)
+      <= pointDistance(points[0], end) + pointDistance(last, start);
+    return forward ? points : points.reverse();
+  }
+  return [start, end];
+}
+
+/** Point and bearing at a 0–1 fraction of a polyline's length. */
+export function pointAlongPolyline(points, fraction) {
+  if (!Array.isArray(points) || points.length === 0) return null;
+  if (points.length === 1) return { ...points[0], bearing: null };
+  const lengths = points.slice(1).map((point, index) => pointDistance(points[index], point));
+  const total = lengths.reduce((sum, value) => sum + value, 0);
+  let remaining = Math.max(0, Math.min(1, Number(fraction) || 0)) * total;
+  for (let index = 0; index < lengths.length; index += 1) {
+    const length = lengths[index];
+    if (remaining <= length || index === lengths.length - 1) {
+      const a = points[index];
+      const b = points[index + 1];
+      const t = length > 0 ? Math.min(1, remaining / length) : 0;
+      return {
+        x: a.x + (b.x - a.x) * t,
+        y: a.y + (b.y - a.y) * t,
+        bearing: length > 1e-6 ? normalizeDegrees((Math.atan2(b.x - a.x, b.y - a.y) * 180) / Math.PI) : null,
+      };
+    }
+    remaining -= length;
+  }
+  return null;
+}
+
+/** Map bearing of the walking direction at the current progress of a segment. */
+export function getRouteSegmentBearing(routeResult, segmentIndex, walkedMeters = 0) {
+  const points = getRouteSegmentPoints(routeResult, segmentIndex);
+  if (points.length < 2) return null;
+  const distance = getSegmentDistance(routeResult, segmentIndex);
+  const fraction = distance > 0 ? Math.max(0, Math.min(1, walkedMeters / distance)) : 0;
+  return pointAlongPolyline(points, fraction)?.bearing ?? null;
+}
+
 export function interpolateRoutePosition(routeResult, segmentIndex, walkedMeters) {
   const from = routeResult?.path?.[segmentIndex];
   const to = routeResult?.path?.[segmentIndex + 1];
@@ -61,10 +121,12 @@ export function interpolateRoutePosition(routeResult, segmentIndex, walkedMeters
 
   const distance = getSegmentDistance(routeResult, segmentIndex);
   const progress = distance > 0 ? Math.max(0, Math.min(1, walkedMeters / distance)) : 0;
+  const position = pointAlongPolyline(getRouteSegmentPoints(routeResult, segmentIndex), progress);
+  if (!position) return null;
   return {
     floor: from.floor,
-    x: from.coordinates.x + (to.coordinates.x - from.coordinates.x) * progress,
-    y: from.coordinates.y + (to.coordinates.y - from.coordinates.y) * progress,
+    x: position.x,
+    y: position.y,
     progress,
     distanceRemaining: Math.max(0, distance - walkedMeters),
   };
@@ -216,17 +278,21 @@ export function matchPositionToRoute(position, routeResult, options = {}) {
     const from = path[index];
     const to = path[index + 1];
     if (Number(from.floor) !== Number(position.floor) || Number(to.floor) !== Number(position.floor)) continue;
-    const a = from.coordinates;
-    const b = to.coordinates;
-    if (!a || !b) continue;
-    const projection = projectOntoSegment(position, a, b);
-    const segmentBearing = getMapBearing(from, to);
-    const headingDifference = Number.isFinite(heading) && segmentBearing !== null
-      ? Math.abs(((segmentBearing - heading + 540) % 360) - 180)
-      : 0;
-    const isPreferred = preferredSegmentIndex === null || index === preferredSegmentIndex;
-    const score = projection.distance + (isPreferred ? 0 : 0.5) + (headingDifference > headingTolerance ? 2 : 0);
-    if (!best || score < best.score) best = { ...projection, segmentIndex: index, floor: from.floor, headingDifference, score };
+    const points = getRouteSegmentPoints(routeResult, index);
+    for (let piece = 0; piece < points.length - 1; piece += 1) {
+      const a = points[piece];
+      const b = points[piece + 1];
+      const projection = projectOntoSegment(position, a, b);
+      const pieceBearing = pointDistance(a, b) > 1e-6
+        ? normalizeDegrees((Math.atan2(b.x - a.x, b.y - a.y) * 180) / Math.PI)
+        : null;
+      const headingDifference = Number.isFinite(heading) && pieceBearing !== null
+        ? Math.abs(((pieceBearing - heading + 540) % 360) - 180)
+        : 0;
+      const isPreferred = preferredSegmentIndex === null || index === preferredSegmentIndex;
+      const score = projection.distance + (isPreferred ? 0 : 0.5) + (headingDifference > headingTolerance ? 2 : 0);
+      if (!best || score < best.score) best = { ...projection, segmentIndex: index, floor: from.floor, headingDifference, score };
+    }
   }
   if (!best || best.distance > maxDistance) return null;
   return best;
@@ -311,8 +377,10 @@ export function getRouteTurnInstruction(routeResult, segmentIndex, straightThres
   const junction = path[segmentIndex + 1];
   const to = path[segmentIndex + 2];
   if (!from || !junction || !to || from.floor !== junction.floor || junction.floor !== to.floor) return null;
-  const incoming = getMapBearing(from, junction);
-  const outgoing = getMapBearing(junction, to);
+  const incomingPoints = getRouteSegmentPoints(routeResult, segmentIndex);
+  const outgoingPoints = getRouteSegmentPoints(routeResult, segmentIndex + 1);
+  const incoming = pointAlongPolyline(incomingPoints, 1)?.bearing ?? getMapBearing(from, junction);
+  const outgoing = pointAlongPolyline(outgoingPoints, 0)?.bearing ?? getMapBearing(junction, to);
   if (incoming === null || outgoing === null) return null;
   const angle = ((outgoing - incoming + 540) % 360) - 180;
   const magnitude = Math.abs(angle);

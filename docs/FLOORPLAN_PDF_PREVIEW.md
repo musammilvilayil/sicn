@@ -1,5 +1,7 @@
 # SICN Architectural Floor Plan Sources
 
+> **Update:** the drawings are now the live navigation map. Node coordinates are metres in the plan frame and the PDF preview is registered automatically. See [`REAL_FLOOR_PLAN_MAP.md`](REAL_FLOOR_PLAN_MAP.md). The limitation section below describes the earlier state.
+
 ## In-app source preview
 
 The map screen exposes an **Architectural Plan** preview for each floor. The Vite floor-plan asset plugin:

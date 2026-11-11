@@ -1,5 +1,7 @@
 # Measurement-driven campus geometry audit
 
+> **Update:** the seed graph now uses plan-metre coordinates and plan-derived edge distances with traced geometry (see [`REAL_FLOOR_PLAN_MAP.md`](REAL_FLOOR_PLAN_MAP.md)). The baseline described below (schematic coordinates, 154 unverified edges) is historical.
+
 ## What this delivery adds
 
 - A reusable parser for explicit architectural dimensions already stored in node metadata.

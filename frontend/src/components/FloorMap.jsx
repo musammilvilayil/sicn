@@ -1,4 +1,51 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { loadFloorPlan } from '../data/floorplans';
+import { getRouteSegmentPoints } from '../utils/indoorNavigation';
+import {
+  MAP_VIEWBOX,
+  PLAN_LAYER_TRANSFORM,
+  clampPan,
+  clampZoom,
+  fitPlanToViewport,
+  getBaseScale,
+  getMapUiInsets,
+  panToCenter,
+  projectX,
+  projectY,
+  unprojectPoint,
+} from '../utils/mapProjection';
+
+const scaleX = projectX;
+const scaleY = projectY;
+const fmt = (value) => Math.round(value * 10) / 10;
+
+const LABELLED_TYPES = new Set(['room', 'lab', 'office', 'library', 'hall', 'restroom', 'entrance', 'checkpoint', 'stair', 'lift']);
+
+/** Node name without the floor suffix, wrapped onto at most two short lines. */
+function getNodeLabelLines(node) {
+  const text = String(node.name || '').replace(/\s*\([^)]*\)/g, '').trim();
+  const words = text.split(/\s+/);
+  const lines = [''];
+  for (const word of words) {
+    const current = lines[lines.length - 1];
+    if (!current) lines[lines.length - 1] = word;
+    else if ((current + ' ' + word).length <= 16) lines[lines.length - 1] = `${current} ${word}`;
+    else if (lines.length < 2) lines.push(word);
+    else {
+      lines[1] = `${lines[1].slice(0, 13)}…`;
+      break;
+    }
+  }
+  return lines;
+}
+
+function getEdgePolyline(edge) {
+  const traced = edge.geometry?.points;
+  const points = Array.isArray(traced) && traced.length >= 2
+    ? traced
+    : [edge.u.coordinates, edge.v.coordinates];
+  return points.map((point) => `${fmt(scaleX(point.x))},${fmt(scaleY(point.y))}`).join(' ');
+}
 
 export default function FloorMap({
   floor = 0,
@@ -25,9 +72,50 @@ export default function FloorMap({
   onUserPan,
 }) {
   const svgRef = useRef(null);
+  const containerRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0, moved: false });
+  const pinchRef = useRef(null);
   const [selectedPopupNode, setSelectedPopupNode] = useState(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [loadedPlan, setLoadedPlan] = useState(null);
+
+  // Track the map viewport so zoom limits, panning and label sizes follow it.
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return undefined;
+    const measure = () => setContainerSize({ width: element.clientWidth, height: element.clientHeight });
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  // Architectural line work of the active floor (generated from the PDFs).
+  useEffect(() => {
+    let cancelled = false;
+    loadFloorPlan(floor)
+      .then((data) => {
+        if (!cancelled) setLoadedPlan({ floor, data });
+      })
+      .catch(() => {
+        if (!cancelled) setLoadedPlan({ floor, data: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [floor]);
+  const plan = loadedPlan?.floor === floor ? loadedPlan.data : null;
+  const planPending = loadedPlan?.floor !== floor;
+
+  const baseScale = getBaseScale(containerSize.width, containerSize.height);
+  const screenScale = baseScale * zoom;
+  // Keep text near 10–11 screen pixels while zooming, within sane map sizes.
+  const labelSize = Math.max(3.4, Math.min(11.5, 10.5 / screenScale));
+  const showNodeLabels = labelSize * screenScale >= 4.8;
+  const showAnnotations = screenScale >= 0.8;
+  const markerScale = Math.max(0.45, Math.min(1.15, 1.05 / screenScale));
 
   const floorNodes = useMemo(() => {
     return nodes.filter((n) => n.floor === floor);
@@ -40,17 +128,6 @@ export default function FloorMap({
   const otherFloorFriends = useMemo(() => {
     return friends.filter((f) => Number(f.floor) !== Number(floor));
   }, [friends, floor]);
-
-  // Scale node coordinates (0-100 range) to SVG viewBox (1000 x 620)
-  const scaleX = (x) => 60 + x * 8.8;
-  const scaleY = (y) => 60 + (85 - y) * 5.8;
-
-  // Inverse scale for Admin click-to-place node
-  const unscaleCoords = (svgX, svgY) => {
-    const x = Math.max(0, Math.min(100, Math.round(((svgX - 60) / 8.8) * 10) / 10));
-    const y = Math.max(0, Math.min(100, Math.round((85 - (svgY - 60) / 5.8) * 10) / 10));
-    return { x, y };
-  };
 
   // Floor transition badge info (prioritize outbound transition on pass-through transit floors)
   const floorTransitionInfo = useMemo(() => {
@@ -82,31 +159,35 @@ export default function FloorMap({
     return inboundMatch;
   }, [routeResult, floor]);
 
-  // Keep floor segments separate; filtering all same-floor nodes can draw
-  // a false straight line across an intervening floor transition.
-  const pathPolylineSegments = useMemo(() => {
-    if (!routeResult?.path || routeResult.path.length < 2) return [];
+  // Route drawn along each edge's traced geometry (through doors and along
+  // corridor centrelines). Floor changes split the line so a transition never
+  // draws a false straight segment across the plan.
+  const routeFloorPoints = useMemo(() => {
+    const path = routeResult?.path;
+    if (!path || path.length < 2) return [];
     const segments = [];
     let current = [];
-    routeResult.path.forEach((node, index) => {
-      if (node.floor !== floor) {
+    for (let index = 0; index < path.length - 1; index += 1) {
+      const sameFloor = Number(path[index].floor) === Number(floor) && Number(path[index + 1].floor) === Number(floor);
+      if (!sameFloor) {
         if (current.length > 1) segments.push(current);
         current = [];
-        return;
+        continue;
       }
-      if (index > 0 && routeResult.path[index - 1].floor !== floor && current.length) {
-        if (current.length > 1) segments.push(current);
-        current = [];
-      }
-      current.push(`${scaleX(node.coordinates.x)},${scaleY(node.coordinates.y)}`);
-      if (index < routeResult.path.length - 1 && routeResult.path[index + 1].floor !== floor) {
-        if (current.length > 1) segments.push(current);
-        current = [];
-      }
-    });
+      const points = getRouteSegmentPoints(routeResult, index);
+      points.forEach((point, pointIndex) => {
+        if (pointIndex === 0 && current.length) return;
+        current.push({ x: scaleX(point.x), y: scaleY(point.y) });
+      });
+    }
     if (current.length > 1) segments.push(current);
     return segments;
   }, [routeResult, floor]);
+
+  const pathPolylineSegments = useMemo(
+    () => routeFloorPoints.map((segment) => segment.map((point) => `${fmt(point.x)},${fmt(point.y)}`)),
+    [routeFloorPoints]
+  );
 
   const currentPosition = userPosition && Number(userPosition.floor) === Number(floor)
     ? userPosition
@@ -114,47 +195,36 @@ export default function FloorMap({
       ? { ...startNode.coordinates, floor: startNode.floor }
       : null;
 
-  // Fit the active floor's route into the map viewport when a route/floor changes.
+  // Fit the active floor's route into the visible part of the map when a route/floor changes.
   useEffect(() => {
-    if (!routeResult?.path?.length || !setZoom || !setPan || typeof window === 'undefined') return;
-    const points = routeResult.path
-      .filter((node) => Number(node.floor) === Number(floor))
-      .map((node) => ({ x: scaleX(node.coordinates.x), y: scaleY(node.coordinates.y) }));
+    if (!setZoom || !setPan || !containerSize.width) return;
+    const points = routeFloorPoints.flat();
     if (!points.length) return;
     const minX = Math.min(...points.map((point) => point.x));
     const maxX = Math.max(...points.map((point) => point.x));
     const minY = Math.min(...points.map((point) => point.y));
     const maxY = Math.max(...points.map((point) => point.y));
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
     const width = Math.max(110, maxX - minX);
     const height = Math.max(90, maxY - minY);
-    const pxPerSvgX = Math.min(window.innerWidth, 1380) / 1000;
-    const pxPerSvgY = Math.min(window.innerHeight, 860) / 620;
-    const fitX = (window.innerWidth - 110) / (width * pxPerSvgX);
-    const fitY = (window.innerHeight - 300) / (height * pxPerSvgY);
-    const nextZoom = Math.max(1.12, Math.min(2.35, fitX, fitY));
+    const base = getBaseScale(containerSize.width, containerSize.height);
+    // Leave room for the search bar on top and the directions sheet below.
+    const insets = { ...getMapUiInsets(containerSize.width), top: 110, bottom: 190 };
+    const fitX = (containerSize.width - insets.left - insets.right - 70) / (width * base);
+    const fitY = (containerSize.height - insets.top - insets.bottom) / (height * base);
+    const home = fitPlanToViewport(containerSize.width, containerSize.height, getMapUiInsets(containerSize.width));
+    const nextZoom = clampZoom(Math.max(home.zoom, Math.min(3.4, fitX, fitY)));
     setZoom(nextZoom);
-    setPan({
-      x: Math.max(-420, Math.min(420, (500 - centerX) * pxPerSvgX * nextZoom)),
-      y: Math.max(-320, Math.min(320, (310 - centerY) * pxPerSvgY * nextZoom)),
-    });
-  }, [routeResult, floor, setZoom, setPan]);
+    setPan(panToCenter((minX + maxX) / 2, (minY + maxY) / 2, nextZoom, containerSize.width, containerSize.height, insets));
+  }, [routeFloorPoints, containerSize.width, containerSize.height, setZoom, setPan]);
 
   // Keep the estimated position near the centre while auto-follow is enabled.
   useEffect(() => {
-    if (!autoFollow || !navigationActive || !userPosition || Number(userPosition.floor) !== Number(floor) || !setPan || typeof window === 'undefined') return;
-    const pxPerSvgX = Math.min(window.innerWidth, 1380) / 1000;
-    const pxPerSvgY = Math.min(window.innerHeight, 860) / 620;
-    const x = scaleX(userPosition.x);
-    const y = scaleY(userPosition.y);
-    setPan({
-      x: Math.max(-420, Math.min(420, (500 - x) * pxPerSvgX * zoom)),
-      y: Math.max(-320, Math.min(320, (310 - y) * pxPerSvgY * zoom)),
-    });
-  }, [autoFollow, navigationActive, userPosition, floor, setPan, zoom]);
+    if (!autoFollow || !navigationActive || !userPosition || Number(userPosition.floor) !== Number(floor) || !setPan || !containerSize.width) return;
+    const insets = { ...getMapUiInsets(containerSize.width), top: 110, bottom: 190 };
+    setPan(panToCenter(scaleX(userPosition.x), scaleY(userPosition.y), zoom, containerSize.width, containerSize.height, insets));
+  }, [autoFollow, navigationActive, userPosition, floor, setPan, zoom, containerSize.width, containerSize.height]);
 
-  // Subtle network edges on current floor (visible in Admin Edit Mode or light guide lines)
+  // Walkable network on the current floor (clear in Admin Edit Mode, subtle otherwise)
   const floorEdges = useMemo(() => {
     const nodeMap = new Map(floorNodes.map((n) => [n.nodeId, n]));
     return edges
@@ -165,6 +235,20 @@ export default function FloorMap({
         v: nodeMap.get(e.toNode),
       }));
   }, [edges, floorNodes]);
+
+  // Zoom while keeping the map point at the centre of the screen in place.
+  const applyZoom = useCallback((computeNext) => {
+    if (!setZoom) return;
+    const nextZoom = clampZoom(computeNext(zoom));
+    if (nextZoom === zoom) return;
+    setZoom(nextZoom);
+    setPan?.(clampPan(
+      { x: pan.x * (nextZoom / zoom), y: pan.y * (nextZoom / zoom) },
+      nextZoom,
+      containerSize.width,
+      containerSize.height
+    ));
+  }, [zoom, pan, setZoom, setPan, containerSize.width, containerSize.height]);
 
   // Pointer / Touch Drag Handlers for Google Maps Panning
   const handlePointerDown = (clientX, clientY) => {
@@ -186,20 +270,54 @@ export default function FloorMap({
       if (!dragStartRef.current.moved) onUserPan?.();
       dragStartRef.current.moved = true;
     }
-    setPan?.({
-      x: Math.max(-420, Math.min(420, dragStartRef.current.panX + dx)),
-      y: Math.max(-320, Math.min(320, dragStartRef.current.panY + dy)),
-    });
+    setPan?.(clampPan(
+      { x: dragStartRef.current.panX + dx, y: dragStartRef.current.panY + dy },
+      zoom,
+      containerSize.width,
+      containerSize.height
+    ));
   };
 
   const handlePointerUp = () => {
     setIsDragging(false);
+    pinchRef.current = null;
   };
 
   const handleWheel = (e) => {
-    if (!setZoom) return;
-    const delta = e.deltaY < 0 ? 0.12 : -0.12;
-    setZoom((z) => Math.max(0.65, Math.min(2.6, Math.round((z + delta) * 100) / 100)));
+    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    applyZoom((z) => z * factor);
+  };
+
+  const touchDistance = (touches) => Math.hypot(
+    touches[0].clientX - touches[1].clientX,
+    touches[0].clientY - touches[1].clientY
+  );
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      setIsDragging(false);
+      pinchRef.current = { distance: touchDistance(e.touches), zoom, pan };
+      dragStartRef.current.moved = true;
+    } else if (e.touches.length === 1) {
+      handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2 && pinchRef.current && setZoom) {
+      const start = pinchRef.current;
+      const nextZoom = clampZoom(start.zoom * (touchDistance(e.touches) / Math.max(1, start.distance)));
+      onUserPan?.();
+      setZoom(nextZoom);
+      setPan?.(clampPan(
+        { x: start.pan.x * (nextZoom / start.zoom), y: start.pan.y * (nextZoom / start.zoom) },
+        nextZoom,
+        containerSize.width,
+        containerSize.height
+      ));
+    } else if (e.touches.length === 1) {
+      handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
   };
 
   const handleSvgBackgroundClick = (e) => {
@@ -211,49 +329,11 @@ export default function FloorMap({
       const ctm = svgRef.current.getScreenCTM();
       if (ctm) {
         const svgPt = pt.matrixTransform(ctm.inverse());
-        const mapCoords = unscaleCoords(svgPt.x, svgPt.y);
-        onAdminMapClick(mapCoords);
+        onAdminMapClick(unprojectPoint(svgPt.x, svgPt.y));
       }
       return;
     }
     setSelectedPopupNode(null);
-  };
-
-  const UPPER_FLOOR_HEADERS = {
-    2: '2ND FLOOR PLAN • CIVIL ENGINEERING & COMPUTING LABS (Z = +7.8 M)',
-    3: '3RD FLOOR PLAN • MECHANICAL ENGINEERING & B.ARCH STUDIOS (Z = +11.7 M)',
-    4: '4TH FLOOR PLAN • CSE WING, DRAWING HALL & SICK ROOM (Z = +15.6 M)',
-    5: '5TH FLOOR PLAN • EEE DEPARTMENT & EAST OPEN TERRACE (Z = +19.5 M)',
-    6: '6TH FLOOR PLAN • MAIN SEMINAR AUDITORIUM & OPEN TERRACE (Z = +23.4 M)',
-    7: '7TH FLOOR PLAN • SKY TRANSIT LOBBY & OPEN ROOFTOP TERRACES (Z = +27.3 M)',
-  };
-
-  const getUpperRoomClass = (node) => {
-    const id = node.nodeId || '';
-    if (id.includes('TERRACE')) return 'room-shape room-terrace';
-    if (id.includes('HOD')) return 'room-shape room-hod';
-    if (id.includes('FACULTY')) return 'room-shape room-faculty';
-    switch (node.type) {
-      case 'lab':
-        return 'room-shape room-lab';
-      case 'office':
-        return 'room-shape room-office';
-      case 'hall':
-        return 'room-shape room-hall';
-      case 'restroom':
-        return 'room-shape room-general';
-      default:
-        return 'room-shape room-classroom';
-    }
-  };
-
-  const getShortBlueprintTitle = (node) => {
-    const raw = node.name
-      .replace(/\s*\([^)]*\)/g, '')
-      .replace(/^Head of\s+/i, 'HOD ')
-      .replace(/\s+Department$/i, '')
-      .toUpperCase();
-    return raw.length > 19 ? `${raw.slice(0, 18)}…` : raw;
   };
 
   const getNodeColor = (node) => {
@@ -282,6 +362,10 @@ export default function FloorMap({
         return '#d97706';
       case 'library':
         return '#0d9488';
+      case 'hall':
+        return '#7c3aed';
+      case 'restroom':
+        return '#0891b2';
       default:
         return '#64748b';
     }
@@ -289,22 +373,15 @@ export default function FloorMap({
 
   return (
     <div
+      ref={containerRef}
       className={`sicn-floor-map relative w-full h-full overflow-hidden bg-[#eef2f6] select-none ${adminEditMode ? 'cursor-crosshair' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
       onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
       onMouseUp={handlePointerUp}
       onMouseLeave={handlePointerUp}
-      onTouchStart={(e) => {
-        if (e.touches.length === 1) {
-          handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
-        }
-      }}
-      onTouchMove={(e) => {
-        if (e.touches.length === 1) {
-          handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
-        }
-      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handlePointerUp}
       onWheel={handleWheel}
     >
@@ -318,8 +395,8 @@ export default function FloorMap({
       >
         <svg
           ref={svgRef}
-          viewBox="0 0 1000 620"
-          className="sicn-floor-map-svg w-full h-full max-w-[1380px] max-h-[860px] drop-shadow-md"
+          viewBox={`0 0 ${MAP_VIEWBOX.width} ${MAP_VIEWBOX.height}`}
+          className="sicn-floor-map-svg w-full h-full max-w-[1380px] max-h-[860px]"
           style={{
             transform: headingUp && navigationActive && userHeading !== null
               ? `rotate(${mapNorthHeading - userHeading}deg)`
@@ -337,312 +414,59 @@ export default function FloorMap({
               <feGaussianBlur stdDeviation="4.5" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
-            <linearGradient id="corridorFill" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="100%" stopColor="#f8fafc" />
-            </linearGradient>
+            <filter id="planSlabShadow" x="-10%" y="-10%" width="120%" height="120%">
+              <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor="#0f172a" floodOpacity="0.12" />
+            </filter>
           </defs>
 
-          {/* Campus Ground Surface */}
-          <rect
-            x="40"
-            y="25"
-            width="920"
-            height="570"
-            rx="22"
-            fill="#f8fafc"
-            stroke="#cbd5e1"
-            strokeWidth="2"
-          />
-          <rect x="40" y="25" width="920" height="570" rx="22" fill="url(#gmapsGrid)" />
+          {/* Site surface */}
+          <rect x="-600" y="-400" width="2200" height="1420" fill="#eef2f6" />
+          <rect x="-600" y="-400" width="2200" height="1420" fill="url(#gmapsGrid)" />
 
-          {/* Architectural Blueprint Floor Layouts */}
-          {floor === 0 ? (
-            <g className="architectural-rooms">
-              <rect
-                x="80"
-                y="50"
-                width="840"
-                height="520"
-                rx="10"
-                fill="#ffffff"
-                stroke="#cbd5e1"
-                strokeWidth="2.5"
-              />
-
-              {/* CAD Lab */}
-              <rect x="110" y="80" width="200" height="150" rx="8" className="room-shape room-lab" />
-              <text x="210" y="145" textAnchor="middle" className="room-label-bold">CAD LAB</text>
-              <text x="210" y="165" textAnchor="middle" className="room-dim-text">1783 × 1239 cm</text>
-
-              {/* Drawing Workshop */}
-              <rect x="110" y="245" width="200" height="140" rx="8" className="room-shape room-workshop" />
-              <text x="210" y="305" textAnchor="middle" className="room-label-bold">DRAWING WORKSHOP</text>
-              <text x="210" y="325" textAnchor="middle" className="room-dim-text">891 × 1766 cm</text>
-
-              {/* Students Club */}
-              <rect x="110" y="400" width="200" height="130" rx="8" className="room-shape room-general" />
-              <text x="210" y="460" textAnchor="middle" className="room-label-bold">STUDENTS CLUB</text>
-              <text x="210" y="480" textAnchor="middle" className="room-dim-text">504 × 1215 cm</text>
-
-              {/* Central Passage */}
-              <rect x="320" y="245" width="360" height="80" fill="url(#corridorFill)" stroke="#e2e8f0" strokeWidth="1.5" rx="6" />
-              <text x="500" y="290" textAnchor="middle" className="corridor-text">2.76 M MAIN CORRIDOR</text>
-
-              {/* Valuation Room */}
-              <rect x="440" y="80" width="160" height="150" rx="8" className="room-shape room-general" />
-              <text x="520" y="145" textAnchor="middle" className="room-label-bold">VALUATION ROOM</text>
-              <text x="520" y="165" textAnchor="middle" className="room-dim-text">1783 × 1239 cm</text>
-
-              {/* Exam Cell */}
-              <rect x="325" y="80" width="105" height="150" rx="8" className="room-shape room-office" />
-              <text x="377" y="150" textAnchor="middle" className="room-label-bold">EXAM CELL</text>
-
-              {/* Basic Science */}
-              <rect x="610" y="80" width="150" height="150" rx="8" className="room-shape room-lab" />
-              <text x="685" y="145" textAnchor="middle" className="room-label-bold">BASIC SCIENCE</text>
-              <text x="685" y="165" textAnchor="middle" className="room-dim-text">1783 × 1239 cm</text>
-
-              {/* Drawing Hall */}
-              <rect x="770" y="80" width="140" height="305" rx="8" className="room-shape room-hall" />
-              <text x="840" y="225" textAnchor="middle" className="room-label-bold">DRAWING HALL</text>
-              <text x="840" y="245" textAnchor="middle" className="room-dim-text">1476 × 1309 cm</text>
-
-              {/* Public Relations & Visitor */}
-              <rect x="590" y="340" width="120" height="120" rx="8" className="room-shape room-office" />
-              <text x="650" y="395" textAnchor="middle" className="room-label-bold">PRO OFFICE</text>
-              <text x="650" y="415" textAnchor="middle" className="room-dim-text">743 × 775 cm</text>
-
-              <rect x="720" y="340" width="110" height="120" rx="8" className="room-shape room-office" />
-              <text x="775" y="405" textAnchor="middle" className="room-label-bold">VISITOR RM</text>
-
-              {/* Main Entrance Porch */}
-              <polygon points="425,535 575,535 595,475 405,475" className="entrance-porch-shape" />
-              <text x="500" y="510" textAnchor="middle" className="entrance-text">MAIN ENTRANCE & RAMP</text>
-
-              {/* Stairs & Lifts */}
-              <rect x="390" y="200" width="70" height="40" className="stair-housing" rx="5" />
-              <text x="425" y="224" textAnchor="middle" className="stair-text">STAIR A</text>
-
-              <rect x="470" y="200" width="44" height="40" className="lift-housing" rx="5" />
-              <text x="492" y="224" textAnchor="middle" className="lift-text">LIFT 1</text>
-
-              <rect x="690" y="200" width="44" height="40" className="lift-housing" rx="5" />
-              <text x="712" y="224" textAnchor="middle" className="lift-text">LIFT 2</text>
-
-              <rect x="840" y="405" width="70" height="45" className="stair-housing" rx="5" />
-              <text x="875" y="432" textAnchor="middle" className="stair-text">STAIR B</text>
-            </g>
-          ) : floor === 1 ? (
-            <g className="architectural-rooms">
-              <rect
-                x="80"
-                y="50"
-                width="840"
-                height="520"
-                rx="10"
-                fill="#ffffff"
-                stroke="#cbd5e1"
-                strokeWidth="2.5"
-              />
-
-              {/* Class 02 */}
-              <rect x="110" y="80" width="200" height="150" rx="8" className="room-shape room-classroom" />
-              <text x="210" y="145" textAnchor="middle" className="room-label-bold">CLASS 02</text>
-              <text x="210" y="165" textAnchor="middle" className="room-dim-text">876 × 1203 cm • S5 CSE</text>
-
-              {/* Class 03 */}
-              <rect x="110" y="245" width="200" height="140" rx="8" className="room-shape room-classroom" />
-              <text x="210" y="305" textAnchor="middle" className="room-label-bold">CLASS 03</text>
-              <text x="210" y="325" textAnchor="middle" className="room-dim-text">876 × 1203 cm • S7 CSE</text>
-
-              {/* Staff Room */}
-              <rect x="110" y="400" width="200" height="130" rx="8" className="room-shape room-faculty" />
-              <text x="210" y="460" textAnchor="middle" className="room-label-bold">STAFF ROOM</text>
-              <text x="210" y="480" textAnchor="middle" className="room-dim-text">616 × 1235 cm</text>
-
-              {/* 1F Corridor */}
-              <rect x="320" y="245" width="360" height="80" fill="url(#corridorFill)" stroke="#e2e8f0" strokeWidth="1.5" rx="6" />
-              <text x="500" y="290" textAnchor="middle" className="corridor-text">2.76 M CORRIDOR (1ST FLOOR)</text>
-
-              {/* KTU Exam Cell */}
-              <rect x="390" y="80" width="160" height="150" rx="8" className="room-shape room-office" />
-              <text x="470" y="145" textAnchor="middle" className="room-label-bold">KTU EXAM CELL</text>
-              <text x="470" y="165" textAnchor="middle" className="room-dim-text">1206 × 1223 cm</text>
-
-              {/* Dept Library */}
-              <rect x="560" y="80" width="130" height="150" rx="8" className="room-shape room-library" />
-              <text x="625" y="145" textAnchor="middle" className="room-label-bold">DEPT LIBRARY</text>
-              <text x="625" y="165" textAnchor="middle" className="room-dim-text">585 × 531 cm</text>
-
-              {/* Senior Prof Cabins */}
-              <rect x="700" y="80" width="105" height="150" rx="8" className="room-shape room-faculty" />
-              <text x="752" y="145" textAnchor="middle" className="room-label-bold">SR. PROF 1</text>
-              <text x="752" y="165" textAnchor="middle" className="room-dim-text">Dr. Ananya</text>
-
-              <rect x="815" y="80" width="95" height="150" rx="8" className="room-shape room-faculty" />
-              <text x="862" y="150" textAnchor="middle" className="room-label-bold">SR. PROF 2</text>
-
-              {/* Principal & Admin */}
-              <rect x="410" y="340" width="110" height="140" rx="8" className="room-shape room-principal" />
-              <text x="465" y="405" textAnchor="middle" className="room-label-bold">PRINCIPAL</text>
-              <text x="465" y="425" textAnchor="middle" className="room-dim-text">576 × 1044 cm</text>
-
-              <rect x="530" y="340" width="150" height="140" rx="8" className="room-shape room-office" />
-              <text x="605" y="405" textAnchor="middle" className="room-label-bold">ADMIN OFFICE</text>
-              <text x="605" y="425" textAnchor="middle" className="room-dim-text">1144 × 576 cm</text>
-
-              <rect x="690" y="340" width="120" height="140" rx="8" className="room-shape room-hall" />
-              <text x="750" y="405" textAnchor="middle" className="room-label-bold">CONF. HALL</text>
-              <text x="750" y="425" textAnchor="middle" className="room-dim-text">587 × 878 cm</text>
-
-              {/* HOD Room */}
-              <rect x="820" y="245" width="90" height="160" rx="8" className="room-shape room-hod" />
-              <text x="865" y="315" textAnchor="middle" className="room-label-bold">HOD CS</text>
-              <text x="865" y="335" textAnchor="middle" className="room-dim-text">Dr. Priya</text>
-
-              {/* Stairs & Lifts */}
-              <rect x="390" y="200" width="70" height="40" className="stair-housing" rx="5" />
-              <text x="425" y="224" textAnchor="middle" className="stair-text">STAIR A</text>
-
-              <rect x="470" y="200" width="44" height="40" className="lift-housing" rx="5" />
-              <text x="492" y="224" textAnchor="middle" className="lift-text">LIFT 1</text>
-
-              <rect x="690" y="200" width="44" height="40" className="lift-housing" rx="5" />
-              <text x="712" y="224" textAnchor="middle" className="lift-text">LIFT 2</text>
-
-              <rect x="825" y="415" width="78" height="42" className="stair-housing" rx="5" />
-              <text x="864" y="440" textAnchor="middle" className="stair-text">STAIR B</text>
+          {/* Architectural floor plan traced from the source PDF (1:100, metres) */}
+          {plan ? (
+            <g className="sicn-plan-layer" transform={PLAN_LAYER_TRANSFORM}>
+              <path d={plan.hull} className="plan-slab" filter="url(#planSlabShadow)" />
+              <path d={plan.layers.fine} className="plan-line plan-fine" />
+              <path d={plan.layers.detail} className="plan-line plan-detail" />
+              <path d={plan.layers.wall} className="plan-line plan-wall" />
+              {plan.layers.solid && <path d={plan.layers.solid} className="plan-solid" />}
             </g>
           ) : (
-            /* Architectural Floor Plans for Floors 2 through 7 (Parsed from BJI Plans 00000, 0002 & 003) */
-            <g className="architectural-rooms">
-              {/* Outer Building Slab */}
-              <rect
-                x="80"
-                y="50"
-                width="840"
-                height="520"
-                rx="10"
-                fill={floor === 7 ? '#f8fafc' : '#ffffff'}
-                stroke="#cbd5e1"
-                strokeWidth="2.5"
-              />
+            <text x={MAP_VIEWBOX.width / 2} y={MAP_VIEWBOX.height / 2} textAnchor="middle" className="plan-annotation" fontSize="12">
+              {planPending ? 'Loading floor plan…' : 'Floor plan drawing unavailable for this floor'}
+            </text>
+          )}
 
-              {/* Blueprint Sheet Header */}
-              <text x="500" y="76" textAnchor="middle" className="corridor-text">
-                {UPPER_FLOOR_HEADERS[floor] || `FLOOR ${floor} ARCHITECTURAL PLAN`}
-              </text>
-
-              {/* Step-back Open Terrace Deck Outlines on 5F, 6F, and 7F */}
-              {(floor === 5 || floor === 6) && (
-                <rect
-                  x="685"
-                  y="92"
-                  width="215"
-                  height="150"
-                  rx="10"
-                  className="room-shape room-terrace"
-                />
-              )}
-              {floor === 7 && (
-                <rect
-                  x="110"
-                  y="92"
-                  width="790"
-                  height="210"
-                  rx="12"
-                  className="room-shape room-terrace"
-                />
-              )}
-
-              {/* Walkable 2.76m / 2.73m Main Corridor Passages */}
-              <rect
-                x={floor === 7 ? '400' : '295'}
-                y="222"
-                width={floor === 7 ? '475' : '580'}
-                height="66"
-                fill="url(#corridorFill)"
-                stroke="#e2e8f0"
-                strokeWidth="1.5"
-                rx="6"
-              />
-              <text x="565" y="280" textAnchor="middle" className="corridor-text">
-                {floor === 7
-                  ? '7TH FLOOR SKY TRANSIT PASSAGE'
-                  : `2.76 M / 2.73 M MAIN CORRIDOR (FLOOR ${floor})`}
-              </text>
-
-              {/* Continuous Vertical Transit Shafts (Section A-A & Section B-B) */}
-              <rect x="394" y="206" width="68" height="36" className="stair-housing" rx="5" />
-              <text x="428" y="220" textAnchor="middle" className="stair-text">STAIR A</text>
-
-              <rect x="462" y="232" width="44" height="36" className="lift-housing" rx="5" />
-              <text x="484" y="246" textAnchor="middle" className="lift-text">LIFT 1</text>
-
-              <rect x="672" y="232" width="46" height="36" className="lift-housing" rx="5" />
-              <text x="695" y="246" textAnchor="middle" className="lift-text">LIFT 2</text>
-
-              <rect x="818" y="232" width="72" height="38" className="stair-housing" rx="5" />
-              <text x="854" y="247" textAnchor="middle" className="stair-text">STAIR B</text>
-
-              {/* Architectural Room, Lab, Seminar Hall & Terrace Blocks */}
-              {floorNodes
-                .filter((n) => !['corridor', 'stair', 'lift'].includes(n.type))
-                .map((roomNode) => {
-                  const cx = scaleX(roomNode.coordinates.x);
-                  const cy = scaleY(roomNode.coordinates.y);
-                  const isLargeHall =
-                    roomNode.nodeId.includes('SEMINAR') || roomNode.nodeId.includes('TERRACE');
-                  const boxW = isLargeHall ? 156 : 108;
-                  const boxH = isLargeHall ? 92 : 68;
-
-                  return (
-                    <g key={`arch-${roomNode.nodeId}`}>
-                      <rect
-                        x={cx - boxW / 2}
-                        y={cy - boxH / 2}
-                        width={boxW}
-                        height={boxH}
-                        rx="8"
-                        className={getUpperRoomClass(roomNode)}
-                      />
-                      <text
-                        x={cx}
-                        y={cy - 14}
-                        textAnchor="middle"
-                        className="room-label-bold"
-                      >
-                        {getShortBlueprintTitle(roomNode)}
-                      </text>
-                      {roomNode.metadata?.dimensions && (
-                        <text
-                          x={cx}
-                          y={cy + 23}
-                          textAnchor="middle"
-                          className="room-dim-text"
-                        >
-                          {roomNode.metadata.dimensions}
-                        </text>
-                      )}
-                    </g>
-                  );
-                })}
+          {/* Names printed on the drawing for spaces that are not navigation destinations */}
+          {plan && showAnnotations && (
+            <g className="plan-annotation-layer" pointerEvents="none">
+              {plan.labels.map((label, index) => (
+                <text
+                  key={`${label.text}-${index}`}
+                  x={scaleX(label.x)}
+                  y={scaleY(label.y)}
+                  textAnchor="middle"
+                  className="plan-annotation"
+                  fontSize={fmt(labelSize * 0.82)}
+                >
+                  {label.text}
+                </text>
+              ))}
             </g>
           )}
 
-          {/* Graph Walkable Network Guide Lines (Visible clearly in Admin Mode, subtle otherwise) */}
-          <g opacity={adminEditMode ? '0.65' : '0.18'}>
+          {/* Walkable network (clear in Admin Mode, subtle otherwise) */}
+          <g opacity={adminEditMode ? '0.7' : '0.22'} pointerEvents="none">
             {floorEdges.map((edge) => (
-              <line
+              <polyline
                 key={edge.edgeId}
-                x1={scaleX(edge.u.coordinates.x)}
-                y1={scaleY(edge.u.coordinates.y)}
-                x2={scaleX(edge.v.coordinates.x)}
-                y2={scaleY(edge.v.coordinates.y)}
+                points={getEdgePolyline(edge)}
+                fill="none"
                 stroke={adminEditMode ? '#6366f1' : '#94a3b8'}
-                strokeWidth={adminEditMode ? '2.2' : '1.5'}
-                strokeDasharray={adminEditMode ? '4 4' : 'none'}
+                strokeWidth={fmt((adminEditMode ? 1.8 : 1.1) * markerScale)}
+                strokeLinejoin="round"
+                strokeDasharray={adminEditMode ? '4 4' : `${fmt(3 * markerScale)} ${fmt(3 * markerScale)}`}
               />
             ))}
           </g>
@@ -651,10 +475,10 @@ export default function FloorMap({
           {pathPolylineSegments.map((segment, index) => {
             const points = segment.join(' ');
             return (
-              <g className="rendered-path-layer" key={`floor-route-${floor}-${index}`}>
-                <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" opacity="0.28" filter="url(#routeGlow)" />
-                <polyline points={points} fill="none" stroke="#1d4ed8" strokeWidth="6.5" strokeLinecap="round" strokeLinejoin="round" />
-                <polyline points={points} fill="none" stroke="#93c5fd" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="8 10" className="animated-dash-line" />
+              <g className="rendered-path-layer" key={`floor-route-${floor}-${index}`} pointerEvents="none">
+                <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth={fmt(11 * markerScale)} strokeLinecap="round" strokeLinejoin="round" opacity="0.28" filter="url(#routeGlow)" />
+                <polyline points={points} fill="none" stroke="#1d4ed8" strokeWidth={fmt(5.5 * markerScale)} strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points={points} fill="none" stroke="#93c5fd" strokeWidth={fmt(2.4 * markerScale)} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="8 10" className="animated-dash-line" />
               </g>
             );
           })}
@@ -663,29 +487,14 @@ export default function FloorMap({
           {floorTransitionInfo && (
             <g
               className="cursor-pointer"
+              transform={`translate(${fmt(scaleX(floorTransitionInfo.node.coordinates.x))} ${fmt(scaleY(floorTransitionInfo.node.coordinates.y))}) scale(${fmt(markerScale)})`}
               onClick={(e) => {
                 e.stopPropagation();
                 onSwitchFloor?.(floorTransitionInfo.targetFloor ?? floorTransitionInfo.sourceFloor);
               }}
             >
-              <rect
-                x={scaleX(floorTransitionInfo.node.coordinates.x) - 82}
-                y={scaleY(floorTransitionInfo.node.coordinates.y) - 46}
-                width="164"
-                height="30"
-                rx="15"
-                fill="#0f172a"
-                stroke="#38bdf8"
-                strokeWidth="2"
-              />
-              <text
-                x={scaleX(floorTransitionInfo.node.coordinates.x)}
-                y={scaleY(floorTransitionInfo.node.coordinates.y) - 27}
-                textAnchor="middle"
-                fill="#ffffff"
-                fontSize="11"
-                fontWeight="700"
-              >
+              <rect x="-82" y="-46" width="164" height="30" rx="15" fill="#0f172a" stroke="#38bdf8" strokeWidth="2" />
+              <text x="0" y="-27" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="700">
                 {floorTransitionInfo.type === 'exit'
                   ? `↗ ${floorTransitionInfo.transitType} to ${floorTransitionInfo.targetFloor === 0
                     ? 'GF'
@@ -707,12 +516,19 @@ export default function FloorMap({
               const isStart = startNode?.nodeId === node.nodeId;
               const isDest = destinationNode?.nodeId === node.nodeId;
               const isInPath = routeResult?.nodeIds?.includes(node.nodeId);
+              const isWaypoint = node.type === 'corridor';
               const color = getNodeColor(node);
+              const emphasised = isStart || isDest;
+              const radius = (emphasised ? 9 : isInPath ? (isWaypoint ? 3.4 : 6) : adminEditMode ? 6 : isWaypoint ? 2.2 : 4.6) * markerScale;
+              const labelLines = !isWaypoint && LABELLED_TYPES.has(node.type) && (showNodeLabels || emphasised)
+                ? getNodeLabelLines(node)
+                : null;
 
               return (
                 <g
                   key={node.nodeId}
                   className="cursor-pointer"
+                  opacity={isWaypoint && !adminEditMode && !isInPath && !emphasised ? 0.55 : 1}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (dragStartRef.current.moved) return;
@@ -723,11 +539,14 @@ export default function FloorMap({
                     }
                   }}
                 >
-                  {(isStart || isDest) && (
+                  {/* Generous invisible tap target */}
+                  <circle cx={cx} cy={cy} r={fmt(Math.max(radius, 9 * markerScale))} fill="transparent" />
+
+                  {emphasised && (
                     <circle
                       cx={cx}
                       cy={cy}
-                      r="20"
+                      r={fmt(18 * markerScale)}
                       fill={color}
                       opacity="0.26"
                       className="pulsing-beacon"
@@ -737,19 +556,35 @@ export default function FloorMap({
                   <circle
                     cx={cx}
                     cy={cy}
-                    r={isStart || isDest ? 10.5 : isInPath ? 7 : adminEditMode ? 8 : 5.5}
+                    r={fmt(radius)}
                     fill={color}
                     stroke="#ffffff"
-                    strokeWidth={isStart || isDest ? 3 : 2}
+                    strokeWidth={fmt((emphasised ? 2.6 : isWaypoint ? 0.8 : 1.5) * markerScale)}
                   />
 
-                  {/* Custom Admin-created rooms label if outside standard blueprint labels */}
+                  {labelLines && !adminEditMode && (
+                    <text
+                      x={cx}
+                      y={fmt(cy + radius + labelSize * 0.95)}
+                      textAnchor="middle"
+                      className={`plan-node-label plan-node-label-${node.type}`}
+                      fontSize={fmt(labelSize)}
+                    >
+                      {labelLines.map((line, lineIndex) => (
+                        <tspan key={line + lineIndex} x={cx} dy={lineIndex === 0 ? 0 : fmt(labelSize * 1.08)}>
+                          {line}
+                        </tspan>
+                      ))}
+                    </text>
+                  )}
+
+                  {/* Full names while editing the graph */}
                   {adminEditMode && (
                     <text
                       x={cx}
-                      y={cy - 12}
+                      y={fmt(cy - radius - 3 * markerScale)}
                       textAnchor="middle"
-                      fontSize="9.5"
+                      fontSize={fmt(Math.max(4, labelSize * 0.85))}
                       fontWeight="700"
                       fill="#334155"
                     >
@@ -757,37 +592,10 @@ export default function FloorMap({
                     </text>
                   )}
 
-                  {isStart && (
-                    <g>
-                      <rect
-                        x={cx - 32}
-                        y={cy + 13}
-                        width="64"
-                        height="19"
-                        rx="9.5"
-                        fill="#059669"
-                        stroke="#ffffff"
-                        strokeWidth="1.5"
-                      />
-                      <text x={cx} y={cy + 26} textAnchor="middle" fill="#fff" fontSize="9.5" fontWeight="800">
-                        YOU
-                      </text>
-                    </g>
-                  )}
-
                   {isDest && (
-                    <g>
-                      <rect
-                        x={cx - 38}
-                        y={cy + 13}
-                        width="76"
-                        height="19"
-                        rx="9.5"
-                        fill="#dc2626"
-                        stroke="#ffffff"
-                        strokeWidth="1.5"
-                      />
-                      <text x={cx} y={cy + 26} textAnchor="middle" fill="#fff" fontSize="9.5" fontWeight="800">
+                    <g transform={`translate(${fmt(cx)} ${fmt(cy)}) scale(${fmt(markerScale)})`}>
+                      <rect x="-38" y="-34" width="76" height="19" rx="9.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.5" />
+                      <text x="0" y="-21" textAnchor="middle" fill="#fff" fontSize="9.5" fontWeight="800">
                         TARGET
                       </text>
                     </g>
@@ -800,7 +608,7 @@ export default function FloorMap({
           {/* ======================================================== */}
           {/* Phone compass marker. Rotation is relative to the calibrated PDF north. */}
           {currentPosition && (
-            <g className="sicn-phone-position" transform={`translate(${scaleX(currentPosition.x)},${scaleY(currentPosition.y)})`}>
+            <g className="sicn-phone-position" transform={`translate(${fmt(scaleX(currentPosition.x))},${fmt(scaleY(currentPosition.y))}) scale(${fmt(markerScale)})`}>
               <circle r="25" fill="#2563eb" opacity="0.14" />
               <circle r="13" fill="#2563eb" stroke="#ffffff" strokeWidth="3" />
               {navigationActive && userHeading !== null && (
@@ -834,7 +642,7 @@ export default function FloorMap({
                   key={friend.socketId}
                   className="friend-avatar-glide cursor-pointer"
                   style={{
-                    transform: `translate(${cx}px, ${cy}px)`,
+                    transform: `translate(${cx}px, ${cy}px) scale(${fmt(markerScale)})`,
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
