@@ -11,6 +11,8 @@ import {
   clampZoom,
   fitPlanToViewport,
   getMapUiInsets,
+  getScaleBar,
+  zoomAroundPoint,
   panToCenter,
   projectX,
   projectY,
@@ -86,4 +88,32 @@ test('built-in registration places every seed node on its source PDF page', () =
   const b = transformMapToPlan({ x: 20, y: 10 }, gf);
   assert.ok(Math.abs(a.x - b.x) < 1e-12 && b.y > a.y);
   assert.equal(getPlanRegistration(9), null);
+});
+
+test('zooming keeps the point under the cursor or pinch in place', () => {
+  const pan = { x: 40, y: -25 };
+  const anchor = { x: 180, y: 90 };
+  const next = zoomAroundPoint(pan, 1.5, 3, anchor);
+  // Screen offset of the anchored map point: anchor = pan + zoom * p  =>  p = (anchor - pan) / zoom
+  const before = { x: (anchor.x - pan.x) / 1.5, y: (anchor.y - pan.y) / 1.5 };
+  const after = { x: (anchor.x - next.x) / 3, y: (anchor.y - next.y) / 3 };
+  assert.ok(Math.abs(before.x - after.x) < 1e-9 && Math.abs(before.y - after.y) < 1e-9);
+  // Zooming around the centre only scales the pan.
+  assert.deepEqual(zoomAroundPoint({ x: 10, y: 20 }, 1, 2, { x: 0, y: 0 }), { x: 20, y: 40 });
+});
+
+test('phone insets grow with the directions sheet; desktop insets follow the side panel', () => {
+  const closed = getMapUiInsets(390, { sheet: 'none', viewportHeight: 844 });
+  const peek = getMapUiInsets(390, { sheet: 'peek', viewportHeight: 844 });
+  const half = getMapUiInsets(390, { sheet: 'half', viewportHeight: 844 });
+  assert.ok(closed.bottom < peek.bottom && peek.bottom < half.bottom);
+  const open = getMapUiInsets(1400, { panelOpen: true });
+  const collapsed = getMapUiInsets(1400, { panelOpen: false });
+  assert.ok(open.left > collapsed.left && collapsed.left >= 76);
+});
+
+test('scale bar picks a round length that fits', () => {
+  assert.deepEqual(getScaleBar(9), { metres: 10, width: 90 });
+  assert.deepEqual(getScaleBar(40), { metres: 2, width: 80 });
+  assert.equal(getScaleBar(500).metres, 1);
 });

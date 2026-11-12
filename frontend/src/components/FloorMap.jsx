@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { loadFloorPlan } from '../data/floorplans';
+import PlaceCard from './PlaceCard';
 import { getRouteSegmentPoints } from '../utils/indoorNavigation';
 import {
   MAP_VIEWBOX,
@@ -10,10 +11,13 @@ import {
   fitPlanToViewport,
   getBaseScale,
   getMapUiInsets,
+  getScaleBar,
   panToCenter,
+  PX_PER_METER,
   projectX,
   projectY,
   unprojectPoint,
+  zoomAroundPoint,
 } from '../utils/mapProjection';
 
 const scaleX = projectX;
@@ -71,15 +75,39 @@ export default function FloorMap({
   headingUp = false,
   autoFollow = false,
   onUserPan,
+  uiInsets = null,
+  floorLabel = '',
+  schedule = null,
 }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0, moved: false });
-  const pinchRef = useRef(null);
+  // 'gesture' while a finger / mouse moves the map, 'wheel' while zooming with
+  // a wheel, 'idle' otherwise (programmatic camera moves then animate smoothly).
+  const [motion, setMotion] = useState('idle');
+  const pointersRef = useRef(new Map());
+  const gestureRef = useRef(null);
+  const movedRef = useRef(false);
+  const inertiaRef = useRef(0);
+  const lastTapRef = useRef(null);
   const [selectedPopupNode, setSelectedPopupNode] = useState(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [loadedPlan, setLoadedPlan] = useState(null);
+
+  // Floor changes animate like a level switch: the new floor slides in from
+  // the direction travelled and its name flashes briefly.
+  const previousFloorRef = useRef(floor);
+  const [floorFlash, setFloorFlash] = useState(null);
+  const [floorEnter, setFloorEnter] = useState('');
+  useEffect(() => {
+    const previous = previousFloorRef.current;
+    previousFloorRef.current = floor;
+    if (previous === floor) return undefined;
+    const direction = Number(floor) > Number(previous) ? 'up' : 'down';
+    setFloorEnter(direction);
+    setFloorFlash({ id: Date.now(), direction });
+    const timer = setTimeout(() => setFloorFlash(null), 1600);
+    return () => clearTimeout(timer);
+  }, [floor]);
 
   // Track the map viewport so zoom limits, panning and label sizes follow it.
   useEffect(() => {
@@ -113,10 +141,11 @@ export default function FloorMap({
   const baseScale = getBaseScale(containerSize.width, containerSize.height);
   const screenScale = baseScale * zoom;
   // Keep text near 10–11 screen pixels while zooming, within sane map sizes.
-  const labelSize = Math.max(3.4, Math.min(11.5, 10.5 / screenScale));
-  const showNodeLabels = labelSize * screenScale >= 4.8;
+  const labelSize = Math.max(1.4, Math.min(30, 10.5 / screenScale));
+  const showNodeLabels = screenScale >= 0.7;
   const showAnnotations = screenScale >= 0.8;
-  const markerScale = Math.max(0.45, Math.min(1.15, 1.05 / screenScale));
+  const markerScale = Math.max(0.16, Math.min(1.15, 1.05 / screenScale));
+  const scaleBar = getScaleBar(PX_PER_METER * screenScale);
 
   const floorNodes = useMemo(() => {
     return nodes.filter((n) => n.floor === floor);
@@ -196,6 +225,12 @@ export default function FloorMap({
       ? { ...startNode.coordinates, floor: startNode.floor }
       : null;
 
+  // Screen space covered by the floating search bar, side panel and sheets.
+  const insets = uiInsets || getMapUiInsets(containerSize.width);
+  const insetKey = `${insets.left}|${insets.right}|${insets.top}|${insets.bottom}`;
+  const insetsRef = useRef(insets);
+  insetsRef.current = insets;
+
   // Fit the active floor's route into the visible part of the map when a route/floor changes.
   useEffect(() => {
     if (!setZoom || !setPan || !containerSize.width) return;
@@ -208,22 +243,20 @@ export default function FloorMap({
     const width = Math.max(110, maxX - minX);
     const height = Math.max(90, maxY - minY);
     const base = getBaseScale(containerSize.width, containerSize.height);
-    // Leave room for the search bar on top and the directions sheet below.
-    const insets = { ...getMapUiInsets(containerSize.width), top: 110, bottom: 190 };
-    const fitX = (containerSize.width - insets.left - insets.right - 70) / (width * base);
-    const fitY = (containerSize.height - insets.top - insets.bottom) / (height * base);
-    const home = fitPlanToViewport(containerSize.width, containerSize.height, getMapUiInsets(containerSize.width));
+    const fitInsets = insetsRef.current;
+    const fitX = (containerSize.width - fitInsets.left - fitInsets.right - 48) / (width * base);
+    const fitY = (containerSize.height - fitInsets.top - fitInsets.bottom - 32) / (height * base);
+    const home = fitPlanToViewport(containerSize.width, containerSize.height, fitInsets);
     const nextZoom = clampZoom(Math.max(home.zoom, Math.min(3.4, fitX, fitY)));
     setZoom(nextZoom);
-    setPan(panToCenter((minX + maxX) / 2, (minY + maxY) / 2, nextZoom, containerSize.width, containerSize.height, insets));
-  }, [routeFloorPoints, containerSize.width, containerSize.height, setZoom, setPan]);
+    setPan(panToCenter((minX + maxX) / 2, (minY + maxY) / 2, nextZoom, containerSize.width, containerSize.height, fitInsets));
+  }, [routeFloorPoints, containerSize.width, containerSize.height, insetKey, setZoom, setPan]);
 
   // Keep the estimated position near the centre while auto-follow is enabled.
   useEffect(() => {
     if (!autoFollow || !navigationActive || !userPosition || Number(userPosition.floor) !== Number(floor) || !setPan || !containerSize.width) return;
-    const insets = { ...getMapUiInsets(containerSize.width), top: 110, bottom: 190 };
-    setPan(panToCenter(scaleX(userPosition.x), scaleY(userPosition.y), zoom, containerSize.width, containerSize.height, insets));
-  }, [autoFollow, navigationActive, userPosition, floor, setPan, zoom, containerSize.width, containerSize.height]);
+    setPan(panToCenter(scaleX(userPosition.x), scaleY(userPosition.y), zoom, containerSize.width, containerSize.height, insetsRef.current));
+  }, [autoFollow, navigationActive, userPosition, floor, setPan, zoom, containerSize.width, containerSize.height, insetKey]);
 
   // Walkable network on the current floor (clear in Admin Edit Mode, subtle otherwise)
   const floorEdges = useMemo(() => {
@@ -237,92 +270,249 @@ export default function FloorMap({
       }));
   }, [edges, floorNodes]);
 
-  // Zoom while keeping the map point at the centre of the screen in place.
-  const applyZoom = useCallback((computeNext) => {
-    if (!setZoom) return;
-    const nextZoom = clampZoom(computeNext(zoom));
-    if (nextZoom === zoom) return;
-    setZoom(nextZoom);
-    setPan?.(clampPan(
-      { x: pan.x * (nextZoom / zoom), y: pan.y * (nextZoom / zoom) },
-      nextZoom,
-      containerSize.width,
-      containerSize.height
-    ));
-  }, [zoom, pan, setZoom, setPan, containerSize.width, containerSize.height]);
+  // ------------------------------------------------------------------
+  // Map camera gestures, modelled on how a web map behaves:
+  //  - one finger / mouse drag pans, and a quick release keeps gliding
+  //  - pinch zooms around the middle of the two fingers and pans with them
+  //  - mouse wheel / trackpad pinch zooms around the cursor
+  //  - double tap / double click zooms in at that point, two-finger tap zooms out
+  //  - arrow keys pan, + / - zoom when the map has keyboard focus
+  // ------------------------------------------------------------------
+  const viewRef = useRef({ zoom, pan });
+  useEffect(() => {
+    if (!pointersRef.current.size && !inertiaRef.current) viewRef.current = { zoom, pan };
+  }, [zoom, pan]);
 
-  // Pointer / Touch Drag Handlers for Google Maps Panning
-  const handlePointerDown = (clientX, clientY) => {
-    setIsDragging(true);
-    dragStartRef.current = {
-      x: clientX,
-      y: clientY,
-      panX: pan.x,
-      panY: pan.y,
-      moved: false,
+  const setView = useCallback((nextZoom, nextPan) => {
+    const z = clampZoom(nextZoom);
+    const p = clampPan(nextPan, z, containerSize.width, containerSize.height);
+    viewRef.current = { zoom: z, pan: p };
+    setZoom?.(z);
+    setPan?.(p);
+  }, [setZoom, setPan, containerSize.width, containerSize.height]);
+
+  const anchorFrom = useCallback((clientX, clientY) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: clientX - rect.left - rect.width / 2, y: clientY - rect.top - rect.height / 2 };
+  }, []);
+
+  const zoomAt = useCallback((anchor, nextZoom) => {
+    const { zoom: z1, pan: p1 } = viewRef.current;
+    const z2 = clampZoom(nextZoom);
+    if (z2 === z1) return;
+    setView(z2, zoomAroundPoint(p1, z1, z2, anchor));
+  }, [setView]);
+
+  const stopInertia = useCallback(() => {
+    if (inertiaRef.current) cancelAnimationFrame(inertiaRef.current);
+    inertiaRef.current = 0;
+  }, []);
+  useEffect(() => stopInertia, [stopInertia]);
+
+  const startInertia = useCallback((vx, vy) => {
+    stopInertia();
+    if (Math.hypot(vx, vy) < 0.15) {
+      setMotion('idle');
+      return;
+    }
+    let last = performance.now();
+    let velocity = { x: vx, y: vy };
+    const tick = (now) => {
+      const dt = Math.min(40, now - last);
+      last = now;
+      const { zoom: z, pan: p } = viewRef.current;
+      setView(z, { x: p.x + velocity.x * dt, y: p.y + velocity.y * dt });
+      const decay = Math.pow(0.994, dt);
+      velocity = { x: velocity.x * decay, y: velocity.y * decay };
+      if (Math.hypot(velocity.x, velocity.y) < 0.02) {
+        inertiaRef.current = 0;
+        setMotion('idle');
+        return;
+      }
+      inertiaRef.current = requestAnimationFrame(tick);
+    };
+    inertiaRef.current = requestAnimationFrame(tick);
+  }, [setView, stopInertia]);
+
+  const pointerList = () => [...pointersRef.current.values()];
+  const midpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+  const beginDrag = (point) => {
+    gestureRef.current = {
+      type: 'drag',
+      startX: point.x,
+      startY: point.y,
+      startPan: viewRef.current.pan,
+      samples: [{ x: point.x, y: point.y, t: performance.now() }],
+      startedAt: performance.now(),
     };
   };
 
-  const handlePointerMove = (clientX, clientY) => {
-    if (!isDragging) return;
-    const dx = clientX - dragStartRef.current.x;
-    const dy = clientY - dragStartRef.current.y;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-      if (!dragStartRef.current.moved) onUserPan?.();
-      dragStartRef.current.moved = true;
+  const handlePointerDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    stopInertia();
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const points = pointerList();
+    if (points.length === 1) {
+      movedRef.current = false;
+      beginDrag(points[0]);
+    } else if (points.length === 2) {
+      const [a, b] = points;
+      gestureRef.current = {
+        type: 'pinch',
+        startDistance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        startZoom: viewRef.current.zoom,
+        startPan: viewRef.current.pan,
+        startMid: anchorFrom(midpoint(a, b).x, midpoint(a, b).y),
+        startedAt: performance.now(),
+        travelled: 0,
+      };
     }
-    setPan?.(clampPan(
-      { x: dragStartRef.current.panX + dx, y: dragStartRef.current.panY + dy },
-      zoom,
-      containerSize.width,
-      containerSize.height
-    ));
+    setMotion('gesture');
   };
 
-  const handlePointerUp = () => {
-    setIsDragging(false);
-    pinchRef.current = null;
-  };
-
-  const handleWheel = (e) => {
-    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-    applyZoom((z) => z * factor);
-  };
-
-  const touchDistance = (touches) => Math.hypot(
-    touches[0].clientX - touches[1].clientX,
-    touches[0].clientY - touches[1].clientY
-  );
-
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 2) {
-      setIsDragging(false);
-      pinchRef.current = { distance: touchDistance(e.touches), zoom, pan };
-      dragStartRef.current.moved = true;
-    } else if (e.touches.length === 1) {
-      handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+  const handlePointerMove = (e) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const gesture = gestureRef.current;
+    if (!gesture) return;
+    if (gesture.type === 'drag') {
+      const dx = e.clientX - gesture.startX;
+      const dy = e.clientY - gesture.startY;
+      if (!movedRef.current && Math.hypot(dx, dy) > 5) {
+        movedRef.current = true;
+        onUserPan?.();
+      }
+      if (!movedRef.current) return;
+      const now = performance.now();
+      gesture.samples.push({ x: e.clientX, y: e.clientY, t: now });
+      while (gesture.samples.length > 2 && now - gesture.samples[0].t > 90) gesture.samples.shift();
+      setView(viewRef.current.zoom, { x: gesture.startPan.x + dx, y: gesture.startPan.y + dy });
+      return;
+    }
+    const points = pointerList();
+    if (gesture.type === 'pinch' && points.length >= 2) {
+      const [a, b] = points;
+      const distance = Math.hypot(a.x - b.x, a.y - b.y);
+      const mid = anchorFrom(midpoint(a, b).x, midpoint(a, b).y);
+      const nextZoom = clampZoom(gesture.startZoom * (distance / gesture.startDistance));
+      const zoomed = zoomAroundPoint(gesture.startPan, gesture.startZoom, nextZoom, gesture.startMid);
+      gesture.travelled = Math.max(
+        gesture.travelled,
+        Math.abs(distance - gesture.startDistance),
+        Math.hypot(mid.x - gesture.startMid.x, mid.y - gesture.startMid.y)
+      );
+      if (!movedRef.current && gesture.travelled > 6) onUserPan?.();
+      movedRef.current = true;
+      setView(nextZoom, {
+        x: zoomed.x + (mid.x - gesture.startMid.x),
+        y: zoomed.y + (mid.y - gesture.startMid.y),
+      });
     }
   };
 
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 2 && pinchRef.current && setZoom) {
-      const start = pinchRef.current;
-      const nextZoom = clampZoom(start.zoom * (touchDistance(e.touches) / Math.max(1, start.distance)));
+  const handlePointerEnd = (e) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.delete(e.pointerId);
+    const gesture = gestureRef.current;
+    const remaining = pointerList();
+    const now = performance.now();
+
+    if (gesture?.type === 'pinch') {
+      // A quick two-finger tap zooms out, like on a phone map.
+      if (gesture.travelled < 8 && now - gesture.startedAt < 300 && remaining.length === 1) {
+        zoomAt(gesture.startMid, viewRef.current.zoom / 2);
+        gestureRef.current = { type: 'done' };
+        setMotion('idle');
+        return;
+      }
+      if (remaining.length === 1) {
+        beginDrag(remaining[0]);
+        return;
+      }
+    }
+
+    if (remaining.length) return;
+    gestureRef.current = null;
+
+    if (gesture?.type === 'drag' && movedRef.current) {
+      const samples = gesture.samples;
+      const first = samples[0];
+      const last = samples[samples.length - 1];
+      const dt = last.t - first.t;
+      if (dt > 0 && now - last.t < 60) startInertia((last.x - first.x) / dt, (last.y - first.y) / dt);
+      else setMotion('idle');
+      return;
+    }
+
+    if (gesture?.type === 'drag' && !movedRef.current && e.type === 'pointerup') {
+      // Double tap / double click zooms in around the tapped point.
+      const tap = { x: e.clientX, y: e.clientY, t: now };
+      const previous = lastTapRef.current;
+      if (previous && tap.t - previous.t < 320 && Math.hypot(tap.x - previous.x, tap.y - previous.y) < 30) {
+        lastTapRef.current = null;
+        setMotion('idle');
+        zoomAt(anchorFrom(tap.x, tap.y), viewRef.current.zoom * 2);
+        return;
+      }
+      lastTapRef.current = tap;
+    }
+    setMotion('idle');
+  };
+
+  // Wheel and trackpad zoom need a non-passive listener to keep the page still.
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return undefined;
+    let timer = 0;
+    const onWheel = (event) => {
+      event.preventDefault();
+      stopInertia();
+      const unit = event.deltaMode === 1 ? 32 : event.deltaMode === 2 ? 400 : 1;
+      const delta = Math.max(-240, Math.min(240, event.deltaY * unit));
+      // ctrlKey is set for trackpad pinch gestures; they report small deltas.
+      const factor = Math.exp(-delta * (event.ctrlKey ? 0.012 : 0.0025));
       onUserPan?.();
-      setZoom(nextZoom);
-      setPan?.(clampPan(
-        { x: start.pan.x * (nextZoom / start.zoom), y: start.pan.y * (nextZoom / start.zoom) },
-        nextZoom,
-        containerSize.width,
-        containerSize.height
-      ));
-    } else if (e.touches.length === 1) {
-      handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      setMotion('wheel');
+      zoomAt(anchorFrom(event.clientX, event.clientY), viewRef.current.zoom * factor);
+      clearTimeout(timer);
+      timer = setTimeout(() => setMotion('idle'), 160);
+    };
+    const preventGesture = (event) => event.preventDefault();
+    element.addEventListener('wheel', onWheel, { passive: false });
+    element.addEventListener('gesturestart', preventGesture);
+    return () => {
+      clearTimeout(timer);
+      element.removeEventListener('wheel', onWheel);
+      element.removeEventListener('gesturestart', preventGesture);
+    };
+  }, [zoomAt, anchorFrom, stopInertia, onUserPan]);
+
+  const handleKeyDown = (e) => {
+    const step = 90;
+    const { zoom: z, pan: p } = viewRef.current;
+    const moves = {
+      ArrowLeft: { x: step, y: 0 },
+      ArrowRight: { x: -step, y: 0 },
+      ArrowUp: { x: 0, y: step },
+      ArrowDown: { x: 0, y: -step },
+    };
+    if (moves[e.key]) {
+      e.preventDefault();
+      onUserPan?.();
+      setView(z, { x: p.x + moves[e.key].x, y: p.y + moves[e.key].y });
+    } else if (e.key === '+' || e.key === '=') {
+      e.preventDefault();
+      zoomAt({ x: 0, y: 0 }, z * 1.5);
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      zoomAt({ x: 0, y: 0 }, z / 1.5);
     }
   };
 
   const handleSvgBackgroundClick = (e) => {
-    if (dragStartRef.current.moved) return;
+    if (movedRef.current) return;
     if (adminEditMode && onAdminMapClick && svgRef.current) {
       const pt = svgRef.current.createSVGPoint();
       pt.x = e.clientX;
@@ -375,23 +565,29 @@ export default function FloorMap({
   return (
     <div
       ref={containerRef}
-      className={`sicn-floor-map relative w-full h-full overflow-hidden bg-[#eef2f6] select-none ${adminEditMode ? 'cursor-crosshair' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
+      role="application"
+      aria-label={`Floor map${floorLabel ? `, ${floorLabel}` : ''}. Drag to move, pinch or scroll to zoom, double tap to zoom in.`}
+      tabIndex={0}
+      className={`sicn-floor-map relative w-full h-full overflow-hidden bg-[#eef2f6] select-none outline-none ${adminEditMode ? 'cursor-crosshair' : motion === 'gesture' ? 'cursor-grabbing' : 'cursor-grab'
         }`}
-      onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
-      onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
-      onMouseUp={handlePointerUp}
-      onMouseLeave={handlePointerUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handlePointerUp}
-      onWheel={handleWheel}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onPointerLeave={(e) => { if (e.pointerType === 'mouse') handlePointerEnd(e); }}
+      onKeyDown={handleKeyDown}
     >
       {/* Interactive Pan/Zoom Canvas */}
       <div
-        className="w-full h-full flex items-center justify-center transition-transform duration-75 ease-out"
+        className="sicn-map-camera w-full h-full flex items-center justify-center"
         style={{
           transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
           transformOrigin: 'center center',
+          transition: motion === 'gesture'
+            ? 'none'
+            : motion === 'wheel'
+              ? 'transform 110ms ease-out'
+              : 'transform 320ms cubic-bezier(0.2, 0, 0, 1)',
         }}
       >
         <svg
@@ -415,6 +611,13 @@ export default function FloorMap({
               <feGaussianBlur stdDeviation="4.5" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
+            <radialGradient id="headingBeam" cx="0.5" cy="1" r="1" fx="0.5" fy="1">
+              <stop offset="0%" stopColor="#1a73e8" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="#1a73e8" stopOpacity="0" />
+            </radialGradient>
+            <filter id="dotShadow" x="-60%" y="-60%" width="220%" height="220%">
+              <feDropShadow dx="0" dy="1" stdDeviation="1.6" floodColor="#0f172a" floodOpacity="0.35" />
+            </filter>
             <filter id="planSlabShadow" x="-10%" y="-10%" width="120%" height="120%">
               <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor="#0f172a" floodOpacity="0.12" />
             </filter>
@@ -423,6 +626,8 @@ export default function FloorMap({
           {/* Site surface */}
           <rect x="-600" y="-400" width="2200" height="1420" fill="#eef2f6" />
           <rect x="-600" y="-400" width="2200" height="1420" fill="url(#gmapsGrid)" />
+
+          <g key={`floor-layer-${floor}`} className={`sicn-floor-layer ${floorEnter ? `enter-${floorEnter}` : ''}`}>
 
           {/* Architectural floor plan traced from the source PDF (1:100, metres) */}
           {plan ? (
@@ -555,7 +760,7 @@ export default function FloorMap({
                   opacity={isWaypoint && !adminEditMode && !isInPath && !emphasised ? 0.55 : 1}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (dragStartRef.current.moved) return;
+                    if (movedRef.current) return;
                     if (adminEditMode) {
                       onSelectNode?.(node, 'admin_edit');
                     } else {
@@ -564,7 +769,7 @@ export default function FloorMap({
                   }}
                 >
                   {/* Generous invisible tap target */}
-                  <circle cx={cx} cy={cy} r={fmt(Math.max(radius, 9 * markerScale))} fill="transparent" />
+                  <circle cx={cx} cy={cy} r={fmt(Math.max(radius, 12 / Math.max(0.05, screenScale)))} fill="transparent" />
 
                   {emphasised && (
                     <circle
@@ -617,11 +822,16 @@ export default function FloorMap({
                   )}
 
                   {isDest && (
-                    <g transform={`translate(${fmt(cx)} ${fmt(cy)}) scale(${fmt(markerScale)})`}>
-                      <rect x="-38" y="-34" width="76" height="19" rx="9.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.5" />
-                      <text x="0" y="-21" textAnchor="middle" fill="#fff" fontSize="9.5" fontWeight="800">
-                        TARGET
-                      </text>
+                    <g className="sicn-dest-pin" transform={`translate(${fmt(cx)} ${fmt(cy)}) scale(${fmt(markerScale)})`} pointerEvents="none">
+                      <ellipse cx="0" cy="1" rx="7" ry="2.6" fill="#0f172a" opacity="0.22" />
+                      <path
+                        d="M0 0 C -4 -9 -13 -15 -13 -26 A 13 13 0 1 1 13 -26 C 13 -15 4 -9 0 0 Z"
+                        fill="#e5383b"
+                        stroke="#ffffff"
+                        strokeWidth="2"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="0" cy="-26" r="5" fill="#7a0f12" />
                     </g>
                   )}
                 </g>
@@ -632,17 +842,22 @@ export default function FloorMap({
           {/* ======================================================== */}
           {/* Phone compass marker. Rotation is relative to the calibrated PDF north. */}
           {currentPosition && (
-            <g className="sicn-phone-position" transform={`translate(${fmt(scaleX(currentPosition.x))},${fmt(scaleY(currentPosition.y))}) scale(${fmt(markerScale)})`}>
-              <circle r="25" fill="#2563eb" opacity="0.14" />
-              <circle r="13" fill="#2563eb" stroke="#ffffff" strokeWidth="3" />
-              {navigationActive && userHeading !== null && (
-                <g transform={`rotate(${userHeading - mapNorthHeading})`}>
-                  <path d="M0 -39 L10 -12 L0 -18 L-10 -12 Z" fill="#1d4ed8" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round" />
+            <g
+              className="sicn-phone-position"
+              aria-label={userPosition?.mapMatched ? 'Your estimated position' : 'Your position'}
+              transform={`translate(${fmt(scaleX(currentPosition.x))},${fmt(scaleY(currentPosition.y))}) scale(${fmt(markerScale)})`}
+              pointerEvents="none"
+            >
+              {/* Accuracy halo: wider while the position is only a step estimate */}
+              <circle r={userPosition && !userPosition.confirmed ? 30 : 22} fill="#1a73e8" opacity="0.13" className="sicn-accuracy-halo" />
+              {/* Heading beam: the way the phone is pointing */}
+              {userHeading !== null && (
+                <g transform={`rotate(${fmt(userHeading - mapNorthHeading)})`}>
+                  <path d="M0 0 L-15 -40 A 43 43 0 0 1 15 -40 Z" fill="url(#headingBeam)" />
                 </g>
               )}
-              <circle r="4" fill="#ffffff" />
-              <rect x="-23" y="17" width="46" height="16" rx="8" fill="#1d4ed8" stroke="#ffffff" strokeWidth="1.5" />
-              <text x="0" y="28" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="800">YOU</text>
+              <circle r="10.5" fill="#ffffff" filter="url(#dotShadow)" />
+              <circle r="7.6" fill="#1a73e8" />
             </g>
           )}
 
@@ -726,64 +941,65 @@ export default function FloorMap({
               );
             })}
           </g>
+          </g>
         </svg>
       </div>
 
-      {/* Google Maps-style Tap Pin Action Card */}
-      {selectedPopupNode && !adminEditMode && (
+      {/* Scale bar, bottom-left of the visible map area */}
+      {containerSize.width > 0 && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 bottom-28 md:bottom-24 z-30 w-[92%] max-w-sm bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-2xl p-3.5 animate-fade-in"
-          onClick={(e) => e.stopPropagation()}
+          className="sicn-scale-bar pointer-events-none absolute z-10"
+          style={{ left: insets.left + 12, bottom: insets.bottom + 12 }}
+          aria-hidden="true"
         >
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 mb-1">
-                {selectedPopupNode.floor === 0 ? 'Ground Floor' : `Floor ${selectedPopupNode.floor}`} • {selectedPopupNode.type}
-              </span>
-              <h4 className="text-sm font-bold text-slate-900 leading-snug">
-                {selectedPopupNode.name}
-              </h4>
-              {selectedPopupNode.metadata?.description && (
-                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
-                  {selectedPopupNode.metadata.description}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => setSelectedPopupNode(null)}
-              className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1.5 py-0.5"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <button
-              onClick={() => {
-                onSelectNode?.(selectedPopupNode, 'destination');
-                setSelectedPopupNode(null);
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-xl transition"
-            >
-              Directions Here
-            </button>
-            <button
-              onClick={() => {
-                onSelectNode?.(selectedPopupNode, 'start');
-                setSelectedPopupNode(null);
-              }}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold py-2 px-3 rounded-xl transition"
-            >
-              Set as Start
-            </button>
-          </div>
+          <span>{scaleBar.metres} m</span>
+          <i style={{ width: scaleBar.width }} />
+        </div>
+      )}
+
+      {/* Place card for a tapped room */}
+      {selectedPopupNode && !adminEditMode && (
+        <PlaceCard
+          node={selectedPopupNode}
+          nodes={nodes}
+          schedule={schedule}
+          onClose={() => setSelectedPopupNode(null)}
+          onDirections={(target) => {
+            onSelectNode?.(target, 'destination');
+            setSelectedPopupNode(null);
+          }}
+          onSetStart={(target) => {
+            onSelectNode?.(target, 'start');
+            setSelectedPopupNode(null);
+          }}
+          style={{
+            left: insets.left + Math.max(0, (containerSize.width - insets.left - insets.right) / 2),
+            bottom: insets.bottom + 14,
+            width: Math.min(384, Math.max(240, containerSize.width - insets.left - insets.right - 24)),
+          }}
+        />
+      )}
+
+      {/* Floor name flashes when the floor changes */}
+      {floorFlash && (
+        <div
+          key={floorFlash.id}
+          className="sicn-floor-flash"
+          style={{ top: insets.top + 14, left: insets.left + (containerSize.width - insets.left - insets.right) / 2 }}
+          role="status"
+          aria-live="polite"
+        >
+          {floorFlash.direction === 'up' ? '↑' : '↓'} {floorLabel || (floor === 0 ? 'Ground Floor' : `Floor ${floor}`)}
         </div>
       )}
 
       {/* Friends on another floor indicator pill */}
       {otherFloorFriends.length > 0 && (
         <button
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onSwitchFloor?.(otherFloorFriends[0].floor)}
-          className="absolute top-36 left-4 z-20 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 transition"
+          style={{ top: insets.top + 12, left: insets.left + 12 }}
+          className="absolute z-20 bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 transition"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
           <span>
@@ -795,7 +1011,9 @@ export default function FloorMap({
 
       {/* Admin Edit Mode Banner */}
       {adminEditMode && (
-        <div className="absolute top-36 left-1/2 -translate-x-1/2 z-20 bg-amber-500 text-slate-950 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg pointer-events-none">
+        <div
+          style={{ top: insets.top + 12, left: insets.left + (containerSize.width - insets.left - insets.right) / 2 }}
+          className="absolute -translate-x-1/2 z-20 max-w-[90vw] text-center bg-amber-500 text-slate-950 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg pointer-events-none">
           Admin Map Editor: Tap empty space to Add Node • Tap node to Edit/Delete
         </div>
       )}

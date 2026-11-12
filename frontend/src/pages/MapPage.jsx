@@ -4,22 +4,40 @@ import {
   Search,
   Navigation,
   ArrowUpDown,
+  ArrowLeft,
+  ArrowUp,
+  CornerUpRight,
   QrCode,
   Share2,
   Accessibility,
-  ZoomIn,
-  ZoomOut,
   LocateFixed,
   Wrench,
   X,
   Plus,
-  Sparkles,
+  Minus,
   Camera,
   Compass,
   Footprints,
   FileText,
+  Layers,
+  MapPin,
+  Maximize2,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
+  FlaskConical,
+  Briefcase,
+  Presentation,
+  Bath,
+  BookOpen,
+  DoorOpen,
+  ArrowUpFromLine,
+  Building2,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import FloorMap from '../components/FloorMap';
+import MapToolsSheet from '../components/MapToolsSheet';
 import FloorPlanCalibrationViewer from '../components/FloorPlanCalibrationViewer';
 import ARView from '../components/ARView';
 import DirectionsBottomSheet from '../components/DirectionsBottomSheet';
@@ -31,8 +49,64 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import usePhoneSensors from '../hooks/usePhoneSensors';
+import useVoiceGuidance from '../hooks/useVoiceGuidance';
 import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, applyPdrStep, matchPositionToRoute, getRouteTurnInstruction, getRouteSegmentBearing, getRouteAlignedNorth } from '../utils/indoorNavigation';
-import { clampZoom, fitPlanToViewport, getMapUiInsets, PLAN_UP_COMPASS_BEARING, MAP_NORTH_STORAGE_KEY, MAP_NORTH_CHANGE_EVENT, readSavedMapNorth } from '../utils/mapProjection';
+import {
+  clampZoom,
+  fitPlanToViewport,
+  getMapUiInsets,
+  getDesktopPanelWidth,
+  panToCenter,
+  projectX,
+  projectY,
+  DESKTOP_BREAKPOINT,
+  DESKTOP_RAIL_WIDTH,
+  PLAN_UP_COMPASS_BEARING,
+  MAP_NORTH_STORAGE_KEY,
+  MAP_NORTH_CHANGE_EVENT,
+  readSavedMapNorth,
+} from '../utils/mapProjection';
+
+const CATEGORY_CHIPS = [
+  { label: 'Classrooms', type: 'room', icon: GraduationCap },
+  { label: 'Labs', type: 'lab', icon: FlaskConical },
+  { label: 'Offices', type: 'office', icon: Briefcase },
+  { label: 'Halls', type: 'hall', icon: Presentation },
+  { label: 'Restrooms', type: 'restroom', icon: Bath },
+  { label: 'Library', type: 'library', icon: BookOpen },
+];
+
+const PLACE_ICONS = {
+  room: GraduationCap,
+  lab: FlaskConical,
+  office: Briefcase,
+  hall: Presentation,
+  restroom: Bath,
+  library: BookOpen,
+  entrance: DoorOpen,
+  stair: ArrowUpFromLine,
+  lift: Building2,
+  checkpoint: QrCode,
+};
+const getPlaceIcon = (type) => PLACE_ICONS[type] || MapPin;
+
+/** Current window size, updated on resize and rotation. */
+function useViewportSize() {
+  const read = () => (typeof window === 'undefined'
+    ? { width: 1280, height: 800 }
+    : { width: window.innerWidth, height: window.innerHeight });
+  const [size, setSize] = useState(read);
+  useEffect(() => {
+    const update = () => setSize(read());
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
+  return size;
+}
 
 const FLOOR_DEFS = [
   { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
@@ -75,14 +149,61 @@ export default function MapPage() {
     showToast,
   } = useNavigation();
 
-  const { user, effectiveRole, canEditMap } = useAuth();
+  const { user, effectiveRole, canEditMap, canAccessTimetableRouting } = useAuth();
+
+  // Timetable + faculty cabins for the place card (role-restricted on the API).
+  const [schedule, setSchedule] = useState({ status: 'locked', teachers: [], timetables: [] });
+  useEffect(() => {
+    if (!canAccessTimetableRouting) {
+      setSchedule({ status: 'locked', teachers: [], timetables: [] });
+      return undefined;
+    }
+    let cancelled = false;
+    setSchedule((current) => ({ ...current, status: 'loading' }));
+    Promise.all([api.getTeachers(), api.getTimetables()])
+      .then(([teachers, timetables]) => {
+        if (!cancelled) setSchedule({ status: 'ready', teachers: teachers || [], timetables: timetables || [] });
+      })
+      .catch(() => {
+        if (!cancelled) setSchedule({ status: 'error', teachers: [], timetables: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canAccessTimetableRouting, user?._id]);
   const { roomCode, roomMembers, friendsInRoom, broadcastCheckpoint } = useSocket();
+
+  // Viewport: phones get a top search bar and a bottom sheet, larger screens a
+  // docked side panel next to the navigation rail.
+  const viewport = useViewportSize();
+  const isDesktop = viewport.width >= DESKTOP_BREAKPOINT;
+  // Narrow tablets start with the map uncovered; the panel opens for directions.
+  const [panelOpen, setPanelOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 1024);
+  const hasRoute = Boolean(routeResult);
+  useEffect(() => {
+    if (hasRoute) setPanelOpen(true);
+  }, [hasRoute]);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const panelWidth = getDesktopPanelWidth(viewport.width);
+  // Part of the map hidden by floating UI; routes and "my position" are
+  // framed inside what is left.
+  const mapInsets = useMemo(() => {
+    const base = getMapUiInsets(viewport.width, { panelOpen, sheet: routeResult ? sheetSnap : 'none', viewportHeight: viewport.height });
+    if (isDesktop) {
+      const top = routeResult ? 132 : panelOpen ? base.top : 76;
+      return { ...base, top };
+    }
+    return { ...base, top: routeResult ? 150 : 118 };
+  }, [viewport.width, viewport.height, isDesktop, panelOpen, routeResult, sheetSnap]);
 
   // Map camera state
   // Start with the whole building visible beside the floating controls.
-  const getHomeView = () => (typeof window === 'undefined'
+  const getHomeView = (insets) => (typeof window === 'undefined'
     ? { zoom: 1, pan: { x: 0, y: 0 } }
-    : fitPlanToViewport(window.innerWidth, window.innerHeight, getMapUiInsets(window.innerWidth)));
+    : fitPlanToViewport(window.innerWidth, window.innerHeight, insets || getMapUiInsets(window.innerWidth, {
+      panelOpen: window.innerWidth >= 1024,
+      viewportHeight: window.innerHeight,
+    })));
   const [zoom, setZoom] = useState(() => getHomeView().zoom);
   const [pan, setPan] = useState(() => getHomeView().pan);
   // Compass bearing of plan-up: the building's known orientation (the main
@@ -205,6 +326,7 @@ export default function MapPage() {
 
     return nodes
       .filter((n) => {
+        if (n.type === 'corridor') return false;
         if (categoryFilter && n.type !== categoryFilter) return false;
         if (!q) return true;
         return (
@@ -224,7 +346,7 @@ export default function MapPage() {
     setCategoryFilter('');
     setSearchFocused(false);
     computeRoute(startNodeId, node.nodeId, accessibleOnly, nodes);
-    setSheetSnap('half');
+    setSheetSnap(isDesktop ? 'half' : 'peek');
   };
 
   const handleMapNodeAction = (node, actionType) => {
@@ -246,7 +368,7 @@ export default function MapPage() {
     } else {
       setDestinationNodeId(node.nodeId);
       computeRoute(startNodeId, node.nodeId, accessibleOnly, nodes);
-      setSheetSnap('half');
+      setSheetSnap(isDesktop ? 'half' : 'peek');
     }
   };
 
@@ -281,6 +403,11 @@ export default function MapPage() {
     setConfirmedTransition(null);
     setActiveStepIndex(0);
     setStartNodeId(checkpoint.nodeId);
+    // Landing confirmed: switch to the new floor and frame the rest of the route.
+    if (Number(validation.floor) !== Number(currentFloor)) {
+      setAutoFollow(false);
+      if (!isDesktop) setSheetSnap('peek');
+    }
     setCurrentFloor(validation.floor);
     if (destinationNodeId && checkpoint.nodeId !== destinationNodeId) {
       computeRoute(checkpoint.nodeId, destinationNodeId, accessibleOnly, nodes);
@@ -395,6 +522,23 @@ export default function MapPage() {
   }, [stepCount, routeResult, sensorStatus, relativeTurn, isVerticalTransition]);
   const isRouteComplete = Boolean(routeResult?.path?.length && activeStepIndex >= routeResult.path.length - 1);
 
+  const voice = useVoiceGuidance({
+    routeResult,
+    activeStepIndex,
+    remainingMeters: sensorStatus === 'active' ? remainingDistance : Number.NaN,
+    nextTurn: nextTurnInstruction,
+    stepDirection,
+    isRouteComplete,
+    isVerticalTransition: Boolean(isVerticalTransition),
+  });
+
+  // While following, the map shows the floor the user is walking on.
+  useEffect(() => {
+    if (!autoFollow || !routeResult || !estimatedPosition || isVerticalTransition) return;
+    const floor = Number(estimatedPosition.floor);
+    if (Number.isFinite(floor) && floor !== Number(currentFloor)) setCurrentFloor(floor);
+  }, [autoFollow, routeResult, estimatedPosition, isVerticalTransition, currentFloor, setCurrentFloor]);
+
   // Zoom buttons keep the map point at the centre of the screen in place.
   const zoomBy = (factor) => {
     const nextZoom = clampZoom(zoom * factor);
@@ -427,17 +571,418 @@ export default function MapPage() {
   }, [nodes]);
 
   const showAROverlay = Boolean(isARMode && routeResult?.path?.length >= 2);
+  const floorDef = FLOOR_DEFS.find((item) => item.f === currentFloor) || FLOOR_DEFS[0];
+  // On phones the fully expanded directions sheet covers the map.
+  const sheetCoversMap = !isDesktop && Boolean(routeResult) && sheetSnap === 'full';
+  // The floor picker scrolls instead of running into the map buttons below it.
+  const floorDockRef = useRef(null);
+  const floorDockTop = mapInsets.top + (isDesktop ? 4 : 10);
+  const controlsHeight = 52 + 2 * (40 + 10) + (headingUp ? 50 : 0) + (isDesktop ? 91 : 0);
+  const floorDockMaxHeight = Math.max(76, viewport.height - floorDockTop - (mapInsets.bottom + 12 + controlsHeight + 12));
+  useEffect(() => {
+    const active = floorDockRef.current?.querySelector('.is-active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }, [currentFloor, isDesktop, floorDockMaxHeight]);
+  const sensorsOn = sensorStatus === 'active' || sensorStatus === 'compass-only';
+  const showResults = (searchFocused || categoryFilter) && (searchResults.length > 0 || searchText.trim());
+
+  const recenterOnMe = () => {
+    const position = estimatedPosition;
+    // Second tap while already following: switch to compass (heading-up) mode.
+    if (autoFollow && position && heading !== null && routeResult) {
+      setHeadingUp((value) => !value);
+      return;
+    }
+    setAutoFollow(true);
+    if (!position) {
+      const home = getHomeView(mapInsets);
+      setZoom(home.zoom);
+      setPan(home.pan);
+      return;
+    }
+    if (Number(position.floor) !== Number(currentFloor)) setCurrentFloor(Number(position.floor));
+    const nextZoom = clampZoom(Math.max(zoom, 2.2));
+    setZoom(nextZoom);
+    setPan(panToCenter(projectX(position.x), projectY(position.y), nextZoom, viewport.width, viewport.height, mapInsets));
+  };
+
+  const fitBuilding = () => {
+    const home = getHomeView(mapInsets);
+    setAutoFollow(false);
+    setZoom(home.zoom);
+    setPan(home.pan);
+  };
+
+  const tools = [
+    { key: 'ar', label: 'AR Live View', icon: Camera, onClick: launchARLiveView, description: 'Camera guidance with direction arrows' },
+    { key: 'qr', label: autoScannerOpen ? 'QR scanning on' : 'Scan QR checkpoint', icon: QrCode, active: autoScannerOpen, onClick: () => setAutoScannerOpen((open) => !open) },
+    { key: 'share', label: roomCode ? `Live #${roomCode}` : 'Share location', icon: Share2, active: Boolean(roomCode), onClick: () => setIsShareOpen(true) },
+    {
+      key: 'compass',
+      label: sensorsOn ? (routeResult ? 'Align compass' : savedMapNorth === null ? 'Calibrate compass' : 'Recalibrate compass') : 'Enable compass',
+      icon: Compass,
+      onClick: sensorsOn ? handleCalibrateNorth : handleEnableCompass,
+      description: sensorsOn
+        ? (routeResult ? 'Stand on the route, face along the blue line, then tap' : 'Point the top of the phone toward the top of the floor plan, then tap')
+        : 'Enable phone compass and motion sensors',
+    },
+    { key: 'heading', label: headingUp ? 'Heading up' : 'North up', icon: Navigation, active: headingUp, disabled: heading === null || !routeResult, onClick: () => setHeadingUp((value) => !value) },
+    { key: 'follow', label: autoFollow ? 'Follow on' : 'Follow off', icon: LocateFixed, active: autoFollow, disabled: !routeResult, onClick: () => setAutoFollow((value) => !value) },
+    {
+      key: 'steps',
+      label: calibrationStartSteps !== null ? 'Finish 10 m walk' : `Step length ${strideLengthMeters.toFixed(2)} m`,
+      icon: Footprints,
+      active: calibrationStartSteps !== null,
+      disabled: sensorStatus !== 'active',
+      onClick: handleStrideCalibration,
+      description: 'Walk a measured 10 metres to calibrate your step length',
+    },
+    ...(voice.supported
+      ? [{ key: 'voice', label: voice.enabled ? 'Voice on' : 'Voice off', icon: voice.enabled ? Volume2 : VolumeX, active: voice.enabled, onClick: () => voice.setEnabled((value) => !value), description: 'Spoken turn-by-turn directions' }]
+      : []),
+    { key: 'plan', label: 'Architectural plan', icon: FileText, onClick: () => setShowFloorPlan(true) },
+    { key: 'accessible', label: 'Step-free route', icon: Accessibility, active: accessibleOnly, onClick: () => setAccessibleOnly(!accessibleOnly) },
+    ...(canEditMap
+      ? [
+        { key: 'edit', label: adminEditMode ? 'Exit map editor' : 'Edit map', icon: Wrench, tone: 'warning', active: adminEditMode, onClick: () => setAdminEditMode(!adminEditMode) },
+        {
+          key: 'add',
+          label: 'Add node',
+          icon: Plus,
+          tone: 'warning',
+          onClick: () => {
+            setEditingNode(null);
+            setClickedMapCoords({ x: 33, y: 21 });
+            setAdminModalOpen(true);
+          },
+        },
+      ]
+      : []),
+  ];
+
+  const categoryChips = (
+    <div className="sicn-chip-row no-scrollbar" role="toolbar" aria-label="Place categories">
+      {CATEGORY_CHIPS.map((cat) => {
+        const Icon = cat.icon;
+        const active = categoryFilter === cat.type;
+        return (
+          <button
+            key={cat.type}
+            type="button"
+            aria-pressed={active}
+            onClick={() => {
+              setCategoryFilter((prev) => (prev === cat.type ? '' : cat.type));
+              setSearchFocused(true);
+              setShowRoutePlanner(false);
+            }}
+            className={`sicn-chip ${active ? 'is-active' : ''}`}
+          >
+            <Icon size={14} />
+            <span>{cat.label}</span>
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        aria-pressed={accessibleOnly}
+        onClick={() => setAccessibleOnly(!accessibleOnly)}
+        className={`sicn-chip ${accessibleOnly ? 'is-active is-green' : ''}`}
+      >
+        <Accessibility size={14} />
+        <span>Step-free</span>
+      </button>
+    </div>
+  );
+
+  const searchBox = (
+    <div className="sicn-searchbox">
+      {searchFocused || searchText || categoryFilter ? (
+        <button
+          type="button"
+          aria-label="Close search"
+          onClick={() => {
+            setSearchText('');
+            setCategoryFilter('');
+            setSearchFocused(false);
+          }}
+          className="sicn-icon-btn"
+        >
+          <ArrowLeft size={19} />
+        </button>
+      ) : (
+        <span className="sicn-search-glyph" aria-hidden="true"><Search size={18} /></span>
+      )}
+      <input
+        type="search"
+        value={searchText}
+        onFocus={() => setSearchFocused(true)}
+        onChange={(e) => setSearchText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && searchResults[0]) handleSelectSearchDestination(searchResults[0]);
+          if (e.key === 'Escape') {
+            setSearchFocused(false);
+            e.currentTarget.blur();
+          }
+        }}
+        placeholder="Search rooms, labs, offices…"
+        aria-label="Search campus places"
+        className="sicn-search-input"
+      />
+      {searchText && (
+        <button type="button" aria-label="Clear search" onClick={() => setSearchText('')} className="sicn-icon-btn">
+          <X size={17} />
+        </button>
+      )}
+      <span className="sicn-search-divider" aria-hidden="true" />
+      <button
+        type="button"
+        onClick={() => setShowRoutePlanner(true)}
+        title="Directions"
+        aria-label="Directions"
+        className="sicn-icon-btn text-blue-600"
+      >
+        <Navigation size={18} />
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate('/profile')}
+        title={`Signed in role: ${effectiveRole}`}
+        aria-label="Account"
+        className="sicn-avatar-btn"
+        style={{ backgroundColor: user?.avatarColor || '#334155' }}
+      >
+        {user?.name ? user.name[0].toUpperCase() : 'G'}
+      </button>
+    </div>
+  );
+
+  const resultsList = showResults && (
+    <div className="sicn-results" role="listbox" aria-label="Search results">
+      {searchResults.length === 0 && (
+        <p className="px-4 py-5 text-center text-xs text-slate-500">No places match “{searchText.trim()}”.</p>
+      )}
+      {searchResults.map((n) => {
+        const Icon = getPlaceIcon(n.type);
+        return (
+          <button
+            key={n.nodeId}
+            type="button"
+            role="option"
+            aria-selected="false"
+            onClick={() => handleSelectSearchDestination(n)}
+            className="sicn-result-row"
+          >
+            <span className="sicn-result-icon"><Icon size={16} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-bold text-slate-900">{n.name}</span>
+              <span className="block truncate text-[11px] text-slate-500">
+                {n.floor === 0 ? 'Ground Floor' : `Floor ${n.floor}`} · {n.type}
+                {n.metadata?.department ? ` · ${n.metadata.department}` : ''}
+              </span>
+            </span>
+            <span className="sicn-result-go" aria-hidden="true"><Navigation size={14} /></span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const routePlanner = (
+    <div className="sicn-route-planner animate-fade-in">
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={() => setShowRoutePlanner(false)} aria-label="Back" className="sicn-icon-btn">
+          <ArrowLeft size={19} />
+        </button>
+        <span className="text-[13px] font-extrabold text-slate-800">Directions</span>
+        <button
+          type="button"
+          onClick={() => setAccessibleOnly(!accessibleOnly)}
+          aria-pressed={accessibleOnly}
+          title="Step-free route (lifts and ramps only)"
+          className={`sicn-icon-btn ${accessibleOnly ? 'bg-emerald-50 text-emerald-700' : ''}`}
+        >
+          <Accessibility size={18} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="sicn-route-dots" aria-hidden="true">
+          <span className="is-start" />
+          <i />
+          <span className="is-end" />
+        </div>
+        <div className="flex-1 space-y-2 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <select
+              value={startNodeId}
+              aria-label="Start"
+              onChange={(e) => {
+                const val = e.target.value;
+                setWalkedMeters(0);
+                setActiveStepIndex(0);
+                setStartNodeId(val);
+                broadcastCheckpoint(val);
+                if (destinationNodeId) {
+                  computeRoute(val, destinationNodeId, accessibleOnly, nodes);
+                }
+              }}
+              className="sicn-route-field"
+            >
+              {groupedFloorNodes.map((group) => (
+                <optgroup key={group.f} label={group.fullLabel}>
+                  {group.items.map((n) => (
+                    <option key={n.nodeId} value={n.nodeId}>
+                      {n.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setAutoScannerOpen(true)}
+              title="Set start by scanning a QR checkpoint"
+              aria-label="Scan QR checkpoint"
+              className="sicn-icon-btn bg-indigo-50 text-indigo-700"
+            >
+              <QrCode size={16} />
+            </button>
+          </div>
+          <select
+            value={destinationNodeId}
+            aria-label="Destination"
+            onChange={(e) => {
+              const val = e.target.value;
+              setDestinationNodeId(val);
+              if (val) {
+                computeRoute(startNodeId, val, accessibleOnly, nodes);
+                setSheetSnap(isDesktop ? 'half' : 'peek');
+              }
+            }}
+            className="sicn-route-field"
+          >
+            <option value="">Choose destination</option>
+            {[...groupedFloorNodes].reverse().map((group) => (
+              <optgroup key={group.f} label={group.fullLabel}>
+                {group.items.map((n) => (
+                  <option key={n.nodeId} value={n.nodeId}>
+                    {n.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        <button type="button" onClick={handleSwapEndpoints} title="Swap start and destination" aria-label="Swap start and destination" className="sicn-icon-btn">
+          <ArrowUpDown size={18} />
+        </button>
+      </div>
+
+      {!routeResult && (
+        <button
+          type="button"
+          onClick={() => {
+            computeRoute(startNodeId, destinationNodeId, accessibleOnly, nodes);
+            if (!isDesktop) setShowRoutePlanner(false);
+            setSheetSnap(isDesktop ? 'half' : 'peek');
+          }}
+          disabled={routeLoading || !destinationNodeId}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-bold py-2.5 rounded-full shadow-sm transition disabled:opacity-50"
+        >
+          {routeLoading ? 'Finding the best route…' : 'Get directions'}
+        </button>
+      )}
+    </div>
+  );
+
+  const guidanceBanner = routeResult && (
+    <div className="sicn-guidance" role="status" aria-live="polite">
+      <div className="flex items-start gap-3">
+        <span className="sicn-guidance-icon" aria-hidden="true">
+          {isRouteComplete ? <MapPin size={22} /> : isVerticalTransition ? <Layers size={22} /> : relativeTurn !== null && Math.abs(relativeTurn) > 18
+            ? <CornerUpRight size={22} style={relativeTurn < 0 ? { transform: 'scaleX(-1)' } : undefined} />
+            : <ArrowUp size={22} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-extrabold leading-snug pr-1">
+            {isRouteComplete
+              ? 'You have arrived'
+              : isVerticalTransition
+                ? `Reach ${activeRouteSegment.to.name}, then scan the landing QR`
+                : relativeTurn === null
+                  ? `Head to ${activeRouteSegment?.to?.name || destNodeObj?.name || 'the next point'}`
+                  : Math.abs(relativeTurn) <= 18
+                    ? 'Walk straight'
+                    : relativeTurn > 0
+                      ? `Turn right ${Math.round(Math.abs(relativeTurn))}°`
+                      : `Turn left ${Math.round(Math.abs(relativeTurn))}°`}
+          </div>
+          <div className="mt-0.5 text-[11px] text-white/75">
+            {sensorStatus === 'active' ? `${remainingDistance.toFixed(1)} m to next point` : heading === null ? 'Compass off · tap the tools button to enable' : `Facing ${Math.round(heading)}°`}
+            {savedMapNorth === null ? '' : ' · compass aligned'}
+          </div>
+          {nextTurnInstruction && !isVerticalTransition && !isRouteComplete && (
+            <div className="mt-1 text-[11px] font-semibold text-white/85">
+              Then {nextTurnInstruction.type === 'u-turn' ? 'U-turn' : `turn ${nextTurnInstruction.type}`} at {nextTurnInstruction.atNodeName || nextTurnInstruction.atNodeId}
+            </div>
+          )}
+          {sensorError && <div className="mt-1 text-[10px] text-amber-200">{sensorError}</div>}
+        </div>
+        {voice.supported && (
+          <button
+            type="button"
+            onClick={() => voice.setEnabled((value) => !value)}
+            aria-pressed={voice.enabled}
+            aria-label={voice.enabled ? 'Mute voice guidance' : 'Turn on voice guidance'}
+            title={voice.enabled ? 'Mute voice guidance' : 'Turn on voice guidance'}
+            className="sicn-guidance-voice"
+          >
+            {voice.enabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+        )}
+      </div>
+      {stepDirection !== 'forward' && !isVerticalTransition && !isRouteComplete && (
+        <div className="sicn-guidance-alert is-danger">
+          <span className="flex-1">
+            {stepDirection === 'backward'
+              ? 'Wrong direction — turn around and follow the blue line.'
+              : 'You are walking across the route. Turn to follow the blue line.'}
+          </span>
+          <button type="button" onClick={handleCalibrateNorth}>Align compass</button>
+        </div>
+      )}
+      {routeDeviation && (
+        <div className="sicn-guidance-alert">
+          <span className="flex-1">Heading differs from the route. Confirm your position at the nearest QR checkpoint.</span>
+          <button type="button" onClick={() => setAutoScannerOpen(true)}>Scan QR</button>
+        </div>
+      )}
+    </div>
+  );
+
+  const directionsProps = {
+    routeResult,
+    startNode: startNodeObj,
+    destinationNode: destNodeObj,
+    snap: sheetSnap,
+    setSnap: setSheetSnap,
+    onClearRoute: clearRoute,
+    onSwitchFloor: (f) => setCurrentFloor(f),
+    accessibleOnly,
+    isARMode,
+    onLaunchAR: () => (isARMode ? fallbackTo2DMap() : launchARLiveView()),
+    activeStepIndex,
+    onSelectStep: (idx) => { setWalkedMeters(0); setActiveStepIndex(idx); },
+  };
 
   return (
-    <div className="sicn-map-page fixed inset-0 w-full h-[100dvh] overflow-hidden bg-slate-100">
-      {/* ======================================================== */}
-      {/* AR CAMERA NAVIGATION MODE OR 2D FLOOR MAP FALLBACK       */}
-      {/* ======================================================== */}
+    <div className={`sicn-map-page fixed inset-0 w-full h-[100dvh] overflow-hidden bg-slate-100 ${isDesktop ? 'is-desktop' : 'is-mobile'}`}>
       {showAROverlay ? (
         <ARView />
       ) : (
         <FloorMap
           floor={currentFloor}
+          floorLabel={floorDef.fullLabel}
           nodes={nodes}
           edges={edges}
           routeResult={routeResult}
@@ -455,6 +1000,8 @@ export default function MapPage() {
           onUserPan={() => setAutoFollow(false)}
           pan={pan}
           setPan={setPan}
+          uiInsets={mapInsets}
+          schedule={schedule}
           adminEditMode={canEditMap && adminEditMode}
           onSelectNode={handleMapNodeAction}
           onAdminMapClick={handleAdminMapClick}
@@ -462,491 +1009,182 @@ export default function MapPage() {
         />
       )}
 
-      {/* ======================================================== */}
-      {/* FLOATING TOP SEARCH BAR & ROUTE PLANNER (GOOGLE MAPS UI) */}
-      {/* ======================================================== */}
-      {!showAROverlay && (
-      <header className="fixed top-3 inset-x-3 md:left-[260px] md:right-auto md:w-[410px] z-30 pointer-events-none space-y-2 sicn-map-search">
-        {!showRoutePlanner ? (
-          /* Collapsed Google Maps Search Pill */
-          <div className="pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_8px_28px_rgba(15,23,42,0.14)] border border-slate-200/90 overflow-hidden">
-            <div className="flex items-center gap-2 px-3.5 py-2.5">
-              <Search size={18} className="text-slate-400 shrink-0" />
-              <input
-                type="text"
-                value={searchText}
-                onFocus={() => setSearchFocused(true)}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search rooms, Seminar Hall, Class 501, CAD Lab..."
-                className="flex-1 bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none min-w-0"
-              />
-
-              {(searchText || categoryFilter) && (
-                <button
-                  onClick={() => {
-                    setSearchText('');
-                    setCategoryFilter('');
-                    setSearchFocused(false);
-                  }}
-                  className="p-1 text-slate-400 hover:text-slate-600"
-                >
-                  <X size={16} />
-                </button>
+      {/* ===================== Desktop: docked side panel ===================== */}
+      {!showAROverlay && isDesktop && (
+        <>
+          <aside
+            className={`sicn-side-panel ${panelOpen ? 'is-open' : 'is-closed'}`}
+            style={{ width: panelWidth }}
+            aria-label="Search and directions"
+            aria-hidden={!panelOpen}
+          >
+            <div className="sicn-side-panel-head">
+              {showRoutePlanner || routeResult ? routePlanner : searchBox}
+              {!showRoutePlanner && !routeResult && categoryChips}
+            </div>
+            <div className="sicn-side-panel-body">
+              {routeResult ? (
+                <DirectionsBottomSheet {...directionsProps} variant="panel" />
+              ) : showResults ? (
+                resultsList
+              ) : (
+                <div className="sicn-panel-empty">
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Explore {floorDef.fullLabel}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {CATEGORY_CHIPS.map((cat) => {
+                      const Icon = cat.icon;
+                      return (
+                        <button
+                          key={cat.type}
+                          type="button"
+                          onClick={() => { setCategoryFilter(cat.type); setSearchFocused(true); }}
+                          className="sicn-explore-tile"
+                        >
+                          <Icon size={17} />
+                          <span>{cat.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-4 text-[11px] leading-relaxed text-slate-500">
+                    Tap a room on the map to see it, or search above. Drag to move the map, scroll to zoom, double-click to zoom in.
+                  </p>
+                </div>
               )}
-
-              <button
-                onClick={() => setShowRoutePlanner(true)}
-                title="Open Start & Destination Planner"
-                className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition shrink-0"
-              >
-                <Navigation size={15} />
-              </button>
-
-              <button
-                onClick={() => navigate('/profile')}
-                title={`Signed in role: ${effectiveRole}`}
-                className="w-8 h-8 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-xs"
-                style={{ backgroundColor: user?.avatarColor || '#334155' }}
-              >
-                {user?.name ? user.name[0].toUpperCase() : 'V'}
-              </button>
             </div>
-
-            {/* Instant Search Autocomplete Results */}
-            {(searchFocused || categoryFilter) && searchResults.length > 0 && (
-              <div className="border-t border-slate-100 max-h-64 overflow-y-auto divide-y divide-slate-100">
-                {searchResults.map((n) => (
-                  <button
-                    key={n.nodeId}
-                    onClick={() => handleSelectSearchDestination(n)}
-                    className="w-full px-4 py-2.5 text-left hover:bg-blue-50/70 flex items-center justify-between gap-2 transition"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 truncate">{n.name}</div>
-                      <div className="text-[11px] text-slate-500 truncate">
-                        {n.floor === 0 ? 'Ground Floor' : `Floor ${n.floor}`} • {n.type}
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-semibold text-blue-600 shrink-0">
-                      Route →
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* Expanded Google Maps Origin -> Destination Card */
-          <div className="pointer-events-auto bg-white/98 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 p-3.5 space-y-2.5 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
-                Indoor Route Planner
-              </span>
-              <button
-                onClick={() => setShowRoutePlanner(false)}
-                className="p-1 rounded-full hover:bg-slate-100 text-slate-500"
-              >
-                <X size={16} />
-              </button>
+          </aside>
+          <button
+            type="button"
+            onClick={() => setPanelOpen((open) => !open)}
+            className="sicn-panel-toggle"
+            style={{ left: (panelOpen ? DESKTOP_RAIL_WIDTH + 12 + panelWidth : DESKTOP_RAIL_WIDTH + 12) }}
+            aria-label={panelOpen ? 'Collapse side panel' : 'Expand side panel'}
+            title={panelOpen ? 'Collapse side panel' : 'Expand side panel'}
+          >
+            {panelOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+          </button>
+          {!panelOpen && (
+            <div className="sicn-collapsed-search" style={{ left: DESKTOP_RAIL_WIDTH + 44 }}>
+              {searchBox}
+              {resultsList}
             </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex-1 space-y-2 min-w-0">
-                {/* Start Selector */}
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                  <select
-                    value={startNodeId}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setWalkedMeters(0);
-                      setActiveStepIndex(0);
-                      setStartNodeId(val);
-                      broadcastCheckpoint(val);
-                      if (destinationNodeId) {
-                        computeRoute(val, destinationNodeId, accessibleOnly, nodes);
-                      }
-                    }}
-                    className="flex-1 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 truncate focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {groupedFloorNodes.map((group) => (
-                      <optgroup key={group.f} label={group.fullLabel}>
-                        {group.items.map((n) => (
-                          <option key={n.nodeId} value={n.nodeId}>
-                            {n.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => setAutoScannerOpen(true)}
-                    title="Scan QR Checkpoint"
-                    className="p-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 shrink-0"
-                  >
-                    <QrCode size={15} />
-                  </button>
-                </div>
-
-                {/* Destination Selector */}
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
-                  <select
-                    value={destinationNodeId}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setDestinationNodeId(val);
-                      if (val) {
-                        computeRoute(startNodeId, val, accessibleOnly, nodes);
-                        setSheetSnap('half');
-                      }
-                    }}
-                    className="flex-1 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 truncate focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select destination...</option>
-                    {[...groupedFloorNodes].reverse().map((group) => (
-                      <optgroup key={group.f} label={group.fullLabel}>
-                        {group.items.map((n) => (
-                          <option key={n.nodeId} value={n.nodeId}>
-                            {n.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <button
-                onClick={handleSwapEndpoints}
-                title="Swap Start & Destination"
-                className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0"
-              >
-                <ArrowUpDown size={16} />
-              </button>
-            </div>
-
-            <button
-              onClick={() => {
-                computeRoute(startNodeId, destinationNodeId, accessibleOnly, nodes);
-                setShowRoutePlanner(false);
-                setSheetSnap('half');
-              }}
-              disabled={routeLoading || !destinationNodeId}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-xl shadow transition disabled:opacity-50"
-            >
-              {routeLoading ? 'Calculating Optimal Path...' : 'Show Route & Directions'}
-            </button>
-          </div>
-        )}
-
-        {/* Horizontal Scrollable Google Maps Quick Action Chips */}
-        <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-          {/* AR Live View Camera Navigation Quick Button */}
-          <button
-            onClick={launchARLiveView}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 transition"
-          >
-            <Camera size={13} />
-            <span>AR Live View</span>
-          </button>
-
-          <button
-            onClick={() => setAutoScannerOpen((open) => !open)}
-            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${
-              autoScannerOpen ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50'
-            }`}
-            title="Enable automatic QR checkpoint detection"
-          >
-            <QrCode size={13} />
-            <span>{autoScannerOpen ? 'QR Scanning On' : 'Auto QR Checkpoints'}</span>
-          </button>
-
-          <button
-            onClick={sensorStatus === 'active' || sensorStatus === 'compass-only' ? handleCalibrateNorth : handleEnableCompass}
-            title={sensorStatus === 'active' || sensorStatus === 'compass-only' ? (routeResult ? 'Stand on the route, face along the blue line, then tap to align the compass' : 'Point the top of the phone toward the top of the floor plan, then tap') : 'Enable phone compass and motion sensors'}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50 transition"
-          >
-            <Compass size={13} />
-            <span>{sensorStatus === 'active' || sensorStatus === 'compass-only' ? (routeResult ? 'Align compass to route' : savedMapNorth === null ? 'Calibrate compass' : 'Recalibrate compass') : 'Enable Compass'}</span>
-          </button>
-
-          <button
-            onClick={() => setShowFloorPlan(true)}
-            title="View the original architectural drawing for this floor"
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50 transition"
-          >
-            <FileText size={13} />
-            <span>Architectural Plan</span>
-          </button>
-
-          <button
-            onClick={() => setHeadingUp((value) => !value)}
-            disabled={heading === null || !routeResult}
-            title="Rotate the floor map to keep your phone heading at the top"
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50 transition disabled:opacity-40"
-          >
-            <Compass size={13} />
-            <span>{headingUp ? 'Heading Up' : 'North Up'}</span>
-          </button>
-
-          <button
-            onClick={() => setAutoFollow((value) => !value)}
-            disabled={!routeResult}
-            title="Keep the estimated location centred on the map"
-            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${autoFollow ? 'bg-blue-600 text-white border-blue-600' : 'bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50'} disabled:opacity-40`}
-          >
-            <LocateFixed size={13} />
-            <span>{autoFollow ? 'Auto-follow On' : 'Auto-follow Off'}</span>
-          </button>
-
-          <button
-            onClick={handleStrideCalibration}
-            disabled={sensorStatus !== 'active'}
-            title="Walk a measured 10 metres to calibrate your step length"
-            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${calibrationStartSteps !== null ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50'} disabled:opacity-40`}
-          >
-            <Footprints size={13} />
-            <span>{calibrationStartSteps !== null ? 'Finish 10m calibration' : `Calibrate steps · ${strideLengthMeters.toFixed(2)}m`}</span>
-          </button>
-
-          {/* Live Share Location Button */}
-          <button
-            onClick={() => setIsShareOpen(true)}
-            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${
-              roomCode
-                ? 'bg-violet-600 text-white border-violet-600'
-                : 'bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            <Share2 size={13} />
-            <span>{roomCode ? `Live #${roomCode} (${roomMembers.length})` : 'Share Location'}</span>
-          </button>
-
-          {/* Wheelchair Accessible Filter Chip */}
-          <button
-            onClick={() => setAccessibleOnly(!accessibleOnly)}
-            className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${
-              accessibleOnly
-                ? 'bg-emerald-600 text-white border-emerald-600'
-                : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            <Accessibility size={13} />
-            <span>Accessible</span>
-          </button>
-
-          {/* Admin Map Edit Toggle (Visible ONLY to Admin role!) */}
-          {canEditMap && (
-            <button
-              onClick={() => setAdminEditMode(!adminEditMode)}
-              className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border transition ${
-                adminEditMode
-                  ? 'bg-amber-500 text-slate-950 border-amber-500'
-                  : 'bg-white/95 text-amber-700 border-amber-300 hover:bg-amber-50'
-              }`}
-            >
-              <Wrench size={13} />
-              <span>{adminEditMode ? 'Exit Map Editor' : 'Edit Map'}</span>
-            </button>
           )}
-
-          {/* Category Quick Filter Pills */}
-          {[
-            { label: 'Classrooms', type: 'room' },
-            { label: 'Labs', type: 'lab' },
-            { label: 'Halls & Terraces', type: 'hall' },
-            { label: 'Offices', type: 'office' },
-            { label: 'Restrooms', type: 'restroom' },
-          ].map((cat) => (
-            <button
-              key={cat.type}
-              onClick={() => {
-                setCategoryFilter((prev) => (prev === cat.type ? '' : cat.type));
-                setShowRoutePlanner(false);
-              }}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md border transition ${
-                categoryFilter === cat.type
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white/95 text-slate-700 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-        {routeResult && (
-          <div className="pointer-events-auto mt-1 mx-auto w-fit max-w-[min(92vw,420px)] rounded-2xl bg-slate-950/90 text-white border border-white/15 shadow-xl px-4 py-2.5 backdrop-blur-md">
-            <div className="flex items-center gap-2">
-              <Navigation size={16} className="text-blue-300 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-xs font-extrabold">
-                  {isRouteComplete
-                    ? 'You have arrived at your destination'
-                    : isVerticalTransition
-                    ? `Reach ${activeRouteSegment.to.name}, then scan the destination QR`
-                    : relativeTurn === null
-                      ? 'Enable compass for live turn guidance'
-                      : Math.abs(relativeTurn) <= 18
-                        ? 'Walk straight'
-                        : relativeTurn > 0
-                          ? `Turn right ${Math.round(Math.abs(relativeTurn))}°`
-                          : `Turn left ${Math.round(Math.abs(relativeTurn))}°`}
-                </div>
-                <div className="text-[10px] text-slate-300 mt-0.5">
-                  {heading === null ? 'Compass unavailable' : `Facing ${Math.round(heading)}°`}
-                  {' · '}{savedMapNorth === null ? 'Compass: building default' : 'Compass aligned on this phone'}
-                  {' · '}{sensorStatus === 'active' ? `${remainingDistance.toFixed(1)} m to next point` : 'Step tracking inactive'}
-                </div>
-                {sensorError && <div className="text-[10px] text-amber-200 mt-0.5">{sensorError}</div>}
-                {nextTurnInstruction && !isVerticalTransition && (
-                  <div className="mt-1 text-[10px] text-cyan-200">
-                    Next: {nextTurnInstruction.type === 'u-turn' ? 'U-turn' : `Turn ${nextTurnInstruction.type}`} at {nextTurnInstruction.atNodeName || nextTurnInstruction.atNodeId}
-                  </div>
-                )}
-                {stepDirection !== 'forward' && !isVerticalTransition && !isRouteComplete && (
-                  <div className="mt-2 flex items-center gap-2 rounded-xl border border-rose-300/40 bg-rose-500/15 p-2">
-                    <span className="flex-1 text-[10px] text-rose-100">
-                      {stepDirection === 'backward'
-                        ? 'Wrong direction — you are walking back along the route. Turn around and follow the blue line.'
-                        : 'You are walking across the route. Turn to follow the blue line.'}
-                      {' '}Already facing along the blue line? Align the compass.
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCalibrateNorth}
-                      className="shrink-0 rounded-lg bg-rose-200 px-2 py-1 text-[10px] font-extrabold text-slate-950"
-                    >
-                      Align compass
-                    </button>
-                  </div>
-                )}
-                {routeDeviation && (
-                  <div className="mt-2 flex items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 p-2">
-                    <span className="flex-1 text-[10px] text-amber-100">Heading differs from the route. Confirm your position at the nearest QR checkpoint to recalculate safely.</span>
-                    <button
-                      type="button"
-                      onClick={() => setAutoScannerOpen(true)}
-                      className="shrink-0 rounded-lg bg-amber-300 px-2 py-1 text-[10px] font-extrabold text-slate-950"
-                    >
-                      Confirm QR
-                    </button>
-                  </div>
-                )}
-              </div>
+          {guidanceBanner && (
+            <div className="sicn-guidance-wrap" style={{ left: mapInsets.left + 12 }}>
+              {guidanceBanner}
             </div>
-          </div>
-        )}
-      </header>
+          )}
+        </>
       )}
 
-      {/* ======================================================== */}
-      {/* FLOATING RIGHT-SIDE INDOOR FLOOR PICKER & CAMERA DOCK    */}
-      {/* ======================================================== */}
-      {!showAROverlay && (
-      <aside className="fixed right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 sicn-floor-dock">
-        {/* Google Maps Indoor Floor Selector (GF through 7F) */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1 flex flex-col gap-0.5 max-h-[48dvh] overflow-y-auto no-scrollbar">
+      {/* ===================== Phone: search on top ===================== */}
+      {!showAROverlay && !isDesktop && (
+        <header className="sicn-mobile-top">
+          {routeResult && !showRoutePlanner && !searchFocused ? (
+            guidanceBanner
+          ) : showRoutePlanner ? (
+            routePlanner
+          ) : (
+            <>
+              <div className="sicn-search-card">
+                {searchBox}
+                {resultsList}
+              </div>
+              {!showResults && categoryChips}
+            </>
+          )}
+        </header>
+      )}
+
+      {/* ===================== Floor picker ===================== */}
+      {!showAROverlay && !sheetCoversMap && (
+        <div
+          ref={floorDockRef}
+          className="sicn-floor-dock"
+          style={{ top: floorDockTop, maxHeight: floorDockMaxHeight }}
+          role="radiogroup"
+          aria-label="Floor"
+        >
           {[...FLOOR_DEFS].reverse().map((item) => {
             const active = currentFloor === item.f;
             const hasRouteOnFloor = routeResult?.floorsCovered?.includes(item.f);
             return (
               <button
                 key={item.f}
-                onClick={() => setCurrentFloor(item.f)}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => {
+                  if (routeResult) setAutoFollow(false);
+                  setCurrentFloor(item.f);
+                }}
                 title={item.fullLabel}
-                className={`relative w-9 h-8 rounded-xl text-[11px] font-extrabold transition flex items-center justify-center shrink-0 ${
-                  active
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
+                className={`sicn-floor-btn ${active ? 'is-active' : ''}`}
               >
                 {item.shortLabel}
-                {hasRouteOnFloor && !active && (
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500" />
-                )}
+                {hasRouteOnFloor && !active && <span className="sicn-floor-route-dot" />}
               </button>
             );
           })}
         </div>
-
-        {/* Camera Zoom & Recenter Controls */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1 flex flex-col gap-1">
-          <button
-            onClick={() => zoomBy(1.3)}
-            title="Zoom In"
-            className="w-10 h-9 rounded-xl text-slate-700 hover:bg-slate-100 flex items-center justify-center"
-          >
-            <ZoomIn size={17} />
-          </button>
-          <button
-            onClick={() => zoomBy(1 / 1.3)}
-            title="Zoom Out"
-            className="w-10 h-9 rounded-xl text-slate-700 hover:bg-slate-100 flex items-center justify-center"
-          >
-            <ZoomOut size={17} />
-          </button>
-          <button
-            onClick={() => {
-              const home = getHomeView();
-              setZoom(home.zoom);
-              setAutoFollow(true);
-              setPan(home.pan);
-            }}
-            title="Recenter Map"
-            className="w-10 h-9 rounded-xl text-blue-600 hover:bg-blue-50 flex items-center justify-center"
-          >
-            <LocateFixed size={17} />
-          </button>
-        </div>
-
-        {/* Admin Quick Add Node Button */}
-        {canEditMap && (
-          <button
-            onClick={() => {
-              setEditingNode(null);
-              setClickedMapCoords({ x: 50, y: 50 });
-              setAdminModalOpen(true);
-            }}
-            title="Add New Map Node (Admin)"
-            className="w-11 h-11 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-xl flex items-center justify-center transition"
-          >
-            <Plus size={20} strokeWidth={2.6} />
-          </button>
-        )}
-      </aside>
       )}
 
-      {/* Re-open Route Sheet Pill if user minimized/closed it while route exists */}
-      {!showAROverlay && routeResult && sheetSnap === 'closed' && (
+      {/* ===================== Map controls (bottom right) ===================== */}
+      {!showAROverlay && !sheetCoversMap && (
+        <div className="sicn-map-controls" style={{ bottom: mapInsets.bottom + 12 }}>
+          {headingUp && (
+            <button type="button" onClick={() => setHeadingUp(false)} className="sicn-fab sicn-fab-sm" title="Back to north up" aria-label="Reset map rotation">
+              <Compass size={18} style={{ transform: heading !== null ? `rotate(${mapNorthHeading - heading}deg)` : undefined }} />
+            </button>
+          )}
+          <button type="button" onClick={() => setToolsOpen(true)} className="sicn-fab sicn-fab-sm" title="Map tools" aria-label="Map tools">
+            <Layers size={18} />
+          </button>
+          {isDesktop && (
+            <div className="sicn-zoom-group">
+              <button type="button" onClick={() => zoomBy(1.4)} title="Zoom in" aria-label="Zoom in">
+                <Plus size={18} />
+              </button>
+              <span aria-hidden="true" />
+              <button type="button" onClick={() => zoomBy(1 / 1.4)} title="Zoom out" aria-label="Zoom out">
+                <Minus size={18} />
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={fitBuilding}
+            className="sicn-fab sicn-fab-sm"
+            title="Show whole building"
+            aria-label="Show whole building"
+          >
+            <Maximize2 size={17} />
+          </button>
+          <button
+            type="button"
+            onClick={recenterOnMe}
+            className={`sicn-fab sicn-fab-locate ${autoFollow && estimatedPosition ? 'is-following' : ''} ${headingUp ? 'is-heading' : ''}`}
+            title={estimatedPosition ? 'Show my position' : 'Recenter map'}
+            aria-label={estimatedPosition ? 'Show my position' : 'Recenter map'}
+          >
+            {headingUp ? <Navigation size={20} fill="currentColor" /> : <LocateFixed size={20} />}
+          </button>
+        </div>
+      )}
+
+      {/* Re-open the route sheet on phones after it was closed */}
+      {!showAROverlay && !isDesktop && routeResult && sheetSnap === 'closed' && (
         <button
+          type="button"
           onClick={() => setSheetSnap('peek')}
-          className="fixed bottom-20 left-4 md:bottom-6 md:left-[260px] z-20 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-xl flex items-center gap-1.5"
+          className="sicn-reopen-route"
         >
-          <Sparkles size={14} />
-          <span>View Active Route ({routeResult.totalDistance}m)</span>
+          <Navigation size={14} />
+          <span>Route · {routeResult.estimatedTimeMinutes} min ({routeResult.totalDistance} m)</span>
         </button>
       )}
 
-      {/* ======================================================== */}
-      {/* SWIPE-UP BOTTOM SHEET FOR STEP-BY-STEP DIRECTIONS        */}
-      {/* ======================================================== */}
-      {!showAROverlay && (
-        <DirectionsBottomSheet
-          routeResult={routeResult}
-          startNode={startNodeObj}
-          destinationNode={destNodeObj}
-          snap={sheetSnap}
-          setSnap={setSheetSnap}
-          onClearRoute={clearRoute}
-          onSwitchFloor={(f) => setCurrentFloor(f)}
-          accessibleOnly={accessibleOnly}
-          isARMode={isARMode}
-          onLaunchAR={() => (isARMode ? fallbackTo2DMap() : launchARLiveView())}
-          activeStepIndex={activeStepIndex}
-          onSelectStep={(idx) => { setWalkedMeters(0); setActiveStepIndex(idx); }}
-        />
-      )}
+      {!showAROverlay && !isDesktop && <DirectionsBottomSheet {...directionsProps} variant="sheet" />}
 
       {!showAROverlay && (
         <IndoorCheckpointScanner
@@ -967,13 +1205,13 @@ export default function MapPage() {
         />
       )}
 
-      {/* Live Location & 6-Digit Room Sharing Modal */}
+      <MapToolsSheet open={toolsOpen} onClose={() => setToolsOpen(false)} tools={tools} />
+
       <ShareLocationSheet
         isOpen={isShareOpen}
         onClose={() => setIsShareOpen(false)}
       />
 
-      {/* Admin RBAC Map & Node Editor Modal */}
       {canEditMap && (
         <AdminNodeModal
           isOpen={adminModalOpen}
@@ -994,4 +1232,3 @@ export default function MapPage() {
     </div>
   );
 }
-

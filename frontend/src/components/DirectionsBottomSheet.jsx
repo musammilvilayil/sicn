@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Footprints,
   Clock,
@@ -28,10 +28,14 @@ export default function DirectionsBottomSheet({
   onLaunchAR,
   activeStepIndex = 0,
   onSelectStep,
+  variant = 'sheet', // 'sheet' (phone bottom sheet) | 'panel' (desktop side panel)
 }) {
   const touchStartYRef = useRef(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const isPanel = variant === 'panel';
 
-  if (!routeResult || snap === 'closed') return null;
+  if (!routeResult || (!isPanel && snap === 'closed')) return null;
+  const expanded = isPanel || snap !== 'peek';
 
   const {
     totalDistance,
@@ -44,7 +48,15 @@ export default function DirectionsBottomSheet({
     touchStartYRef.current = e.touches[0].clientY;
   };
 
+  // The sheet follows the finger while it is dragged down.
+  const handleTouchMove = (e) => {
+    if (touchStartYRef.current === null) return;
+    const dy = e.touches[0].clientY - touchStartYRef.current;
+    setDragOffset(dy > 0 ? Math.min(dy, 260) : Math.max(dy, -40) / 3);
+  };
+
   const handleTouchEnd = (e) => {
+    setDragOffset(0);
     if (touchStartYRef.current === null) return;
     const endY = e.changedTouches[0].clientY;
     const deltaY = touchStartYRef.current - endY; // positive = swipe up, negative = swipe down
@@ -56,8 +68,9 @@ export default function DirectionsBottomSheet({
       else if (snap === 'half') setSnap('full');
     } else if (deltaY < -38) {
       // Swipe DOWN
-      if (snap === 'full') setSnap('half');
+      if (snap === 'full') setSnap(deltaY < -220 ? 'peek' : 'half');
       else if (snap === 'half') setSnap('peek');
+      else if (snap === 'peek' && deltaY < -70) setSnap('closed');
     }
   };
 
@@ -82,29 +95,34 @@ export default function DirectionsBottomSheet({
     }
   };
 
-  const heightClasses =
-    snap === 'full'
-      ? 'max-h-[75dvh]'
+  const heightClasses = isPanel
+    ? ''
+    : snap === 'full'
+      ? 'h-[78dvh]'
       : snap === 'half'
-      ? 'max-h-[46dvh]'
-      : 'max-h-[112px]';
+        ? 'h-[46dvh]'
+        : 'h-[150px]';
 
   return (
     <section
       aria-label="Turn-by-turn directions drawer"
-      className={`fixed bottom-16 md:bottom-20 inset-x-0 md:left-[260px] md:right-auto md:w-[410px] z-30 bg-white/98 backdrop-blur-xl rounded-t-3xl md:rounded-3xl border border-slate-200/90 shadow-[0_-8px_32px_rgba(15,23,42,0.16)] transition-all duration-300 ease-out flex flex-col overflow-hidden ${heightClasses}`}
+      className={isPanel
+        ? 'sicn-directions-panel flex flex-col'
+        : `sicn-directions-sheet fixed inset-x-0 z-30 bg-white rounded-t-[22px] border-t border-slate-200/90 shadow-[0_-8px_32px_rgba(15,23,42,0.16)] flex flex-col overflow-hidden ${dragOffset ? '' : 'transition-[height,transform] duration-300 ease-out'} ${heightClasses}`}
+      style={isPanel ? undefined : { transform: dragOffset ? `translateY(${dragOffset}px)` : undefined }}
     >
       {/* Swipe / Drag Handle Zone */}
       <div
-        className="pt-2.5 pb-3 px-4 cursor-pointer select-none touch-none border-b border-slate-100"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onClick={cycleSnap}
+        className={isPanel ? 'pb-3 border-b border-slate-100' : 'pt-2.5 pb-3 px-4 cursor-pointer select-none touch-none border-b border-slate-100'}
+        onTouchStart={isPanel ? undefined : handleTouchStart}
+        onTouchMove={isPanel ? undefined : handleTouchMove}
+        onTouchEnd={isPanel ? undefined : handleTouchEnd}
+        onClick={isPanel ? undefined : cycleSnap}
       >
-        <div className="w-11 h-1.5 bg-slate-300 rounded-full mx-auto mb-2.5" />
+        {!isPanel && <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-2.5" aria-hidden="true" />}
 
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-extrabold text-emerald-600 tracking-tight">
                 {estimatedTimeMinutes} min
@@ -124,7 +142,7 @@ export default function DirectionsBottomSheet({
             {routeResult.distanceQuality?.status && routeResult.distanceQuality.status !== 'field_verified' && routeResult.distanceQuality.status !== 'not_applicable' && (
               <p
                 role="status"
-                className="mt-1 text-[10px] leading-snug font-semibold text-amber-700"
+                className="mt-1 truncate text-[10px] leading-snug font-semibold text-amber-700"
                 title={routeResult.distanceQuality.message}
               >
                 <span aria-hidden="true">ⓘ </span>
@@ -137,7 +155,17 @@ export default function DirectionsBottomSheet({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onClearRoute?.(); }}
+            title="Close route"
+            aria-label="Close route"
+            className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition shrink-0"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="mt-2.5 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             {onLaunchAR && (
               <button
                 onClick={onLaunchAR}
@@ -153,29 +181,20 @@ export default function DirectionsBottomSheet({
               </button>
             )}
 
-            <button
+            {!isPanel && <button
               onClick={cycleSnap}
               className="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-full shadow-sm transition"
             >
               <Navigation size={13} />
               <span>{snap === 'peek' ? 'Steps' : snap === 'half' ? 'Expand' : 'Minimize'}</span>
               {snap === 'full' ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-            </button>
-
-            <button
-              onClick={onClearRoute}
-              title="Close route"
-              className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
-            >
-              <X size={15} />
-            </button>
-          </div>
+            </button>}
         </div>
       </div>
 
       {/* Expanded Drawer Content (Visible in 'half' and 'full' states) */}
-      {snap !== 'peek' && (
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      {expanded && (
+        <div className={isPanel ? 'py-3 space-y-3' : 'flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-3'}>
           {/* Quick Route Metrics Strip */}
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-2.5 text-center">
