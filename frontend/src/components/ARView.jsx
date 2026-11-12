@@ -19,10 +19,9 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
+import { PLAN_UP_COMPASS_BEARING, MAP_NORTH_STORAGE_KEY, MAP_NORTH_CHANGE_EVENT, readSavedMapNorth } from '../utils/mapProjection';
 import { validateRouteCheckpoint, getRouteSegmentBearing, getRelativeBearing, getRouteAlignedNorth, classifyStepDirection, StepDetector } from '../utils/indoorNavigation';
 
-const MAP_NORTH_KEY = 'sicn_map_north_heading';
-const MAP_NORTH_EVENT = 'sicn-map-north-change';
 
 function readStoredNumber(key, fallback, min = -Infinity, max = Infinity) {
   if (typeof window === 'undefined') return fallback;
@@ -115,7 +114,7 @@ export default function ARView() {
   const [confirmedTransition, setConfirmedTransition] = useState(null);
   const walkedMetersRef = useRef(0);
   // Same compass alignment and stride as the 2D map (saved on this device).
-  const [mapNorthHeading, setMapNorthHeading] = useState(() => readStoredNumber(MAP_NORTH_KEY, 0));
+  const [mapNorthHeading, setMapNorthHeading] = useState(() => readSavedMapNorth() ?? PLAN_UP_COMPASS_BEARING);
   const strideMetersRef = useRef(readStoredNumber('sicn_stride_length', 0.72, 0.35, 1.2));
   // How the last detected step related to the route: forward, backward or sideways.
   const [stepDirection, setStepDirection] = useState('forward');
@@ -585,8 +584,8 @@ export default function ARView() {
       return;
     }
     setMapNorthHeading(aligned);
-    window.localStorage.setItem(MAP_NORTH_KEY, String(aligned));
-    window.dispatchEvent(new Event(MAP_NORTH_EVENT));
+    window.localStorage.setItem(MAP_NORTH_STORAGE_KEY, String(aligned));
+    window.dispatchEvent(new Event(MAP_NORTH_CHANGE_EVENT));
     setStepDirection('forward');
     showToast('Compass aligned: the way you are facing now is the route direction', 'success');
   };

@@ -2,8 +2,9 @@
  * Shared sensor and route-math helpers for phone-only 2D indoor navigation.
  * Map coordinates are metres in the architectural plan frame (+X = right and
  * +Y = up on the upright drawing). Map bearings are clockwise from plan-up.
- * The offset between plan-up and compass North ("map north heading") must be
- * calibrated on site before bearings can be compared with the phone compass.
+ * "Map north heading" is the compass bearing of plan-up. The building default
+ * is 90° (the main entrance, at the bottom of the plan, faces West); a phone
+ * can refine it by standing on a route and aligning its compass.
  */
 
 export const normalizeDegrees = (value) => ((Number(value) % 360) + 360) % 360;

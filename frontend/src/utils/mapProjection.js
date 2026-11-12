@@ -14,6 +14,23 @@ export const MAP_FRAME = Object.freeze({
 
 export const MAP_VIEWBOX = Object.freeze({ width: 1000, height: 620 });
 
+/**
+ * Compass bearing of plan-up. The main entrance is on the bottom edge of the
+ * plan and faces West, so walking "up" the plan is walking East (90°) and
+ * North is to the left of the plan. A phone can refine this with "Align
+ * compass"; that per-device value is kept under MAP_NORTH_STORAGE_KEY.
+ */
+export const PLAN_UP_COMPASS_BEARING = 90;
+export const MAP_NORTH_STORAGE_KEY = 'sicn_map_north_heading_v2';
+export const MAP_NORTH_CHANGE_EVENT = 'sicn-map-north-change';
+
+/** This phone's own compass alignment, or null when it uses the building default. */
+export function readSavedMapNorth() {
+  if (typeof window === 'undefined') return null;
+  const saved = window.localStorage.getItem(MAP_NORTH_STORAGE_KEY);
+  return saved !== null && Number.isFinite(Number(saved)) ? Number(saved) : null;
+}
+
 export const PX_PER_METER = 14.5;
 
 const OFFSET_X = (MAP_VIEWBOX.width - MAP_FRAME.widthMeters * PX_PER_METER) / 2;

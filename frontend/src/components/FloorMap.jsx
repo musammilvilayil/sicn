@@ -4,6 +4,7 @@ import { getRouteSegmentPoints } from '../utils/indoorNavigation';
 import {
   MAP_VIEWBOX,
   PLAN_LAYER_TRANSFORM,
+  PLAN_UP_COMPASS_BEARING,
   clampPan,
   clampZoom,
   fitPlanToViewport,
@@ -65,7 +66,7 @@ export default function FloorMap({
   onSwitchFloor,
   userPosition = null,
   userHeading = null,
-  mapNorthHeading = 0,
+  mapNorthHeading = PLAN_UP_COMPASS_BEARING,
   navigationActive = false,
   headingUp = false,
   autoFollow = false,
@@ -455,6 +456,29 @@ export default function FloorMap({
               ))}
             </g>
           )}
+
+          {/* North arrow: where compass North lies on this plan (entrance side faces West) */}
+          <g
+            className="plan-north-arrow"
+            pointerEvents="none"
+            transform={`translate(${fmt(scaleX(60.5))} ${fmt(scaleY(38))}) scale(${fmt(markerScale)})`}
+          >
+            <circle r="15" fill="#ffffff" stroke="#cbd5e1" strokeWidth="1.2" />
+            <g transform={`rotate(${fmt(-mapNorthHeading)})`}>
+              <path d="M0 -11.5 L4.6 2.5 L0 0 L-4.6 2.5 Z" fill="#dc2626" />
+              <path d="M0 11.5 L4.6 -2.5 L0 0 L-4.6 -2.5 Z" fill="#cbd5e1" />
+            </g>
+            <text
+              x={fmt(22 * Math.sin((-mapNorthHeading * Math.PI) / 180))}
+              y={fmt(-22 * Math.cos((-mapNorthHeading * Math.PI) / 180) + 3.2)}
+              textAnchor="middle"
+              fontSize="9"
+              fontWeight="800"
+              fill="#dc2626"
+            >
+              N
+            </text>
+          </g>
 
           {/* Walkable network (clear in Admin Mode, subtle otherwise) */}
           <g opacity={adminEditMode ? '0.7' : '0.22'} pointerEvents="none">

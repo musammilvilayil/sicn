@@ -32,7 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import usePhoneSensors from '../hooks/usePhoneSensors';
 import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, applyPdrStep, matchPositionToRoute, getRouteTurnInstruction, getRouteSegmentBearing, getRouteAlignedNorth } from '../utils/indoorNavigation';
-import { clampZoom, fitPlanToViewport, getMapUiInsets } from '../utils/mapProjection';
+import { clampZoom, fitPlanToViewport, getMapUiInsets, PLAN_UP_COMPASS_BEARING, MAP_NORTH_STORAGE_KEY, MAP_NORTH_CHANGE_EVENT, readSavedMapNorth } from '../utils/mapProjection';
 
 const FLOOR_DEFS = [
   { f: 0, shortLabel: 'GF', fullLabel: 'Ground Floor' },
@@ -85,11 +85,11 @@ export default function MapPage() {
     : fitPlanToViewport(window.innerWidth, window.innerHeight, getMapUiInsets(window.innerWidth)));
   const [zoom, setZoom] = useState(() => getHomeView().zoom);
   const [pan, setPan] = useState(() => getHomeView().pan);
-  const [mapNorthHeading, setMapNorthHeading] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    const saved = window.localStorage.getItem('sicn_map_north_heading');
-    return saved !== null && Number.isFinite(Number(saved)) ? Number(saved) : null;
-  });
+  // Compass bearing of plan-up: the building's known orientation (the main
+  // entrance faces West), unless this phone has aligned its own compass.
+  const [savedMapNorth, setSavedMapNorth] = useState(readSavedMapNorth);
+  const mapNorthHeading = savedMapNorth ?? PLAN_UP_COMPASS_BEARING;
+  const setMapNorthHeading = setSavedMapNorth;
   const [strideLengthMeters, setStrideLengthMeters] = useState(() => {
     if (typeof window === 'undefined') return 0.72;
     const saved = Number(window.localStorage.getItem('sicn_stride_length'));
@@ -133,7 +133,7 @@ export default function MapPage() {
     // route; facing back along it walks the position back, facing across holds.
     const progress = applyPdrStep(routeResult, activeStepIndex, walkedMeters, strideLengthMeters, {
       heading: step?.heading ?? null,
-      mapNorthHeading: mapNorthHeading ?? 0,
+      mapNorthHeading,
     });
     setStepState({ routeResult, direction: progress.direction });
     if (progress.direction === 'sideways') return;
@@ -164,12 +164,9 @@ export default function MapPage() {
 
   // The AR view can re-align the compass; keep the 2D map on the same value.
   useEffect(() => {
-    const syncMapNorth = () => {
-      const saved = window.localStorage.getItem('sicn_map_north_heading');
-      if (saved !== null && Number.isFinite(Number(saved))) setMapNorthHeading(Number(saved));
-    };
-    window.addEventListener('sicn-map-north-change', syncMapNorth);
-    return () => window.removeEventListener('sicn-map-north-change', syncMapNorth);
+    const syncMapNorth = () => setSavedMapNorth(readSavedMapNorth());
+    window.addEventListener(MAP_NORTH_CHANGE_EVENT, syncMapNorth);
+    return () => window.removeEventListener(MAP_NORTH_CHANGE_EVENT, syncMapNorth);
   }, []);
 
   // Walking should be tracked on the 2D map without first finding a button:
@@ -316,7 +313,7 @@ export default function MapPage() {
     const routeBearing = routeResult ? getRouteSegmentBearing(routeResult, activeStepIndex, walkedMeters) : null;
     const nextNorth = getRouteAlignedNorth(routeBearing, heading) ?? heading;
     setMapNorthHeading(nextNorth);
-    window.localStorage.setItem('sicn_map_north_heading', String(nextNorth));
+    window.localStorage.setItem(MAP_NORTH_STORAGE_KEY, String(nextNorth));
     setStepState({ routeResult, direction: 'forward' });
     setRouteDeviation(false);
     headingDeviationCountRef.current = 0;
@@ -373,7 +370,7 @@ export default function MapPage() {
       ?? getMapBearing(activeRouteSegment.from, activeRouteSegment.to)
     : null;
   const relativeTurn = heading !== null && targetBearing !== null
-    ? getRelativeBearing(targetBearing, heading, mapNorthHeading ?? 0)
+    ? getRelativeBearing(targetBearing, heading, mapNorthHeading)
     : null;
 
   const segmentDistance = routeResult ? getSegmentDistance(routeResult, activeStepIndex) : 0;
@@ -451,7 +448,7 @@ export default function MapPage() {
           setZoom={setZoom}
           userPosition={estimatedPosition}
           userHeading={heading}
-          mapNorthHeading={mapNorthHeading ?? 0}
+          mapNorthHeading={mapNorthHeading}
           navigationActive={Boolean(routeResult)}
           headingUp={headingUp}
           autoFollow={autoFollow}
@@ -671,7 +668,7 @@ export default function MapPage() {
             className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50 transition"
           >
             <Compass size={13} />
-            <span>{sensorStatus === 'active' || sensorStatus === 'compass-only' ? (routeResult ? 'Align compass to route' : mapNorthHeading === null ? 'Calibrate North' : 'Recalibrate North') : 'Enable Compass'}</span>
+            <span>{sensorStatus === 'active' || sensorStatus === 'compass-only' ? (routeResult ? 'Align compass to route' : savedMapNorth === null ? 'Calibrate compass' : 'Recalibrate compass') : 'Enable Compass'}</span>
           </button>
 
           <button
@@ -798,7 +795,7 @@ export default function MapPage() {
                 </div>
                 <div className="text-[10px] text-slate-300 mt-0.5">
                   {heading === null ? 'Compass unavailable' : `Facing ${Math.round(heading)}°`}
-                  {' · '}{mapNorthHeading === null ? 'North not calibrated' : 'North calibrated'}
+                  {' · '}{savedMapNorth === null ? 'Compass: building default' : 'Compass aligned on this phone'}
                   {' · '}{sensorStatus === 'active' ? `${remainingDistance.toFixed(1)} m to next point` : 'Step tracking inactive'}
                 </div>
                 {sensorError && <div className="text-[10px] text-amber-200 mt-0.5">{sensorError}</div>}
