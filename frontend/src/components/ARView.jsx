@@ -19,7 +19,17 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
-import { validateRouteCheckpoint, getRouteSegmentBearing } from '../utils/indoorNavigation';
+import { validateRouteCheckpoint, getRouteSegmentBearing, getRelativeBearing, getRouteAlignedNorth, classifyStepDirection, StepDetector } from '../utils/indoorNavigation';
+
+const MAP_NORTH_KEY = 'sicn_map_north_heading';
+const MAP_NORTH_EVENT = 'sicn-map-north-change';
+
+function readStoredNumber(key, fallback, min = -Infinity, max = Infinity) {
+  if (typeof window === 'undefined') return fallback;
+  const raw = window.localStorage.getItem(key);
+  const value = Number(raw);
+  return raw !== null && Number.isFinite(value) && value >= min && value <= max ? value : fallback;
+}
 
 /**
  * Tilt-compensated compass heading [0, 360) clockwise from North
@@ -104,7 +114,13 @@ export default function ARView() {
   const [pendingCheckpoint, setPendingCheckpoint] = useState(null);
   const [confirmedTransition, setConfirmedTransition] = useState(null);
   const walkedMetersRef = useRef(0);
-  const stepPeakRef = useRef({ above: false, lastStepAt: 0 });
+  // Same compass alignment and stride as the 2D map (saved on this device).
+  const [mapNorthHeading, setMapNorthHeading] = useState(() => readStoredNumber(MAP_NORTH_KEY, 0));
+  const strideMetersRef = useRef(readStoredNumber('sicn_stride_length', 0.72, 0.35, 1.2));
+  // How the last detected step related to the route: forward, backward or sideways.
+  const [stepDirection, setStepDirection] = useState('forward');
+  const navMetricsRef = useRef(null);
+  const userHeadingRef = useRef(null);
   const qrDetectionLockRef = useRef(false);
   const lastQrValueRef = useRef('');
   const cameraApiAvailable = typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia);
@@ -455,8 +471,9 @@ export default function ARView() {
         : 0);
 
     const effectiveHeading = userHeading ?? 0;
-    // Relative angle in [-180, +180]: positive = turn right, negative = turn left
-    const relativeAngle = ((targetBearing - effectiveHeading + 540) % 360) - 180;
+    // Relative angle in [-180, +180]: positive = turn right, negative = turn left.
+    // Uses the same compass alignment as the 2D map.
+    const relativeAngle = getRelativeBearing(targetBearing, effectiveHeading, mapNorthHeading) ?? 0;
 
     // Floor transition pitch (upstairs/lift up = +32 deg, downstairs/lift down = -32 deg)
     const floorDelta = (nextNode?.floor ?? 0) - (currNode?.floor ?? 0);
@@ -495,14 +512,22 @@ export default function ARView() {
       isFinalLeg,
       stepDirection,
     };
-  }, [routeResult, activeStepIndex, userHeading]);
+  }, [routeResult, activeStepIndex, userHeading, mapNorthHeading]);
+
+  // The motion listener stays attached for the whole session and reads the
+  // latest guidance through refs, so step timing is not reset by compass updates.
+  useEffect(() => {
+    navMetricsRef.current = navMetrics;
+  }, [navMetrics]);
+  useEffect(() => {
+    userHeadingRef.current = userHeading;
+  }, [userHeading]);
 
   // Estimate walking progress from motion peaks. This is a short-range estimate only;
   // QR checkpoints remain the authoritative indoor position and floor confirmation.
   useEffect(() => {
     if (sessionState !== 'active') return undefined;
-    let aboveThreshold = false;
-    let lastStepAt = 0;
+    const detector = new StepDetector();
     const handleMotion = (event) => {
       const acceleration = event.acceleration;
       const withGravity = event.accelerationIncludingGravity;
@@ -511,32 +536,60 @@ export default function ARView() {
         : withGravity && [withGravity.x, withGravity.y, withGravity.z].every(Number.isFinite)
           ? Math.abs(Math.hypot(withGravity.x, withGravity.y, withGravity.z) - 9.81)
           : 0;
-      const peak = magnitude > 1.25;
-      const now = Date.now();
-      if (peak && !aboveThreshold && now - lastStepAt > 360) {
-        lastStepAt = now;
-        setMotionAvailable(true);
-        const nextWalked = walkedMetersRef.current + 0.7;
-        const remaining = Number(navMetrics?.stepDirection?.distance || 0);
-        walkedMetersRef.current = nextWalked;
-        setWalkedMeters(nextWalked);
-        // Never auto-advance a stair/lift transition: confirm the new floor with its QR plaque.
-        if (navMetrics && !navMetrics.isFloorChange && remaining > 0 && nextWalked >= remaining * 0.85) {
-          setActiveStepIndex((current) => Math.min(current + 1, Math.max(0, (routeResult?.path?.length || 1) - 2)));
-          walkedMetersRef.current = 0;
-          setWalkedMeters(0);
-        }
+      if (!detector.push(magnitude, event.timeStamp || Date.now())) return;
+      setMotionAvailable(true);
+      const metrics = navMetricsRef.current;
+      if (!metrics) return;
+
+      // A step only counts as progress when the phone faces along the route.
+      // Facing back along it walks the estimate back; facing across it holds.
+      const direction = metrics.isFloorChange || userHeadingRef.current === null
+        ? 'forward'
+        : classifyStepDirection(metrics.relativeAngle);
+      setStepDirection(direction);
+      if (direction === 'sideways') return;
+      const stride = strideMetersRef.current;
+      if (direction === 'backward') {
+        const back = Math.max(0, walkedMetersRef.current - stride);
+        walkedMetersRef.current = back;
+        setWalkedMeters(back);
+        return;
       }
-      aboveThreshold = peak;
+
+      const nextWalked = walkedMetersRef.current + stride;
+      const remaining = Number(metrics.stepDirection?.distance || 0);
+      walkedMetersRef.current = nextWalked;
+      setWalkedMeters(nextWalked);
+      // Never auto-advance a stair/lift transition: confirm the new floor with its QR plaque.
+      if (!metrics.isFloorChange && remaining > 0 && nextWalked >= remaining * 0.85) {
+        setActiveStepIndex((current) => Math.min(current + 1, Math.max(0, (routeResult?.path?.length || 1) - 2)));
+        walkedMetersRef.current = 0;
+        setWalkedMeters(0);
+      }
     };
     window.addEventListener('devicemotion', handleMotion, true);
     return () => window.removeEventListener('devicemotion', handleMotion, true);
-  }, [sessionState, navMetrics, routeResult, setActiveStepIndex]);
+  }, [sessionState, routeResult, setActiveStepIndex]);
 
   useEffect(() => {
     walkedMetersRef.current = 0;
     setWalkedMeters(0);
+    setStepDirection('forward');
   }, [activeStepIndex, routeResult]);
+
+  // "I am standing on the route and facing the way it goes": align the compass.
+  const handleAlignCompass = () => {
+    const aligned = navMetrics ? getRouteAlignedNorth(navMetrics.targetBearing, userHeading) : null;
+    if (aligned === null) {
+      showToast('No compass reading yet. Hold the phone upright in front of you and try again.', 'info');
+      return;
+    }
+    setMapNorthHeading(aligned);
+    window.localStorage.setItem(MAP_NORTH_KEY, String(aligned));
+    window.dispatchEvent(new Event(MAP_NORTH_EVENT));
+    setStepDirection('forward');
+    showToast('Compass aligned: the way you are facing now is the route direction', 'success');
+  };
 
   if (!navMetrics) return null;
 
@@ -546,6 +599,8 @@ export default function ARView() {
       : 'Take Stairs / Lift Down'
     : !orientationAvailable
     ? (navMetrics.stepDirection?.instruction || 'Follow the next navigation step')
+    : stepDirection === 'backward'
+    ? 'Wrong direction • Turn around'
     : navMetrics.isAligned
     ? 'Aligned • Walk Straight'
     : navMetrics.relativeAngle > 0
@@ -853,6 +908,8 @@ export default function ARView() {
                 className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-extrabold shadow-lg border backdrop-blur-md transition-colors ${
                   navMetrics.isFloorChange
                     ? 'bg-amber-500/90 text-slate-950 border-amber-300'
+                    : stepDirection === 'backward' && orientationAvailable
+                    ? 'bg-rose-600/95 text-white border-rose-300'
                     : navMetrics.isAligned
                     ? 'bg-emerald-500/90 text-white border-emerald-300'
                     : 'bg-slate-900/80 text-white border-white/20'
@@ -871,6 +928,25 @@ export default function ARView() {
                 <span>{turnGuidance}</span>
               </div>
             </div>
+
+            {/* Steps were detected but not along the arrow: say so, and offer a one-tap compass fix */}
+            {orientationAvailable && !navMetrics.isFloorChange && stepDirection !== 'forward' && (
+              <div className="flex items-center gap-2 rounded-2xl border border-rose-300/40 bg-slate-900/85 px-3 py-2 text-white shadow-lg backdrop-blur-md">
+                <span className="flex-1 text-[11px] leading-4 text-rose-100">
+                  {stepDirection === 'backward'
+                    ? 'You are walking away from the next point, so progress is going back.'
+                    : 'You are walking across the route, so progress is paused.'}
+                  {' '}Already facing the right way? Align the compass.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAlignCompass}
+                  className="shrink-0 rounded-full bg-rose-200 px-3 py-1.5 text-[11px] font-extrabold text-slate-950"
+                >
+                  Align compass
+                </button>
+              </div>
+            )}
           </div>
 
           {/* BOTTOM NEXT-NODE WAYPOINT STEPPER CARD */}

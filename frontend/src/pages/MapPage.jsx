@@ -31,7 +31,7 @@ import { useNavigation } from '../context/NavigationContext';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import usePhoneSensors from '../hooks/usePhoneSensors';
-import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, advanceAlongRoute, matchPositionToRoute, getRouteTurnInstruction, getRouteSegmentBearing } from '../utils/indoorNavigation';
+import { getMapBearing, getRelativeBearing, getSegmentDistance, interpolateRoutePosition, validateRouteCheckpoint, applyPdrStep, matchPositionToRoute, getRouteTurnInstruction, getRouteSegmentBearing, getRouteAlignedNorth } from '../utils/indoorNavigation';
 import { clampZoom, fitPlanToViewport, getMapUiInsets } from '../utils/mapProjection';
 
 const FLOOR_DEFS = [
@@ -95,9 +95,19 @@ export default function MapPage() {
     const saved = Number(window.localStorage.getItem('sicn_stride_length'));
     return Number.isFinite(saved) && saved >= 0.35 && saved <= 1.2 ? saved : 0.72;
   });
-  const [walkProgress, setWalkProgress] = useState({ routeResult: null, meters: 0 });
-  const walkedMeters = walkProgress.routeResult === routeResult ? walkProgress.meters : 0;
-  const setWalkedMeters = useCallback((meters) => setWalkProgress({ routeResult, meters }), [routeResult]);
+  // Walked distance belongs to one segment of one route: if the route or the
+  // active segment changes elsewhere (QR scan, stepper, AR view) it restarts at 0.
+  const [walkProgress, setWalkProgress] = useState({ routeResult: null, index: 0, meters: 0 });
+  const walkedMeters = walkProgress.routeResult === routeResult && walkProgress.index === activeStepIndex
+    ? walkProgress.meters
+    : 0;
+  const setWalkedMeters = useCallback(
+    (meters, index = activeStepIndex) => setWalkProgress({ routeResult, index, meters }),
+    [routeResult, activeStepIndex]
+  );
+  // How the last detected step related to the route: forward, backward or sideways.
+  const [stepState, setStepState] = useState({ routeResult: null, direction: 'forward' });
+  const stepDirection = stepState.routeResult === routeResult ? stepState.direction : 'forward';
   const [calibrationStartSteps, setCalibrationStartSteps] = useState(null);
 
   // Search & Route Planner UI state
@@ -115,16 +125,23 @@ export default function MapPage() {
   const headingDeviationCountRef = useRef(0);
 
   const transitionPromptRef = useRef(null);
-  const handlePdrStep = useCallback(() => {
+  const handlePdrStep = useCallback((step) => {
     if (calibrationStartSteps !== null || !routeResult?.path?.length) return;
-    const progress = advanceAlongRoute(
-      routeResult, activeStepIndex, walkedMeters, strideLengthMeters
-    );
+    // The AR view tracks steps itself while it is open.
+    if (isARMode && routeResult.path.length >= 2) return;
+    // A step only moves the position forward when the phone faces along the
+    // route; facing back along it walks the position back, facing across holds.
+    const progress = applyPdrStep(routeResult, activeStepIndex, walkedMeters, strideLengthMeters, {
+      heading: step?.heading ?? null,
+      mapNorthHeading: mapNorthHeading ?? 0,
+    });
+    setStepState({ routeResult, direction: progress.direction });
+    if (progress.direction === 'sideways') return;
     if (progress.segmentIndex !== activeStepIndex) {
       setActiveStepIndex(progress.segmentIndex);
       transitionPromptRef.current = null;
     }
-    setWalkedMeters(progress.walkedMeters);
+    setWalkedMeters(progress.walkedMeters, progress.segmentIndex);
     if (progress.blockedByTransition) {
       const edge = routeResult.edges?.[progress.segmentIndex];
       if (edge?.edgeId && transitionPromptRef.current !== edge.edgeId) {
@@ -141,9 +158,43 @@ export default function MapPage() {
         );
       }
     }
-  }, [calibrationStartSteps, routeResult, activeStepIndex, walkedMeters, strideLengthMeters, confirmedTransition, setActiveStepIndex, setWalkedMeters, showToast]);
+  }, [calibrationStartSteps, routeResult, isARMode, activeStepIndex, walkedMeters, strideLengthMeters, mapNorthHeading, confirmedTransition, setActiveStepIndex, setWalkedMeters, showToast]);
 
   const { heading, stepCount, status: sensorStatus, error: sensorError, startSensors } = usePhoneSensors(handlePdrStep);
+
+  // The AR view can re-align the compass; keep the 2D map on the same value.
+  useEffect(() => {
+    const syncMapNorth = () => {
+      const saved = window.localStorage.getItem('sicn_map_north_heading');
+      if (saved !== null && Number.isFinite(Number(saved))) setMapNorthHeading(Number(saved));
+    };
+    window.addEventListener('sicn-map-north-change', syncMapNorth);
+    return () => window.removeEventListener('sicn-map-north-change', syncMapNorth);
+  }, []);
+
+  // Walking should be tracked on the 2D map without first finding a button:
+  // start the compass and step sensors straight away where the browser allows
+  // it, otherwise on the first tap (iOS only grants motion access from a tap).
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return undefined;
+    const needsGesture = typeof window.DeviceOrientationEvent.requestPermission === 'function'
+      || typeof window.DeviceMotionEvent?.requestPermission === 'function';
+    if (!needsGesture) {
+      startSensors();
+      return undefined;
+    }
+    const removeListeners = () => {
+      window.removeEventListener('click', startOnGesture, true);
+      window.removeEventListener('touchend', startOnGesture, true);
+    };
+    function startOnGesture() {
+      removeListeners();
+      startSensors();
+    }
+    window.addEventListener('click', startOnGesture, true);
+    window.addEventListener('touchend', startOnGesture, true);
+    return removeListeners;
+  }, [startSensors]);
 
   // Admin Map Editor state
   const [adminEditMode, setAdminEditMode] = useState(false);
@@ -254,14 +305,27 @@ export default function MapPage() {
     else showToast(sensorError || 'Phone sensors could not be enabled', 'error');
   };
 
+  // With a route active, "calibrating" means: I am standing on the route and
+  // facing along the blue line. Without a route it keeps the old meaning: the
+  // top of the phone points to the top of the floor plan.
   const handleCalibrateNorth = () => {
     if (heading === null) {
-      showToast('Enable the phone compass first. Point the top of your phone toward the North direction marked on the floor plan.', 'info');
+      showToast('No compass reading yet. Hold the phone flat in front of you and try again.', 'info');
       return;
     }
-    setMapNorthHeading(heading);
-    window.localStorage.setItem('sicn_map_north_heading', String(heading));
-    showToast('North reference saved for this device', 'success');
+    const routeBearing = routeResult ? getRouteSegmentBearing(routeResult, activeStepIndex, walkedMeters) : null;
+    const nextNorth = getRouteAlignedNorth(routeBearing, heading) ?? heading;
+    setMapNorthHeading(nextNorth);
+    window.localStorage.setItem('sicn_map_north_heading', String(nextNorth));
+    setStepState({ routeResult, direction: 'forward' });
+    setRouteDeviation(false);
+    headingDeviationCountRef.current = 0;
+    showToast(
+      routeBearing !== null
+        ? 'Compass aligned: the way you are facing now is the route direction'
+        : 'Map direction saved for this device',
+      'success'
+    );
   };
 
   const handleStrideCalibration = () => {
@@ -603,11 +667,11 @@ export default function MapPage() {
 
           <button
             onClick={sensorStatus === 'active' || sensorStatus === 'compass-only' ? handleCalibrateNorth : handleEnableCompass}
-            title={sensorStatus === 'active' || sensorStatus === 'compass-only' ? 'Point the phone toward the floor plan North arrow, then calibrate' : 'Enable phone compass and motion sensors'}
+            title={sensorStatus === 'active' || sensorStatus === 'compass-only' ? (routeResult ? 'Stand on the route, face along the blue line, then tap to align the compass' : 'Point the top of the phone toward the top of the floor plan, then tap') : 'Enable phone compass and motion sensors'}
             className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-md border bg-white/95 text-slate-800 border-slate-200 hover:bg-slate-50 transition"
           >
             <Compass size={13} />
-            <span>{sensorStatus === 'active' || sensorStatus === 'compass-only' ? (mapNorthHeading === null ? 'Calibrate North' : 'Recalibrate North') : 'Enable Compass'}</span>
+            <span>{sensorStatus === 'active' || sensorStatus === 'compass-only' ? (routeResult ? 'Align compass to route' : mapNorthHeading === null ? 'Calibrate North' : 'Recalibrate North') : 'Enable Compass'}</span>
           </button>
 
           <button
@@ -741,6 +805,23 @@ export default function MapPage() {
                 {nextTurnInstruction && !isVerticalTransition && (
                   <div className="mt-1 text-[10px] text-cyan-200">
                     Next: {nextTurnInstruction.type === 'u-turn' ? 'U-turn' : `Turn ${nextTurnInstruction.type}`} at {nextTurnInstruction.atNodeName || nextTurnInstruction.atNodeId}
+                  </div>
+                )}
+                {stepDirection !== 'forward' && !isVerticalTransition && !isRouteComplete && (
+                  <div className="mt-2 flex items-center gap-2 rounded-xl border border-rose-300/40 bg-rose-500/15 p-2">
+                    <span className="flex-1 text-[10px] text-rose-100">
+                      {stepDirection === 'backward'
+                        ? 'Wrong direction — you are walking back along the route. Turn around and follow the blue line.'
+                        : 'You are walking across the route. Turn to follow the blue line.'}
+                      {' '}Already facing along the blue line? Align the compass.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCalibrateNorth}
+                      className="shrink-0 rounded-lg bg-rose-200 px-2 py-1 text-[10px] font-extrabold text-slate-950"
+                    >
+                      Align compass
+                    </button>
                   </div>
                 )}
                 {routeDeviation && (

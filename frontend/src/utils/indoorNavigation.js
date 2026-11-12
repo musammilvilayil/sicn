@@ -132,10 +132,16 @@ export function interpolateRoutePosition(routeResult, segmentIndex, walkedMeters
   };
 }
 
+/**
+ * Counts walking steps from acceleration-magnitude peaks. The detector re-arms
+ * once the signal falls just below the peak level; while walking with the
+ * phone in hand the signal rarely returns close to zero between steps, so a
+ * low release level would latch after the first step.
+ */
 export class StepDetector {
-  constructor({ threshold = 1.2, releaseThreshold = 0.55, refractoryMs = 320 } = {}) {
+  constructor({ threshold = 1.25, releaseThreshold = 1.0, refractoryMs = 340 } = {}) {
     this.threshold = threshold;
-    this.releaseThreshold = releaseThreshold;
+    this.releaseThreshold = Math.min(releaseThreshold, threshold);
     this.refractoryMs = refractoryMs;
     this.aboveThreshold = false;
     this.lastStepAt = 0;
@@ -254,6 +260,84 @@ export function advanceAlongRoute(routeResult, segmentIndex, walkedMeters, stepM
     blockedByTransition,
     arrived: index >= path.length - 1,
   };
+}
+
+/** Walk back along the route (never back through a stair/lift or past the start). */
+export function retreatAlongRoute(routeResult, segmentIndex, walkedMeters, stepMeters) {
+  const path = routeResult?.path || [];
+  const edges = routeResult?.edges || [];
+  let index = Math.max(0, Math.min(Number(segmentIndex) || 0, Math.max(0, path.length - 1)));
+  let progress = Math.max(0, Number(walkedMeters) || 0);
+  let remaining = Math.max(0, Number(stepMeters) || 0);
+
+  while (remaining > 0) {
+    if (remaining <= progress) {
+      progress -= remaining;
+      remaining = 0;
+      break;
+    }
+    remaining -= progress;
+    progress = 0;
+    const previous = index - 1;
+    const from = path[previous];
+    const to = path[index];
+    if (previous < 0 || !from || !to || from.floor !== to.floor || ['stairs', 'lift'].includes(edges[previous]?.type)) break;
+    const distance = getSegmentDistance(routeResult, previous);
+    if (distance <= 0) break;
+    index = previous;
+    progress = distance;
+  }
+
+  return { segmentIndex: index, walkedMeters: progress, atRouteStart: index === 0 && progress === 0 };
+}
+
+/**
+ * How a step relates to the route, from the angle between the way the phone
+ * faces and the way the route runs (0° = along it, ±180° = straight back).
+ * Without a compass reading the step is assumed to follow the route.
+ */
+export function classifyStepDirection(relativeBearing, { forwardLimit = 75, backwardLimit = 115 } = {}) {
+  if (relativeBearing === null || relativeBearing === undefined || !Number.isFinite(Number(relativeBearing))) return 'forward';
+  const magnitude = Math.abs(Number(relativeBearing));
+  if (magnitude <= forwardLimit) return 'forward';
+  if (magnitude >= backwardLimit) return 'backward';
+  return 'sideways';
+}
+
+/**
+ * Apply one detected step to the route position. A step taken while facing
+ * along the route advances; facing back along it retreats; facing across it
+ * leaves the position where it is. `direction` tells the caller which happened.
+ */
+export function applyPdrStep(routeResult, segmentIndex, walkedMeters, stepMeters, { heading = null, mapNorthHeading = 0 } = {}) {
+  const routeBearing = getRouteSegmentBearing(routeResult, segmentIndex, walkedMeters);
+  const relativeBearing = Number.isFinite(heading) && routeBearing !== null
+    ? getRelativeBearing(routeBearing, heading, mapNorthHeading || 0)
+    : null;
+  const direction = classifyStepDirection(relativeBearing);
+  if (direction === 'sideways') {
+    return { direction, relativeBearing, segmentIndex, walkedMeters, remainingMeters: 0, blockedByTransition: false, arrived: false };
+  }
+  if (direction === 'backward') {
+    return {
+      direction,
+      relativeBearing,
+      ...retreatAlongRoute(routeResult, segmentIndex, walkedMeters, stepMeters),
+      remainingMeters: 0,
+      blockedByTransition: false,
+      arrived: false,
+    };
+  }
+  return { direction, relativeBearing, ...advanceAlongRoute(routeResult, segmentIndex, walkedMeters, stepMeters) };
+}
+
+/**
+ * Map-north offset that makes "facing this way" mean "facing along the route".
+ * Used to align the compass by standing on the route and facing along it.
+ */
+export function getRouteAlignedNorth(routeBearing, heading) {
+  if (!Number.isFinite(routeBearing) || !Number.isFinite(heading)) return null;
+  return normalizeDegrees(heading - routeBearing);
 }
 
 /** Project a point onto a finite segment; returns the nearest point and distance. */
