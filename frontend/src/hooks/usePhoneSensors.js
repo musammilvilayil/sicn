@@ -29,12 +29,14 @@ export default function usePhoneSensors(onStep) {
     onStepRef.current = onStep;
   }, [onStep]);
   const stepDetectorRef = useRef(new StepDetector());
+  const headingRef = useRef(null);
 
   const stopSensors = useCallback(() => {
     cleanupRef.current?.();
     cleanupRef.current = null;
     setStatus('idle');
     setHeading(null);
+    headingRef.current = null;
     stepDetectorRef.current.reset();
   }, []);
 
@@ -73,12 +75,13 @@ export default function usePhoneSensors(onStep) {
       const screenAngle = window.screen?.orientation?.angle || window.orientation || 0;
       const nextHeading = extractCompassHeading(event, screenAngle);
       if (nextHeading !== null) {
-        setHeading((previous) => {
-          if (previous === null) return nextHeading;
-          // Circular low-pass filter avoids the 359° -> 0° jump.
-          const delta = ((nextHeading - previous + 540) % 360) - 180;
-          return (previous + delta * 0.22 + 360) % 360;
-        });
+        const previous = headingRef.current;
+        // Circular low-pass filter avoids the 359° -> 0° jump.
+        const smoothed = previous === null
+          ? nextHeading
+          : (previous + ((((nextHeading - previous + 540) % 360) - 180) * 0.22) + 360) % 360;
+        headingRef.current = smoothed;
+        setHeading(smoothed);
       }
     };
 
@@ -86,7 +89,8 @@ export default function usePhoneSensors(onStep) {
       if (motionPermission !== 'granted') return;
       if (stepDetectorRef.current.push(getAccelerationMagnitude(event), event.timeStamp || Date.now())) {
         setStepCount((count) => count + 1);
-        onStepRef.current?.();
+        // The step handler needs the heading at the moment of the step.
+        onStepRef.current?.({ heading: headingRef.current });
       }
     };
 

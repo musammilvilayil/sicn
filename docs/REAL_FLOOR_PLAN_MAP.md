@@ -14,6 +14,10 @@ sheets in `floorplan/`, and the navigation graph is positioned on those drawings
   the ground floor and are recorded in `tools/build_floorplan_assets.py`
   (`--check-registration` re-derives them) and in `frontend/src/config/floorPlans.js`.
 - `z = floor × 3.9 m` (Section A-A / B-B: 390 cm floor to floor).
+- Compass orientation: the main entrance (bottom edge of the plan) faces **West**, so
+  plan-up is East (`PLAN_UP_COMPASS_BEARING = 90` in `frontend/src/utils/mapProjection.js`)
+  and North is to the left of the plan. The map shows a north arrow. This is the default
+  for every phone; "Align compass" stores a per-phone refinement.
 
 ## Pipeline
 
@@ -46,7 +50,7 @@ as light annotations where no navigation node already labels the space.
 - Room numbers such as “Classroom 201” are app labels; the drawings only say “CLASSROOM”.
 - The ground-floor entry is modelled as drawn: the 1:12 ramp and side passage beside
   the grand steps, with the grand steps rising to the 1st floor. Confirm on site.
-- Compass North is not on the drawings; “Calibrate North” in the app is still required.
+- The compass orientation comes from “the entrance faces West”, not from a survey. If walking the right way shows as the wrong direction, stand on the route, face along it and tap **Align compass**.
 - QR sticker positions must be placed and checked physically.
 
 ## Updating
